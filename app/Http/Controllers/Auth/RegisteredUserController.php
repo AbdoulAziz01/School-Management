@@ -53,12 +53,13 @@ class RegisteredUserController extends Controller
         $identifier = $prefix . $year . $newNumber;
 
         $user = User::create([
-            'identifier' => $identifier,
             'name' => $request->name,
             'email' => $request->email,
+            'identifier' => $identifier,
             'role' => $request->role,
+            'status' => 'pending', // Mettre en attente de validation
+            'email_verified_at' => now(), 
             'password' => Hash::make($request->password),
-            'status' => 'pending',
         ]);
 
         // NE PAS connecter l'utilisateur automatiquement

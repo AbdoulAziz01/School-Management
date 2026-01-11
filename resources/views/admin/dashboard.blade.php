@@ -8,18 +8,20 @@
         <h5 class="mb-3 text-muted">Aperçu</h5>
         <div class="row g-3">
             <div class="col-md-3">
-                <div class="border-0 shadow-sm card">
-                    <div class="card-body">
-                        <div class="mb-2 d-flex align-items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="text-primary me-2" viewBox="0 0 16 16">
-                                <path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5"/>
-                            </svg>
-                            <span class="text-muted small">Total Écoles</span>
+                <a href="{{ route('admin.pending') }}" class="text-decoration-none">
+                    <div class="border-0 shadow-sm card h-100">
+                        <div class="card-body">
+                            <div class="mb-2 d-flex align-items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="text-warning me-2" viewBox="0 0 16 16">
+                                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985.299L10 2.5a7 7 0 0 1 1.356-1.087zm1.37.71a7 7 0 0 0-.439-.27l.5-1.94c.195.1.388.207.57.333zM8 2.748l-.096.315a7 7 0 0 0-.5-.07V2a8 8 0 0 1 .596.022zM6.5 2.5a7 7 0 0 0-.5.07v.573a7 7 0 0 1 .5.07V2.5zm-1.354.646a7 7 0 0 0-.44.27l-.57-1.93c.182-.126.375-.233.57-.333l.44 1.993zM5.5 3.5a7 7 0 0 0-.985.299L4 2.5a8 8 0 0 1 1.356-1.087L5.5 3.5zM4.5 4.5a7 7 0 0 0-.299.985L2.5 4a8 8 0 0 1 1.087-1.356L4.5 4.5zM4 5.5a7 7 0 0 0-.07.5h.573a7 7 0 0 1 .07-.5V5.5zm-1.94 1.5a7 7 0 0 0 .27.439l-1.93.57c-.1-.195-.207-.388-.333-.57l1.993-.44zM2.5 8a7 7 0 0 0 .299.985L2 9.5a8 8 0 0 1 0-3l.5.5zm.5.5a7 7 0 0 0 .5.07v-.573a7 7 0 0 1-.5.07V8.5zm.5.5a7 7 0 0 0 .07.5h-.573a7 7 0 0 1 .07-.5V9zm.5.5a7 7 0 0 0 .985.299L4.5 11.5a8 8 0 0 1-1.356-1.087L4 9.5zm.5.5a7 7 0 0 0 .439.27l-.57 1.93c-.182-.126-.375-.233-.57-.333L4.5 10zm1.5.5a7 7 0 0 0 .5.07v-.573a7 7 0 0 1-.5.07V10.5zm.5-.5a7 7 0 0 0 .5-.07v.573a7 7 0 0 1-.5-.07V10zm.5-.5a7 7 0 0 0 .299-.985L7.5 8.5a8 8 0 0 1-1.087 1.356L6.5 9.5zM8 9.5a7 7 0 0 0 .5.5v-1a7 7 0 0 1-.5-.5h.5z"/>
+                                </svg>
+                                <span class="text-muted small">Inscriptions en attente</span>
+                            </div>
+                            <h2 class="mb-1">{{ $pendingCount ?? 0 }}</h2>
+                            <small class="text-warning">En attente de validation</small>
                         </div>
-                        <h2 class="mb-1">3</h2>
-                        <small class="text-success">+1 depuis l'année dernière</small>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="col-md-3">

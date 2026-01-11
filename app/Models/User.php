@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -25,6 +25,28 @@ class User extends Authenticatable
         'role',
         'status',
     ];
+    
+    /**
+     * Find the user instance for the given username.
+     *
+     * @param  string  $identifier
+     * @return \App\Models\User
+     */
+    public function findForPassport($identifier)
+    {
+        return $this->where('identifier', $identifier)->first();
+    }
+    
+    /**
+     * Validate the password of the user for the Passport password grant.
+     *
+     * @param  string  $password
+     * @return bool
+     */
+    public function validateForPassportPasswordGrant($password)
+    {
+        return Hash::check($password, $this->password);
+    }
 
 
     /**

@@ -23,12 +23,42 @@ class AuthenticatedSessionController extends Controller
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
-        {
+    {
         $request->authenticate();
 
         $request->session()->regenerate();
-
-        return redirect()->intended(route('dashboard', absolute: false));
+        
+        // Récupérer l'utilisateur authentifié
+        $user = $request->user();
+        
+        // Vérifier le statut de l'utilisateur
+        if ($user->status === 'pending') {
+            Auth::logout();
+            return back()->with('error', 'Votre compte est en attente de validation par un administrateur.');
+        }
+        
+        if ($user->status === 'rejected') {
+            Auth::logout();
+            return back()->with('error', 'Votre compte a été rejeté. Veuillez contacter l\'administrateur.');
+        }
+        
+        // Rediriger vers le tableau de bord approprié
+        return $this->redirectToDashboard($user);
+    }
+    
+    /**
+     * Redirect to the appropriate dashboard based on user role
+     */
+    protected function redirectToDashboard($user): RedirectResponse
+    {
+        $route = match($user->role) {
+            'admin' => 'admin.dashboard',
+            'teacher' => 'teacher.dashboard',
+            'student' => 'student.dashboard',
+            default => 'dashboard',
+        };
+        
+        return redirect()->intended(route($route, absolute: false));
     }
 
 

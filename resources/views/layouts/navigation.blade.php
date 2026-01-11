@@ -15,6 +15,18 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    
+                    @if(auth()->check() && auth()->user()->role === 'admin')
+                        @php
+                            $pendingCount = \App\Models\User::where('status', 'pending')->count();
+                        @endphp
+                        <x-nav-link :href="route('admin.pending')" :active="request()->routeIs('admin.pending')" class="flex items-center">
+                            <span>Inscriptions</span>
+                            @if($pendingCount > 0)
+                                <span class="ml-2 px-2 py-0.5 text-xs font-semibold bg-yellow-500 text-white rounded-full">{{ $pendingCount }}</span>
+                            @endif
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 

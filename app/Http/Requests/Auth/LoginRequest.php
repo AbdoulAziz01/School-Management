@@ -38,41 +38,46 @@ public function rules(): array
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-public function authenticate(): void
-{
-    $this->ensureIsNotRateLimited();
+    public function authenticate(): void
+    {
+        $this->ensureIsNotRateLimited();
 
-    if (! Auth::attempt(['identifier' => $this->identifier, 'password' => $this->password], $this->boolean('remember'))) {
-        RateLimiter::hit($this->throttleKey());
+        $credentials = [
+            'identifier' => $this->identifier,
+            'password' => $this->password,
+        ];
 
-        throw ValidationException::withMessages([
-            'identifier' => trans('auth.failed'),
-        ]);
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'identifier' => trans('auth.failed'),
+            ]);
+        }
+
+        // Récupérer l'utilisateur authentifié
+        $user = Auth::user();
+
+        // Vérifier le statut du compte
+        if ($user->status === 'rejected') {
+            Auth::logout();
+            
+            throw ValidationException::withMessages([
+                'identifier' => 'Votre compte a été rejeté par l\'administration.',
+            ]);
+        }
+
+        if ($user->status !== 'approved') {
+            Auth::logout();
+            
+            throw ValidationException::withMessages([
+                'identifier' => 'Votre compte est en attente de validation par l\'administration.',
+            ]);
+        }
+
+        // Si l'utilisateur est approuvé, on continue
+        RateLimiter::clear($this->throttleKey());
     }
-
-    // Vérifier si le compte est validé
-    $user = Auth::user();
-    
-    if ($user->status === 'pending') {
-        Auth::logout();
-        
-        throw ValidationException::withMessages([
-            'identifier' => 'Votre compte est en attente de validation par l\'administration.',
-        ]);
-    }
-
-    if ($user->status === 'rejected') {
-        Auth::logout();
-        
-        throw ValidationException::withMessages([
-            'identifier' => 'Votre compte a été rejeté. Contactez l\'administration.',
-        ]);
-    }
-
-    RateLimiter::clear($this->throttleKey());
-}
-
-
 
     /**
      * Ensure the login request is not rate limited.
@@ -102,6 +107,6 @@ public function authenticate(): void
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('identifier')).'|'.$this->ip());
     }
 }

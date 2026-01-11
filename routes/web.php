@@ -10,13 +10,6 @@ Route::get('/', function () {
     return view('welcome-school');
 });
 
-// Une route pour le tableau de bord, accessible uniquement aux utilisateurs authentifiés et vérifiés
-// Le middleware signifie que l'utilisateur doit être connecté et avoir vérifié son adresse e-mail
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
 // Routes pour la gestion du profil utilisateur, protégées par le middleware d'authentification
 // Cela signifie que seules les personnes connectées peuvent accéder à ces routes
 // Elles permettent d'éditer, mettre à jour et supprimer le profil utilisateur
@@ -28,9 +21,8 @@ Route::middleware('auth')->group(function () {
 // Inclusion des routes d'authentification supplémentaires définies dans le fichier auth.php
 require __DIR__.'/auth.php';
 
-// // Routes pour rediriger les utilisateurs vers leur tableau de bord respectif en fonction de leur rôle
-// // Le middleware 'auth' garantit que seules les personnes connectées peuvent accéder à ces routes
-// // On utilise une fonction anonyme pour vérifier le rôle de l'utilisateur connecté
+// Routes pour rediriger les utilisateurs vers leur tableau de bord respectif en fonction de leur rôle
+// Les middlewares 'auth' garantissent que seules les personnes connectées peuvent accéder à ces routes
 Route::middleware(['auth'])->group(function () {
 
     // Redirection vers le tableau de bord approprié selon le rôle de l'utilisateur
@@ -61,25 +53,30 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Routes pour la gestion des inscriptions en attente par l'administrateur
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    
+Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     // Voir les inscriptions en attente
-    Route::get('/admin/pending-registrations', function () {
+    Route::get('/pending-registrations', function () {
         $pendingUsers = \App\Models\User::where('status', 'pending')->get();
         return view('admin.pending-registrations', compact('pendingUsers'));
     })->name('admin.pending');
 
     // Valider une inscription
-    Route::post('/admin/approve/{user}', function (\App\Models\User $user) {
+    Route::post('/approve/{user}', function (\App\Models\User $user) {
         $user->status = 'approved';
         $user->save();
         return redirect()->back()->with('success', 'Utilisateur validé avec succès.');
     })->name('admin.approve');
 
     // Rejeter une inscription
-    Route::post('/admin/reject/{user}', function (\App\Models\User $user) {
+    Route::post('/reject/{user}', function (\App\Models\User $user) {
         $user->status = 'rejected';
         $user->save();
         return redirect()->back()->with('success', 'Utilisateur rejeté.');
     })->name('admin.reject');
+    
+    // Tableau de bord administrateur
+    Route::get('/dashboard', function () {
+        $pendingCount = \App\Models\User::where('status', 'pending')->count();
+        return view('admin.dashboard', compact('pendingCount'));
+    })->name('admin.dashboard');
 });
