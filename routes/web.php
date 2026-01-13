@@ -1,82 +1,153 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\StudentController;
+use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
+use App\Http\Controllers\Admin\StudentAssignmentController;
+use App\Http\Controllers\Admin\PendingRegistrationController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\TeacherController;
 
-// La on a modifié pour afficher la vue "welcome-school" à la racine du site
-// Ce sont les routes web de l'application. Elles sont chargées par le RouteServiceProvider
-// et sont assignées au groupe "web" qui contient l'état de session, la protection
-Route::get('/', function () {
-    return view('welcome-school');
+// Route de débogage temporaire
+Route::get('/debug/student', function() {
+    $user = Auth::user();
+    
+    if (!$user) {
+        return 'Aucun utilisateur connecté. <a href="'.route('login').'">Se connecter</a>';
+    }
+    
+    return [
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'is_authenticated' => Auth::check(),
+            'is_admin' => $user->role === 'admin',
+            'is_student' => $user->role === 'eleve'
+        ],
+        'session' => session()->all(),
+        'routes' => [
+            'login' => route('login'),
+            'student_dashboard' => route('student.dashboard'),
+            'admin_dashboard' => route('admin.dashboard')
+        ]
+    ];
 });
 
-// Routes pour la gestion du profil utilisateur, protégées par le middleware d'authentification
-// Cela signifie que seules les personnes connectées peuvent accéder à ces routes
-// Elles permettent d'éditer, mettre à jour et supprimer le profil utilisateur
+// Page d'accueil
+Route::get('/', function () {
+    return view('welcome-school');
+})->name('home');
+
+// Routes d'authentification
+require __DIR__.'/auth.php';
+
+// Routes protégées par authentification
 Route::middleware('auth')->group(function () {
+    // Tableau de bord étudiant
+    Route::middleware('role:eleve')->group(function () {
+        Route::get('/student/dashboard', [StudentDashboardController::class, 'index'])->name('student.dashboard');
+    });
+    
+    // Tableau de bord professeur
+    Route::middleware('role:professeur')->group(function () {
+        Route::get('/teacher/dashboard', function () {
+            return view('teacher.dashboard');
+        })->name('teacher.dashboard');
+    });
+    
+    // Gestion du profil utilisateur
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-// Inclusion des routes d'authentification supplémentaires définies dans le fichier auth.php
-require __DIR__.'/auth.php';
 
-// Routes pour rediriger les utilisateurs vers leur tableau de bord respectif en fonction de leur rôle
-// Les middlewares 'auth' garantissent que seules les personnes connectées peuvent accéder à ces routes
-Route::middleware(['auth'])->group(function () {
-
-    // Redirection vers le tableau de bord approprié selon le rôle de l'utilisateur
+    // Redirection vers le tableau de bord approprié selon le rôle
     Route::get('/dashboard', function () {
-        $role = auth()->user()->role;
-
-        return match ($role) {
-            'admin'   => redirect()->route('admin.dashboard'),
-            'teacher' => redirect()->route('teacher.dashboard'),
-            'student' => redirect()->route('student.dashboard'),
-            default   => abort(403),
-        };
+        if (auth()->user()->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        } elseif (auth()->user()->role === 'eleve') {
+            return redirect()->route('student.dashboard');
+        }
+        return redirect()->route('home');
     })->name('dashboard');
-    //  Routes spécifiques pour chaque rôle d'utilisateur administratif
-    Route::get('/admin/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
-
-    // Routes spécifiques pour chaque rôle d'utilisateur enseignant
-    Route::get('/teacher/dashboard', function () {
-        return view('teacher.dashboard');
-    })->name('teacher.dashboard');
-
-    // Routes spécifiques pour chaque rôle d'utilisateur étudiant
-    Route::get('/student/dashboard', function () {
-        return view('student.dashboard');
-    })->name('student.dashboard');
 });
 
-// Routes pour la gestion des inscriptions en attente par l'administrateur
+// Routes étudiant
+Route::prefix('student')->middleware(['auth', 'role:eleve'])->group(function () {
+    Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('student.dashboard');
+    Route::get('/timetable', [StudentTimetableController::class, 'index'])->name('student.timetable');
+    Route::get('/assignments', [StudentAssignmentController::class, 'index'])->name('student.assignments');
+    Route::get('/grades', [StudentGradeController::class, 'index'])->name('student.grades');
+    Route::get('/attendance', [StudentAttendanceController::class, 'index'])->name('student.attendance');
+});
+
+// Routes administrateur
 Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
-    // Voir les inscriptions en attente
-    Route::get('/pending-registrations', function () {
-        $pendingUsers = \App\Models\User::where('status', 'pending')->get();
-        return view('admin.pending-registrations', compact('pendingUsers'));
-    })->name('admin.pending');
-
-    // Valider une inscription
-    Route::post('/approve/{user}', function (\App\Models\User $user) {
-        $user->status = 'approved';
-        $user->save();
-        return redirect()->back()->with('success', 'Utilisateur validé avec succès.');
-    })->name('admin.approve');
-
-    // Rejeter une inscription
-    Route::post('/reject/{user}', function (\App\Models\User $user) {
-        $user->status = 'rejected';
-        $user->save();
-        return redirect()->back()->with('success', 'Utilisateur rejeté.');
-    })->name('admin.reject');
+    // Redirection de /admin vers /admin/dashboard
+    Route::get('/', function () {
+        return redirect()->route('admin.dashboard');
+    });
     
     // Tableau de bord administrateur
-    Route::get('/dashboard', function () {
-        $pendingCount = \App\Models\User::where('status', 'pending')->count();
-        return view('admin.dashboard', compact('pendingCount'));
-    })->name('admin.dashboard');
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+        ->name('admin.dashboard');
+
+    // Gestion des inscriptions en attente
+    Route::get('/pending', [PendingRegistrationController::class, 'pending'])
+        ->name('admin.pending');
+        
+    Route::get('/pending-registrations', [PendingRegistrationController::class, 'pending'])
+        ->name('admin.registrations.pending');
+        
+    // Gestion des inscriptions
+    Route::patch('/registrations/{user}/approve', [PendingRegistrationController::class, 'approve'])
+        ->name('admin.registrations.approve');
+        
+    Route::patch('/registrations/{user}/reject', [PendingRegistrationController::class, 'reject'])
+        ->name('admin.registrations.reject');
+
+    // Gestion des étudiants - Routes personnalisées (DOIT être avant la ressource)
+    Route::get('/students/assign', [StudentController::class, 'showAssignForm'])->name('admin.students.assign');
+    Route::post('/students/assign/bulk', [StudentController::class, 'assignToClassBulk'])->name('admin.students.assign.bulk');
+    Route::post('/students/{student}/assign', [StudentController::class, 'assignToClass'])->name('admin.students.assign-to-class');
+    Route::delete('/students/{student}/unassign', [StudentController::class, 'unassign'])->name('admin.students.unassign');
+    
+    // Ressource pour les étudiants (cette ligne DOIT venir après les routes personnalisées)
+    Route::resource('students', StudentController::class)->names('admin.students');
+    
+    // Alias pour la rétrocompatibilité
+    Route::get('/students/list', [StudentController::class, 'index'])->name('admin.students.list');
+        
+    // Gestion des enseignants
+    Route::resource('teachers', TeacherController::class)->names('admin.teachers');
+    
+    // Gestion des classes
+    Route::resource('classes', 'App\Http\Controllers\Admin\ClassController')->names('admin.classes');
+    
+    // Routes supplémentaires pour les classes
+    Route::get('/classes/list', [\App\Http\Controllers\Admin\ClassController::class, 'list'])
+        ->name('admin.classes.list');
+    Route::get('/classes/create', [\App\Http\Controllers\Admin\ClassController::class, 'create'])
+        ->name('admin.classes.create');
+    
+    // Gestion des années académiques
+    Route::resource('academic-years', 'App\Http\Controllers\Admin\AcademicYearController')->names('admin.academic-years');
+    Route::patch('/academic-years/{academicYear}/set-current', [\App\Http\Controllers\Admin\AcademicYearController::class, 'setCurrent'])
+        ->name('admin.academic-years.set-current');
 });
+
+// Autres routes publiques
+// ...
+
+// En cas de route non trouvée
+Route::fallback(function () {
+    return response()->view('errors.404', [], 404);
+});
+
+// Route pour la page des inscriptions en attente (temporaire)
+Route::get('/pending', function() {
+    return view('admin.pending');
+})->name('admin.pending');

@@ -3941,4 +3941,31 @@ Lire attentivement les messages d'erreur
 Utiliser Tinker pour tester rapidement
 
 Vérifier les logs (`storage/logs/           
+## 🚀 Dernières Mises à Jour (Janvier 2026)
 
+### Nouvelles Fonctionnalités
+
+#### Gestion des Années Scolaires
+- Interface complète de gestion des années scolaires (CRUD)
+- Possibilité de définir une année scolaire comme année courante
+- Validation des dates (début < fin, pas de chevauchement)
+- Gestion des dépendances avant suppression
+- Affichage des statistiques par année
+
+#### Gestion des Classes
+- Création et configuration des classes
+- Association des classes aux années scolaires
+- Gestion des capacités et descriptions
+- Relations avec les niveaux et les matières
+
+#### Améliorations Techniques
+- Mise à jour du modèle [SchoolClass](cci:2://file:///c:/xampp/htdocs/school-managment/school-management/app/Models/SchoolClass.php:8:0-37:1) avec les relations
+- Ajout de la colonne `class_id` à la table `users`
+- Amélioration du tableau de bord administrateur
+- Optimisation des requêtes de base de données
+
+### Prochaines Étapes
+- [ ] Gestion des emplois du temps
+- [ ] Gestion des notes et évaluations
+- [ ] Messagerie interne
+- [ ] Tableaux de bord personnalisés

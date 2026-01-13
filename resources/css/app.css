@@ -1,2 +1,6 @@
-/* Application styles */
-/* Bootstrap est chargé via CDN dans layouts/app.blade.php */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Styles personnalisés */
+[x-cloak] { display: none !important; }
