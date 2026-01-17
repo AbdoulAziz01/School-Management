@@ -8,7 +8,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\SchoolClass;
 use App\Models\Grade;
-// use Laravel\Sanctum\HasApiTokens; ← SUPPRIMÉ
 
 class User extends Authenticatable
 {
@@ -97,9 +96,20 @@ class User extends Authenticatable
         return $this->belongsToMany(Subject::class, 'teacher_subjects', 'teacher_id', 'subject_id');
     }
 
-    public function teacherAssignments()
+
+    /**
+     * Les classes auxquelles l'enseignant est affecté
+     */
+    public function assignedClasses()
     {
-        return $this->hasMany(TeacherAssignment::class, 'teacher_id');
+        if ($this->role === self::ROLE_TEACHER) {
+            return $this->belongsToMany(SchoolClass::class, 'class_teacher', 'teacher_id', 'class_id')
+                ->withTimestamps();
+        }
+        
+        return $this->belongsToMany(SchoolClass::class, 'class_teacher', 'teacher_id', 'class_id')
+            ->withTimestamps()
+            ->wherePivot('teacher_id', $this->id);
     }
 
     // Méthodes utilitaires

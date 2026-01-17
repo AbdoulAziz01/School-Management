@@ -12,10 +12,12 @@ class DashboardController extends Controller
     public function index()
     {
         $pendingCount = User::where('status', 'pending')->count();
+            
         $classesCount = SchoolClass::count();
-        $unassignedStudentsCount = User::where('role', 'student')
+        $unassignedStudentsCount = User::whereIn('role', ['student', 'eleve'])
             ->whereNull('class_id')
             ->count();
+            
         $currentYear = AcademicYear::where('is_current', true)->first();
         
         return view('admin.dashboard', compact(

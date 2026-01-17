@@ -18,6 +18,8 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             min-height: 100vh;
             padding-top: 56px;
+            display: flex;
+            flex-direction: column;
         }
         
         .sidebar {
@@ -78,6 +80,10 @@
             flex: 1;
             background-color: #f8fafc;
             min-height: calc(100vh - 56px);
+            width: 100%;
+            overflow-x: auto;
+            margin-left: 0;
+            margin-right: 0;
         }
         
         .card {
@@ -148,10 +154,9 @@
 
 
     <div class="container-fluid">
-        <div class="row">
+        <div class="row flex-nowrap">
             <!-- Sidebar -->
             @include('admin.components.sidebar')
-
 
             <!-- Main content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">

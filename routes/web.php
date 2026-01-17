@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\StudentAssignmentController;
 use App\Http\Controllers\Admin\PendingRegistrationController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\TeacherController;
+use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
+use App\Http\Controllers\Admin\TeacherClassController;
 
 // Route de débogage temporaire
 Route::get('/debug/student', function() {
@@ -47,6 +49,11 @@ require __DIR__.'/auth.php';
 
 // Routes protégées par authentification
 Route::middleware('auth')->group(function () {
+    // Profil utilisateur
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
     // Tableau de bord étudiant
     Route::middleware('role:eleve')->group(function () {
         Route::get('/student/dashboard', [StudentDashboardController::class, 'index'])->name('student.dashboard');
@@ -91,6 +98,12 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
         return redirect()->route('admin.dashboard');
     });
     
+    // Profil administrateur
+    Route::prefix('profile')->name('admin.profile.')->group(function() {
+        Route::get('/', [\App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('edit');
+        Route::put('/', [\App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('update');
+    });
+    
     // Tableau de bord administrateur
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('admin.dashboard');
@@ -123,6 +136,12 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
         
     // Gestion des enseignants
     Route::resource('teachers', TeacherController::class)->names('admin.teachers');
+    
+    // Gestion des affectations de classes aux enseignants
+    Route::prefix('teachers/{teacher}')->name('admin.teachers.')->group(function() {
+        Route::get('/classes', [TeacherClassController::class, 'edit'])->name('classes.edit');
+        Route::put('/classes', [TeacherClassController::class, 'update'])->name('classes.update');
+    });
     
     // Gestion des classes
     Route::resource('classes', 'App\Http\Controllers\Admin\ClassController')->names('admin.classes');

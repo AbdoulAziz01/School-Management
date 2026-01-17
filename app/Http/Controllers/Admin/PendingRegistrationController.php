@@ -18,7 +18,6 @@ class PendingRegistrationController extends Controller
 public function pending()
 {
     $students = User::where('status', 'pending')
-        ->whereIn('role', ['student', 'eleve'])
         ->with('class')
         ->orderBy('created_at', 'desc')
         ->get();

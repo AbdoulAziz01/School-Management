@@ -1,8 +1,8 @@
 @extends('admin.layouts.app')
 
 @section('content')
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
-        <h1 class="h3 mb-0">Inscriptions en Attente</h1>
+    <div class="flex-wrap pt-3 pb-2 mb-4 d-flex justify-content-between flex-md-nowrap align-items-center border-bottom">
+        <h1 class="mb-0 h3">Inscriptions en Attente</h1>
     </div>
 
     @if(session('success'))
@@ -12,8 +12,8 @@
     <div class="card">
         <div class="card-body">
             @if($pendingUsers->isEmpty())
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-user-clock fa-3x mb-3"></i>
+                <div class="py-4 text-center text-muted">
+                    <i class="mb-3 fas fa-user-clock fa-3x"></i>
                     <p class="h5">Aucune inscription en attente</p>
                 </div>
             @else

@@ -137,6 +137,58 @@
         </div>
     </div>
 
+    <!-- Enseignants affectés -->
+    <div class="mb-4 shadow-sm card">
+        <div class="text-white card-header bg-primary">
+            <h5 class="mb-0">
+                <i class="fas fa-chalkboard-teacher"></i> Enseignants affectés
+                <span class="badge bg-light text-dark float-end">{{ $class->teachers->count() }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            @if($class->teachers->isEmpty())
+                <div class="py-3 text-center text-muted">
+                    Aucun enseignant n'est affecté à cette classe.
+                </div>
+            @else
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Email</th>
+                                <th>Matières</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($class->teachers as $teacher)
+                                <tr>
+                                    <td>{{ $teacher->name }}</td>
+                                    <td><small>{{ $teacher->email }}</small></td>
+                                    <td>
+                                        @if($teacher->subjects->isNotEmpty())
+                                            @foreach($teacher->subjects as $subject)
+                                                <span class="badge bg-info">{{ $subject->name }}</span>
+                                            @endforeach
+                                        @else
+                                            <span class="text-muted">Aucune matière</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{{ route('admin.teachers.show', $teacher) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </div>
+
     <!-- Élèves affectés -->
     <div class="shadow-sm card">
         <div class="text-white card-header bg-success">

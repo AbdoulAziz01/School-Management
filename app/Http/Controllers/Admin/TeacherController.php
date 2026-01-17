@@ -7,9 +7,12 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class TeacherController extends Controller
 {
+    use AuthorizesRequests;
+    
     /**
      * Affiche la liste des enseignants
      */
@@ -72,13 +75,9 @@ class TeacherController extends Controller
     /**
      * Affiche les détails d'un enseignant
      */
-    public function show(User $teacher)
+    public function show($id)
     {
-        $this->authorize('view', $teacher);
-        
-        // Charger les affectations de l'enseignant
-        $teacher->load(['teacherAssignments.schoolClass', 'teacherAssignments.subject']);
-        
+        $teacher = User::where('role', 'teacher')->findOrFail($id);
         return view('admin.teachers.show', compact('teacher'));
     }
 

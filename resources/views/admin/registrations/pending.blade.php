@@ -114,7 +114,7 @@
     
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table class="table align-middle table-hover">
                 <thead class="bg-gray-50">
                     <tr>
                         <th>ID</th>
@@ -210,7 +210,7 @@
                                     
                                     <form action="{{ route('admin.registrations.reject', $user) }}" method="POST">
                                         @csrf
-                                        @method('DELETE')
+                                        @method('PATCH')
                                         <button type="submit" 
                                                 class="btn btn-sm btn-outline-danger" 
                                                 data-bs-toggle="tooltip" 

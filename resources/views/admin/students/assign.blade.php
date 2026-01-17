@@ -167,6 +167,10 @@
                             </tbody>
                         </table>
                     </form>
+                    
+                    <div class="mt-3">
+                        {{ $unassignedStudents->links() }}
+                    </div>
                 </div>
             @endif
         </div>

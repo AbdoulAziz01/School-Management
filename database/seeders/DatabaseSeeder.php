@@ -60,7 +60,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Élève Test',
                 'email' => 'eleve@example.com',
                 'identifier' => 'E' . str_pad(1, 5, '0', STR_PAD_LEFT),
-                'role' => 'student',
+                'role' => 'eleve',
                 'status' => 'approved',
                 'password' => bcrypt('password'),
             ]);
@@ -80,7 +80,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Student User',
                 'email' => 'student@example.com',
                 'identifier' => 'E' . str_pad(2, 5, '0', STR_PAD_LEFT), // Changement de E00001 à E00002
-                'role' => 'student',
+                'role' => 'eleve',
                 'status' => 'approved',
                 'password' => bcrypt('password'),
             ]

@@ -38,12 +38,16 @@
                                             <td>{{ $teacher->phone ?? 'Non renseigné' }}</td>
                                             <td>{{ $teacher->created_at->format('d/m/Y') }}</td>
                                             <td>
-                                                <a href="{{ route('admin.teachers.show', $teacher) }}" class="btn btn-sm btn-info">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
                                                 <a href="{{ route('admin.teachers.edit', $teacher) }}" class="btn btn-sm btn-warning">
-                                                    <i class="fas fa-edit"></i>
+                                                    <i class="fas fa-edit"></i> Modifier
                                                 </a>
+                                                <form action="{{ route('admin.teachers.destroy', $teacher) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet enseignant ?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> Supprimer
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     @endforeach

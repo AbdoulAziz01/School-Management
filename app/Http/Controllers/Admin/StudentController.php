@@ -84,20 +84,20 @@ class StudentController extends Controller
      */
     public function showAssignForm()
     {
-        // Récupérer les élèves approuvés sans classe
+        // Récupérer les élèves approuvés sans classe avec pagination
         $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
             ->where('status', User::STATUS_APPROVED)
             ->whereNull('class_id')
             ->orderBy('name')
-            ->get();
+            ->paginate(15, ['*'], 'unassigned_page');
             
-        // Récupérer les élèves déjà affectés à une classe
+        // Récupérer les élèves déjà affectés à une classe avec pagination
         $assignedStudents = User::whereIn('role', ['student', 'eleve'])
             ->where('status', User::STATUS_APPROVED)
             ->whereNotNull('class_id')
             ->with('class')
             ->orderBy('name')
-            ->get();
+            ->paginate(15, ['*'], 'assigned_page');
         
         // Récupérer toutes les classes avec leurs relations
         $classes = SchoolClass::with(['level', 'academicYear'])
@@ -209,7 +209,7 @@ class StudentController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'date_of_birth' => 'required|date|before:today',
-            'class_id' => 'nullable|exists:school_classes,id',
+            'class_id' => 'nullable|exists:classes,id',
             'status' => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
         ]);
 
@@ -217,19 +217,19 @@ class StudentController extends Controller
             DB::beginTransaction();
 
             // Générer un identifiant unique
-            $lastStudent = User::where('role', 'student')
+            $lastStudent = User::where('role', 'eleve')
                 ->orderBy('id', 'desc')
                 ->first();
 
             $studentNumber = $lastStudent ? (int)substr($lastStudent->identifier, 1) + 1 : 1;
-            $identifier = 'S' . str_pad($studentNumber, 5, '0', STR_PAD_LEFT);
+            $identifier = 'E' . str_pad($studentNumber, 5, '0', STR_PAD_LEFT);
 
             $student = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'identifier' => $identifier,
                 'password' => bcrypt('password'), // Mot de passe par défaut
-                'role' => 'student',
+                'role' => 'eleve',
                 'status' => $validated['status'],
                 'date_of_birth' => $validated['date_of_birth'],
                 'class_id' => $validated['class_id'] ?? null,
@@ -243,9 +243,10 @@ class StudentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Erreur lors de la création d\'un élève : ' . $e->getMessage());
             return back()
                 ->withInput()
-                ->with('error', 'Une erreur est survenue lors de la création de l\'étudiant.');
+                ->with('error', 'Erreur lors de la création de l\'élève : ' . $e->getMessage());
         }
     }
 
@@ -255,7 +256,7 @@ class StudentController extends Controller
      */
     public function edit(User $student)
     {
-        if ($student->role !== 'student') {
+        if ($student->role !== 'eleve') {
             abort(404);
         }
 
@@ -274,7 +275,7 @@ class StudentController extends Controller
      */
     public function update(Request $request, User $student)
     {
-        if ($student->role !== 'student') {
+        if ($student->role !== 'eleve') {
             abort(404);
         }
 
@@ -288,7 +289,7 @@ class StudentController extends Controller
                 Rule::unique('users')->ignore($student->id)
             ],
             'date_of_birth' => 'required|date|before:today',
-            'class_id' => 'nullable|exists:school_classes,id',
+            'class_id' => 'nullable|exists:classes,id',
             'status' => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
         ]);
 
@@ -322,7 +323,7 @@ class StudentController extends Controller
      */
     public function destroy(User $student)
     {
-        if ($student->role !== 'student') {
+        if ($student->role !== 'eleve') {
             abort(404);
         }
 
@@ -339,12 +340,11 @@ class StudentController extends Controller
 
             return redirect()
                 ->route('admin.students.index')
-                ->with('success', 'Étudiant supprimé avec succès.');
-
+                ->with('success', 'Élève supprimé avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()
-                ->with('error', 'Une erreur est survenue lors de la suppression de l\'étudiant.');
+                ->with('error', 'Une erreur est survenue lors de la suppression de l\'élève : ' . $e->getMessage());
         }
     }
 
@@ -353,7 +353,7 @@ class StudentController extends Controller
      */
     public function showResetPasswordForm(User $student)
     {
-        if ($student->role !== 'student') {
+        if ($student->role !== 'eleve') {
             abort(404);
         }
 
@@ -365,7 +365,7 @@ class StudentController extends Controller
      */
     public function resetPassword(Request $request, User $student)
     {
-        if ($student->role !== 'student') {
+        if ($student->role !== 'eleve') {
             abort(404);
         }
 
@@ -401,7 +401,7 @@ public function pending()
      */
     public function approve(User $student)
     {
-        if ($student->role !== 'student' || $student->status !== 'pending') {
+        if ($student->role !== 'eleve' || $student->status !== 'pending') {
             return back()->with('error', 'Action non autorisée.');
         }
 
@@ -474,25 +474,20 @@ public function pending()
      */
     public function show(User $student)
     {
-        if ($student->role !== 'student') {
-            abort(404);
+        if (!in_array($student->role, ['student', 'eleve'])) {
+            abort(404, 'Utilisateur non trouvé ou n\'est pas un étudiant');
         }
 
+        // Charger uniquement les relations existantes et nécessaires
         $student->load([
             'class', 
             'class.academicYear', 
-            'class.level',
-            'grades' => function($query) {
-                $query->orderBy('date', 'desc')->take(5);
-            },
-            'attendances' => function($query) {
-                $query->orderBy('date', 'desc')->take(5);
-            },
-            'grades.subject',
-            'attendances.teacher',
-            'attendances.course'
+            'class.level'
         ]);
 
-        return view('admin.students.show', compact('student'));
+        return view('admin.students.show', [
+            'student' => $student,
+            'schoolClass' => $student->class // Alias pour la compatibilité avec la vue
+        ]);
     }
 }
