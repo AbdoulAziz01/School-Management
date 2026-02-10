@@ -19,8 +19,11 @@ class TeacherClassController extends Controller
             abort(404, 'Cet utilisateur n\'est pas un enseignant');
         }
 
-        $assignedClasses = $teacher->assignedClasses()->pluck('id')->toArray();
+        $assignedClasses = $teacher->assignedClasses()->pluck('classes.id')->toArray();
         $classes = SchoolClass::with('level', 'academicYear')
+            ->whereHas('academicYear', function($query) {
+                $query->where('is_current', true);
+            })
             ->orderBy('name')
             ->get();
 

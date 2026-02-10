@@ -6,12 +6,13 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 use App\Models\SchoolClass;
 use App\Models\Grade;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable; // ← HasApiTokens RETIRÉ
+    use HasFactory, Notifiable, HasRoles; // ← HasApiTokens RETIRÉ
 
     // Constantes pour les rôles
     public const ROLE_ADMIN = 'admin';
@@ -41,7 +42,11 @@ class User extends Authenticatable
         'phone',
         'address',
         'email_verified_at',
-        'desired_class' // ← AJOUTÉ pour la classe souhaitée
+        'desired_class', // ← AJOUTÉ pour la classe souhaitée
+        'profile_photo_path', // ← AJOUTÉ pour la photo de profil
+        'city',
+        'postal_code',
+        'country',
     ];
     
     /**
@@ -50,6 +55,14 @@ class User extends Authenticatable
     public function class()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+    
+    /**
+     * Get the teacher's class assignments.
+     */
+    public function teacherAssignments()
+    {
+        return $this->hasMany(\App\Models\TeacherAssignment::class, 'teacher_id');
     }
     
     /**
@@ -78,6 +91,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'date_of_birth' => 'date',
     ];
 
     // Relations
@@ -91,6 +105,36 @@ class User extends Authenticatable
         return $this->belongsTo(Level::class);
     }
 
+    /**
+     * Obtenir les présences de l'utilisateur.
+     */
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    /**
+     * Obtenir les événements de la classe de l'utilisateur.
+     */
+    public function events()
+    {
+        if ($this->schoolClass) {
+            return $this->schoolClass->events();
+        }
+        return collect();
+    }
+
+    /**
+     * Obtenir les devoirs de l'utilisateur.
+     */
+    public function assignments()
+    {
+        if ($this->schoolClass) {
+            return $this->schoolClass->assignments();
+        }
+        return collect();
+    }
+
     public function subjects()
     {
         return $this->belongsToMany(Subject::class, 'teacher_subjects', 'teacher_id', 'subject_id');
@@ -102,14 +146,8 @@ class User extends Authenticatable
      */
     public function assignedClasses()
     {
-        if ($this->role === self::ROLE_TEACHER) {
-            return $this->belongsToMany(SchoolClass::class, 'class_teacher', 'teacher_id', 'class_id')
-                ->withTimestamps();
-        }
-        
         return $this->belongsToMany(SchoolClass::class, 'class_teacher', 'teacher_id', 'class_id')
-            ->withTimestamps()
-            ->wherePivot('teacher_id', $this->id);
+            ->withTimestamps();
     }
 
     // Méthodes utilitaires

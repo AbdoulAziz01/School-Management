@@ -93,7 +93,7 @@
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{{ url('/admin/pending') }}" class="btn btn-sm btn-outline-primary w-100">Voir les inscriptions</a>
+                        <a href="{{ route('admin.registrations.pending') }}" class="btn btn-sm btn-outline-primary w-100">Voir les inscriptions</a>
                     </div>
                 </div>
             </div>
@@ -111,8 +111,8 @@
                             <i class="fas fa-chalkboard text-success fs-4"></i>
                         </div>
                     </div>
-                    <div class="mt-3">
-                        <a href="{{ url('/admin/classes') }}" class="btn btn-sm btn-outline-success w-100">Voir les classes</a>
+                    <div class="mt-3">  
+                        <a href="{{ route('admin.classes.index') }}" class="btn btn-sm btn-outline-success w-100">Voir les classes</a>
                     </div>
                 </div>
             </div>
@@ -131,7 +131,7 @@
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{{ url('/admin/students/assign') }}" class="btn btn-sm btn-outline-warning w-100">Affecter les élèves</a>
+                        <a href="{{ route('admin.students.assign') }}" class="btn btn-sm btn-outline-warning w-100">Affecter les élèves</a>
                     </div>
                 </div>
             </div>
@@ -150,7 +150,7 @@
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{{ url('/admin/academic-years') }}" class="btn btn-sm btn-outline-info w-100">Gérer les années</a>
+                        <a href="{{ route('admin.academic-years.index') }}" class="btn btn-sm btn-outline-info w-100">Gérer les années</a>
                     </div>
                 </div>
             </div>
@@ -158,7 +158,7 @@
     </div>
 
     <!-- Section des actions rapides -->
-    <div class="card mb-4">
+    <div class="mb-4 card">
         <div class="card-header">
             <h5 class="mb-0">Actions rapides</h5>
         </div>
@@ -190,29 +190,41 @@
                 </div>
             </div>
             
-            <div class="row mt-4 g-3">
-                <div class="col-6 col-md-3">
-                    <a href="{{ route('admin.students.index') }}" class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2">
+            <div class="mt-4 row g-3">
+                <div class="col-6 col-md-2">
+                    <a href="{{ route('admin.students.index') }}" class="py-2 btn btn-light w-100 d-flex align-items-center justify-content-center">
                         <i class="fas fa-user-graduate me-2"></i>
-                        <span>Gérer les élèves</span>
+                        <span>Élèves</span>
                     </a>
                 </div>
-                <div class="col-6 col-md-3">
-                    <a href="{{ route('admin.teachers.index') }}" class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2">
+                <div class="col-6 col-md-2">
+                    <a href="{{ route('admin.teachers.index') }}" class="py-2 btn btn-light w-100 d-flex align-items-center justify-content-center">
                         <i class="fas fa-chalkboard-teacher me-2"></i>
-                        <span>Gérer les enseignants</span>
+                        <span>Enseignants</span>
                     </a>
                 </div>
-                <div class="col-6 col-md-3">
-                    <a href="{{ route('admin.classes.index') }}" class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2">
+                <div class="col-6 col-md-2">
+                    <a href="{{ route('admin.classes.index') }}" class="py-2 btn btn-light w-100 d-flex align-items-center justify-content-center">
                         <i class="fas fa-chalkboard me-2"></i>
-                        <span>Gérer les classes</span>
+                        <span>Classes</span>
                     </a>
                 </div>
-                <div class="col-6 col-md-3">
-                    <a href="{{ route('admin.academic-years.index') }}" class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2">
+                <div class="col-6 col-md-2">
+                    <a href="{{ route('admin.subjects.index') }}" class="py-2 btn btn-light w-100 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-book me-2"></i>
+                        <span>Matières</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-2">
+                    <a href="{{ route('admin.academic-years.index') }}" class="py-2 btn btn-light w-100 d-flex align-items-center justify-content-center">
                         <i class="fas fa-calendar-alt me-2"></i>
-                        <span>Années scolaires</span>
+                        <span>Années</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-2">
+                    <a href="{{ route('admin.registrations.pending') }}" class="py-2 btn btn-light w-100 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-user-clock me-2"></i>
+                        <span>Inscriptions</span>
                     </a>
                 </div>
             </div>

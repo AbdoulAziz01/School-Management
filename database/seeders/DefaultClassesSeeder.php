@@ -37,20 +37,25 @@ class DefaultClassesSeeder extends Seeder
             return;
         }
 
-        // Noms de classes par niveau
+        // Noms de classes par niveau (chaque niveau a les sections A et B)
         $classesByLevel = [
-            'CP' => ['A', 'B', 'C'],
-            'CE1' => ['A', 'B'],
-            'CE2' => ['A', 'B'],
-            'CM1' => ['A', 'B'],
-            'CM2' => ['A'],
+            // Collège
             '6ème' => ['A', 'B'],
             '5ème' => ['A', 'B'],
             '4ème' => ['A', 'B'],
             '3ème' => ['A', 'B'],
-            '2nde' => ['A', 'B', 'C'],
-            '1ère' => ['A', 'B', 'C'],
-            'Tle' => ['A', 'B', 'C']
+            // Lycée - Seconde
+            '2nde S' => ['A', 'B'],
+            '2nde L' => ['A', 'B'],
+            '2nde G' => ['A', 'B'],
+            // Lycée - Première
+            '1ère S' => ['A', 'B'],
+            '1ère L' => ['A', 'B'],
+            '1ère G' => ['A', 'B'],
+            // Lycée - Terminale
+            'Terminale S' => ['A', 'B'],
+            'Terminale L' => ['A', 'B'],
+            'Terminale G' => ['A', 'B'],
         ];
 
         $created = 0;
@@ -73,31 +78,31 @@ class DefaultClassesSeeder extends Seeder
                             'name' => $className,
                             'level_id' => $level->id,
                             'academic_year_id' => $currentYear->id,
-                            'room_number' => 'Salle ' . rand(1, 30),
-                            'capacity' => rand(20, 35)
+                            'capacity' => rand(25, 40)
                         ]);
                         
                         $created++;
                     }
                 }
             } else {
-                // Pour les niveaux non définis, créer une seule classe
-                $className = $levelName . ' A';
-                
-                $existingClass = SchoolClass::where('name', $className)
-                    ->where('academic_year_id', $currentYear->id)
-                    ->exists();
-                
-                if (!$existingClass) {
-                    SchoolClass::create([
-                        'name' => $className,
-                        'level_id' => $level->id,
-                        'academic_year_id' => $currentYear->id,
-                        'room_number' => 'Salle ' . rand(1, 30),
-                        'capacity' => rand(20, 35)
-                    ]);
+                // Pour les niveaux non définis, créer les classes A et B
+                foreach (['A', 'B'] as $classSuffix) {
+                    $className = $levelName . ' ' . $classSuffix;
                     
-                    $created++;
+                    $existingClass = SchoolClass::where('name', $className)
+                        ->where('academic_year_id', $currentYear->id)
+                        ->exists();
+                    
+                    if (!$existingClass) {
+                        SchoolClass::create([
+                            'name' => $className,
+                            'level_id' => $level->id,
+                            'academic_year_id' => $currentYear->id,
+                            'capacity' => rand(25, 40)
+                        ]);
+                        
+                        $created++;
+                    }
                 }
             }
         }

@@ -176,9 +176,9 @@
                                                 <form action="{{ route('admin.registrations.approve', $user) }}" method="POST">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <div class="modal-header">
+                                                    <div class="modal-header bg-success text-white">
                                                         <h5 class="modal-title" id="approveModalLabel">Affecter à une classe</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>
                                                     <div class="modal-body">
                                                         <p>Veuillez sélectionner la classe pour <strong>{{ $user->name }}</strong> :</p>
@@ -211,15 +211,43 @@
                                     <form action="{{ route('admin.registrations.reject', $user) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
-                                        <button type="submit" 
+                                        <button type="button" 
                                                 class="btn btn-sm btn-outline-danger" 
-                                                data-bs-toggle="tooltip" 
-                                                title="Rejeter l'inscription"
-                                                onclick="return confirm('Êtes-vous sûr de vouloir rejeter cette inscription ?')">
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#rejectModal{{ $user->id }}"
+                                                title="Rejeter l'inscription">
                                             <i class="fas fa-times me-1"></i>
                                             <span class="d-none d-md-inline">Rejeter</span>
                                         </button>
                                     </form>
+                                    
+                                    <!-- Modal de rejet -->
+                                    <div class="modal fade" id="rejectModal{{ $user->id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title">
+                                                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmer le rejet
+                                                    </h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>Êtes-vous sûr de vouloir rejeter l'inscription de <strong>{{ $user->name }}</strong> ?</p>
+                                                    <p class="text-danger"><i class="fas fa-warning me-1"></i>Cette action est irréversible.</p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                    <form action="{{ route('admin.registrations.reject', $user) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-times me-1"></i>Rejeter
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>

@@ -222,12 +222,9 @@
                 <li><a class="dropdown-item text-dark" href="#">Profil</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="dropdown-item text-dark">
-                            <i class="fas fa-sign-out-alt me-2"></i> Déconnexion
-                        </button>
-                    </form>
+                    <a href="{{ route('logout.get') }}" class="dropdown-item text-dark">
+                        <i class="fas fa-sign-out-alt me-2"></i> Déconnexion
+                    </a>
                 </li>
             </ul>
         </div>

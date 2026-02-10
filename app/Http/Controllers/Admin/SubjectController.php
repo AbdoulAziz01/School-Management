@@ -1,0 +1,176 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Subject;
+use App\Models\Level;
+use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
+class SubjectController extends Controller
+{
+    use AuthorizesRequests;
+    
+    /**
+     * Affiche la liste des matières
+     */
+    public function index(Request $request)
+    {
+        $query = Subject::with('teacherAssignments');
+        
+        // Recherche par nom ou code
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+        
+        // Filtre par statut
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->status === 'active');
+        }
+        
+        $subjects = $query->orderBy('name')->paginate(15);
+
+        return view('admin.subjects.index', compact('subjects'));
+    }
+
+    /**
+     * Affiche le formulaire de création d'une matière
+     */
+    public function create()
+    {
+        $levels = Level::orderBy('name')->get();
+        return view('admin.subjects.create', compact('levels'));
+    }
+
+    /**
+     * Enregistre une nouvelle matière
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:20', 'unique:subjects'],
+            'coefficient' => ['required', 'numeric', 'min:0.5', 'max:10'],
+            'description' => ['nullable', 'string'],
+            'hours_per_week' => ['nullable', 'numeric', 'min:0'],
+            'is_core_subject' => ['boolean'],
+            'is_active' => ['boolean'],
+            'levels' => ['nullable', 'array'],
+            'levels.*' => ['exists:levels,id'],
+        ]);
+
+        try {
+            $subject = Subject::create([
+                'name' => $validated['name'],
+                'code' => strtoupper($validated['code']),
+                'coefficient' => $validated['coefficient'],
+                'description' => $validated['description'] ?? null,
+                'hours_per_week' => $validated['hours_per_week'] ?? 0,
+                'is_core_subject' => $request->boolean('is_core_subject'),
+                'is_active' => $request->boolean('is_active', true),
+                'created_by' => auth()->id(),
+            ]);
+            
+            // Associer aux niveaux si spécifiés
+            if (!empty($validated['levels'])) {
+                $subject->levels()->attach($validated['levels']);
+            }
+
+            return redirect()
+                ->route('admin.subjects.index')
+                ->with('success', 'La matière a été créée avec succès.');
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Une erreur est survenue lors de la création de la matière.');
+        }
+    }
+
+    /**
+     * Affiche les détails d'une matière
+     */
+    public function show(Subject $subject)
+    {
+        $subject->load(['levels', 'teacherAssignments.teacher', 'teacherAssignments.schoolClass']);
+        return view('admin.subjects.show', compact('subject'));
+    }
+
+    /**
+     * Affiche le formulaire d'édition d'une matière
+     */
+    public function edit(Subject $subject)
+    {
+        $levels = Level::orderBy('name')->get();
+        $subject->load('levels');
+        return view('admin.subjects.edit', compact('subject', 'levels'));
+    }
+
+    /**
+     * Met à jour une matière
+     */
+    public function update(Request $request, Subject $subject)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:20', 'unique:subjects,code,' . $subject->id],
+            'coefficient' => ['required', 'numeric', 'min:0.5', 'max:10'],
+            'description' => ['nullable', 'string'],
+            'hours_per_week' => ['nullable', 'numeric', 'min:0'],
+            'is_core_subject' => ['boolean'],
+            'is_active' => ['boolean'],
+            'levels' => ['nullable', 'array'],
+            'levels.*' => ['exists:levels,id'],
+        ]);
+
+        try {
+            $subject->update([
+                'name' => $validated['name'],
+                'code' => strtoupper($validated['code']),
+                'coefficient' => $validated['coefficient'],
+                'description' => $validated['description'] ?? null,
+                'hours_per_week' => $validated['hours_per_week'] ?? 0,
+                'is_core_subject' => $request->boolean('is_core_subject'),
+                'is_active' => $request->boolean('is_active', true),
+                'updated_by' => auth()->id(),
+            ]);
+            
+            // Synchroniser les niveaux
+            $subject->levels()->sync($validated['levels'] ?? []);
+
+            return redirect()
+                ->route('admin.subjects.index')
+                ->with('success', 'La matière a été mise à jour avec succès.');
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Une erreur est survenue lors de la mise à jour de la matière.');
+        }
+    }
+
+    /**
+     * Supprime une matière
+     */
+    public function destroy(Subject $subject)
+    {
+        try {
+            // Vérifier si la matière est utilisée
+            if ($subject->teacherAssignments()->exists()) {
+                return back()->with('error', 'Cette matière ne peut pas être supprimée car elle est affectée à des enseignants.');
+            }
+            
+            $subject->levels()->detach();
+            $subject->delete();
+
+            return redirect()
+                ->route('admin.subjects.index')
+                ->with('success', 'La matière a été supprimée avec succès.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Une erreur est survenue lors de la suppression de la matière.');
+        }
+    }
+}

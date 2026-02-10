@@ -5,13 +5,13 @@
 <div class="flex-wrap pt-3 pb-2 mb-3 d-flex justify-content-between flex-md-nowrap align-items-center border-bottom">
     <h1 class="h2">Détails de l'année scolaire</h1>
     <div class="mb-2 btn-toolbar mb-md-0">
-        <a href="{{ route('academic-years.index') }}" class="btn btn-sm btn-outline-secondary me-2">
+        <a href="{{ route('admin.academic-years.index') }}" class="btn btn-sm btn-outline-secondary me-2">
             <i class="fas fa-arrow-left me-1"></i> Retour à la liste
         </a>
-        <a href="{{ route('academic-years.edit', $academicYear) }}" class="btn btn-sm btn-outline-primary me-2">
+        <a href="{{ route('admin.academic-years.edit', $academicYear) }}" class="btn btn-sm btn-outline-primary me-2">
             <i class="fas fa-edit me-1"></i> Modifier
         </a>
-        <form action="{{ route('academic-years.destroy', $academicYear) }}" method="POST" class="d-inline">
+        <form action="{{ route('admin.academic-years.destroy', $academicYear) }}" method="POST" class="d-inline">
             @csrf
             @method('DELETE')
             <button type="submit" class="btn btn-sm btn-outline-danger" 
@@ -47,7 +47,7 @@
                             @if($academicYear->is_current)
                                 <span class="badge bg-success">Année en cours</span>
                             @else
-                                <form action="{{ route('academic-years.set-current', $academicYear) }}" method="POST" class="d-inline">
+                                <form action="{{ route('admin.academic-years.set-current', $academicYear) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-sm btn-outline-secondary">
@@ -80,14 +80,26 @@
                 <div class="text-center row">
                     <div class="mb-3 col-6">
                         <div class="p-3 border rounded bg-light">
-                            <h3 class="mb-1">{{ $academicYear->classes_count ?? 0 }}</h3>
+                            <h3 class="mb-1">{{ $academicYear->classes_count }}</h3>
                             <small class="text-muted">Classes</small>
                         </div>
                     </div>
                     <div class="mb-3 col-6">
                         <div class="p-3 border rounded bg-light">
-                            <h3 class="mb-1">{{ $academicYear->teacher_assignments_count ?? 0 }}</h3>
-                            <small class="text-muted">Affectations de professeurs</small>
+                            <h3 class="mb-1">{{ $academicYear->students_count ?? 0 }}</h3>
+                            <small class="text-muted">Élèves inscrits</small>
+                        </div>
+                    </div>
+                    <div class="mb-3 col-6">
+                        <div class="p-3 border rounded bg-light">
+                            <h3 class="mb-1">{{ $academicYear->unique_teachers_count ?? 0 }}</h3>
+                            <small class="text-muted">Professeurs affectés</small>
+                        </div>
+                    </div>
+                    <div class="mb-3 col-6">
+                        <div class="p-3 border rounded bg-light">
+                            <h3 class="mb-1">{{ $academicYear->teacher_assignments_count }}</h3>
+                            <small class="text-muted">Affectations totales</small>
                         </div>
                     </div>
                 </div>
@@ -100,7 +112,7 @@
 <div class="mb-4 card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Classes de cette année scolaire</h5>
-        <a href="{{ route('classes.create', ['academic_year_id' => $academicYear->id]) }}" 
+        <a href="{{ route('admin.classes.create', ['academic_year_id' => $academicYear->id]) }}" 
            class="btn btn-sm btn-primary">
             <i class="fas fa-plus me-1"></i> Ajouter une classe
         </a>
@@ -129,11 +141,11 @@
                                 <td>{{ $class->students_count ?? 0 }} élève(s)</td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('classes.show', $class) }}" 
+                                        <a href="{{ route('admin.classes.show', $class) }}" 
                                            class="btn btn-outline-primary" title="Voir">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('classes.edit', $class) }}" 
+                                        <a href="{{ route('admin.classes.edit', $class) }}" 
                                            class="btn btn-outline-secondary" title="Modifier">
                                             <i class="fas fa-edit"></i>
                                         </a>

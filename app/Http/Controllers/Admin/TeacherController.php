@@ -16,11 +16,26 @@ class TeacherController extends Controller
     /**
      * Affiche la liste des enseignants
      */
-    public function index()
+    public function index(Request $request)
     {
-        $teachers = User::where('role', User::ROLE_TEACHER)
-            ->orderBy('name')
-            ->paginate(15);
+        $query = User::where('role', User::ROLE_TEACHER);
+        
+        // Recherche par nom, email ou identifiant
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('identifier', 'like', "%{$search}%");
+            });
+        }
+        
+        // Filtre par statut
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        
+        $teachers = $query->orderBy('name')->paginate(15);
 
         return view('admin.teachers.index', compact('teachers'));
     }
@@ -77,7 +92,9 @@ class TeacherController extends Controller
      */
     public function show($id)
     {
-        $teacher = User::where('role', 'teacher')->findOrFail($id);
+        $teacher = User::where('role', 'teacher')
+            ->with(['assignedClasses.level', 'assignedClasses.academicYear', 'assignedClasses.students', 'subjects'])
+            ->findOrFail($id);
         return view('admin.teachers.show', compact('teacher'));
     }
 
@@ -86,7 +103,10 @@ class TeacherController extends Controller
      */
     public function edit(User $teacher)
     {
-        $this->authorize('update', $teacher);
+        // Vérification simple du rôle admin
+        if (auth()->user()->role !== 'admin') {
+            abort(403, 'Accès non autorisé.');
+        }
         
         return view('admin.teachers.edit', compact('teacher'));
     }
@@ -96,7 +116,10 @@ class TeacherController extends Controller
      */
     public function update(Request $request, User $teacher)
     {
-        $this->authorize('update', $teacher);
+        // Vérification simple du rôle admin
+        if (auth()->user()->role !== 'admin') {
+            abort(403, 'Accès non autorisé.');
+        }
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -152,7 +175,10 @@ class TeacherController extends Controller
      */
     public function destroy(User $teacher)
     {
-        $this->authorize('delete', $teacher);
+        // Vérification simple du rôle admin
+        if (auth()->user()->role !== 'admin') {
+            abort(403, 'Accès non autorisé.');
+        }
 
         try {
             // Vérifier si l'enseignant a des affectations

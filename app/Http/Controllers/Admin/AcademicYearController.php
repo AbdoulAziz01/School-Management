@@ -51,7 +51,7 @@ class AcademicYearController extends Controller
             DB::commit();
             
             return redirect()
-                ->route('academic-years.index')
+                ->route('admin.academic-years.index')
                 ->with('success', 'Année scolaire créée avec succès.');
                 
         } catch (\Exception $e) {
@@ -67,7 +67,26 @@ class AcademicYearController extends Controller
      */
     public function show(AcademicYear $academicYear)
     {
-        $academicYear->load(['classes', 'teacherAssignments.teacher', 'teacherAssignments.subject']);
+        $academicYear->load([
+            'classes.level',
+            'classes.students',
+            'teacherAssignments.teacher', 
+            'teacherAssignments.subject', 
+            'teacherAssignments.schoolClass'
+        ]);
+        
+        // Calculate real statistics
+        $academicYear->classes_count = $academicYear->classes->count();
+        $academicYear->teacher_assignments_count = $academicYear->teacherAssignments->count();
+        $academicYear->students_count = $academicYear->classes->sum(function($class) {
+            return $class->students->count();
+        });
+        $academicYear->unique_teachers_count = $academicYear->teacherAssignments->unique('teacher_id')->count();
+        
+        // Add students_count to each class for display
+        foreach ($academicYear->classes as $class) {
+            $class->students_count = $class->students->count();
+        }
         
         return view('admin.academic-years.show', compact('academicYear'));
     }
@@ -107,7 +126,7 @@ class AcademicYearController extends Controller
             DB::commit();
             
             return redirect()
-                ->route('academic-years.index')
+                ->route('admin.academic-years.index')
                 ->with('success', 'Année scolaire mise à jour avec succès.');
                 
         } catch (\Exception $e) {
@@ -138,7 +157,7 @@ class AcademicYearController extends Controller
         try {
             $academicYear->delete();
             return redirect()
-                ->route('academic-years.index')
+                ->route('admin.academic-years.index')
                 ->with('success', 'Année scolaire supprimée avec succès.');
                 
         } catch (\Exception $e) {

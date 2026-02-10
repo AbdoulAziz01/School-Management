@@ -3969,3 +3969,5 @@ Vérifier les logs (`storage/logs/
 - [ ] Gestion des notes et évaluations
 - [ ] Messagerie interne
 - [ ] Tableaux de bord personnalisés
+
+password123)

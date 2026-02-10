@@ -40,6 +40,7 @@
                                         <th>Niveau</th>
                                         <th>Année scolaire</th>
                                         <th class="text-nowrap">Effectif</th>
+                                        <th>Professeurs affectés</th>
                                         <th class="text-nowrap text-end">Actions</th>
                                     </tr>
                                 </thead>
@@ -60,6 +61,23 @@
                                                     {{ $class->students_count }} élève(s)
                                                 </span>
                                             </td>
+                                            <td>
+                                                @if($class->teachers->count() > 0)
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        @foreach($class->teachers->take(3) as $teacher)
+                                                            <span class="badge bg-info" title="{{ $teacher->name }}{{ $teacher->subjects->isNotEmpty() ? ' - ' . $teacher->subjects->pluck('name')->join(', ') : '' }}">
+                                                                {{ Str::limit($teacher->name, 12) }}
+                                                            </span>
+                                                        @endforeach
+                                                        @if($class->teachers->count() > 3)
+                                                            <span class="badge bg-secondary">+{{ $class->teachers->count() - 3 }}</span>
+                                                        @endif
+                                                    </div>
+                                                    <small class="text-muted">{{ $class->teachers->count() }} professeur(s)</small>
+                                                @else
+                                                    <span class="text-muted small">Aucun</span>
+                                                @endif
+                                            </td>
                                             <td class="text-nowrap text-end">
                                                 <div class="btn-group btn-group-sm">
                                                     <a href="{{ route('admin.classes.show', $class) }}" 
@@ -74,20 +92,42 @@
                                                        data-bs-toggle="tooltip">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    <form action="{{ route('admin.classes.destroy', $class) }}" 
-                                                          method="POST" 
-                                                          class="d-inline"
-                                                          onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" 
-                                                                class="btn btn-sm btn-outline-danger" 
-                                                                title="{{ $class->students_count > 0 ? 'Impossible de supprimer - classe non vide' : 'Supprimer' }}"
-                                                                {{ $class->students_count > 0 ? 'disabled' : '' }}
-                                                                data-bs-toggle="tooltip">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-danger" 
+                                                            title="{{ $class->students_count > 0 ? 'Impossible de supprimer - classe non vide' : 'Supprimer' }}"
+                                                            {{ $class->students_count > 0 ? 'disabled' : '' }}
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#deleteModal{{ $class->id }}">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Modal de confirmation de suppression -->
+                                                <div class="modal fade" id="deleteModal{{ $class->id }}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header bg-danger text-white">
+                                                                <h5 class="modal-title">
+                                                                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                                                                </h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body text-start">
+                                                                <p>Êtes-vous sûr de vouloir supprimer la classe <strong>{{ $class->name }}</strong> ?</p>
+                                                                <p class="text-danger"><i class="fas fa-warning me-1"></i>Cette action est irréversible.</p>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                                <form action="{{ route('admin.classes.destroy', $class) }}" method="POST" class="d-inline">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit" class="btn btn-danger">
+                                                                        <i class="fas fa-trash me-1"></i>Supprimer
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>

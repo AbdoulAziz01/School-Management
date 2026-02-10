@@ -89,13 +89,27 @@
                                     name="desired_class"
                                     {{ old('role') == 'eleve' ? 'required' : '' }}>
                                 <option value="">-- Choisir une classe --</option>
-                                <option value="6e" {{ old('desired_class') == '6e' ? 'selected' : '' }}>6ème</option>
-                                <option value="5e" {{ old('desired_class') == '5e' ? 'selected' : '' }}>5ème</option>
-                                <option value="4e" {{ old('desired_class') == '4e' ? 'selected' : '' }}>4ème</option>
-                                <option value="3e" {{ old('desired_class') == '3e' ? 'selected' : '' }}>3ème</option>
-                                <option value="Seconde" {{ old('desired_class') == 'Seconde' ? 'selected' : '' }}>Seconde</option>
-                                <option value="Première" {{ old('desired_class') == 'Première' ? 'selected' : '' }}>Première</option>
-                                <option value="Terminale" {{ old('desired_class') == 'Terminale' ? 'selected' : '' }}>Terminale</option>
+                                <optgroup label="Collège">
+                                    <option value="6e" {{ old('desired_class') == '6e' ? 'selected' : '' }}>6ème</option>
+                                    <option value="5e" {{ old('desired_class') == '5e' ? 'selected' : '' }}>5ème</option>
+                                    <option value="4e" {{ old('desired_class') == '4e' ? 'selected' : '' }}>4ème</option>
+                                    <option value="3e" {{ old('desired_class') == '3e' ? 'selected' : '' }}>3ème</option>
+                                </optgroup>
+                                <optgroup label="Seconde">
+                                    <option value="2e S" {{ old('desired_class') == '2e S' ? 'selected' : '' }}>2nde S (Scientifique)</option>
+                                    <option value="2e L" {{ old('desired_class') == '2e L' ? 'selected' : '' }}>2nde L (Littéraire)</option>
+                                    <option value="2e G" {{ old('desired_class') == '2e G' ? 'selected' : '' }}>2nde G (Générale)</option>
+                                </optgroup>
+                                <optgroup label="Première">
+                                    <option value="1re S" {{ old('desired_class') == '1re S' ? 'selected' : '' }}>1ère S (Scientifique)</option>
+                                    <option value="1re L" {{ old('desired_class') == '1re L' ? 'selected' : '' }}>1ère L (Littéraire)</option>
+                                    <option value="1re G" {{ old('desired_class') == '1re G' ? 'selected' : '' }}>1ère G (Générale)</option>
+                                </optgroup>
+                                <optgroup label="Terminale">
+                                    <option value="Terminale S" {{ old('desired_class') == 'Terminale S' ? 'selected' : '' }}>Terminale S (Scientifique)</option>
+                                    <option value="Terminale L" {{ old('desired_class') == 'Terminale L' ? 'selected' : '' }}>Terminale L (Littéraire)</option>
+                                    <option value="Terminale G" {{ old('desired_class') == 'Terminale G' ? 'selected' : '' }}>Terminale G (Générale)</option>
+                                </optgroup>
                             </select>
                             @error('desired_class')
                                 <div class="invalid-feedback">{{ $message }}</div>

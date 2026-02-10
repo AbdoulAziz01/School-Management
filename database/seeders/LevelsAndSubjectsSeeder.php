@@ -23,11 +23,17 @@ class LevelsAndSubjectsSeeder extends Seeder
             ['name' => '3ème', 'order' => 4, 'cycle' => 'college'],
         ];
 
-        // Niveaux du lycée
+        // Niveaux du lycée - avec spécialisations S, L, G
         $lyceeLevels = [
-            ['name' => 'Seconde', 'order' => 5, 'cycle' => 'lycee'],
-            ['name' => 'Première', 'order' => 6, 'cycle' => 'lycee'],
-            ['name' => 'Terminale', 'order' => 7, 'cycle' => 'lycee'],
+            ['name' => '2nde S', 'order' => 5, 'cycle' => 'lycee'],
+            ['name' => '2nde L', 'order' => 6, 'cycle' => 'lycee'],
+            ['name' => '2nde G', 'order' => 7, 'cycle' => 'lycee'],
+            ['name' => '1ère S', 'order' => 8, 'cycle' => 'lycee'],
+            ['name' => '1ère L', 'order' => 9, 'cycle' => 'lycee'],
+            ['name' => '1ère G', 'order' => 10, 'cycle' => 'lycee'],
+            ['name' => 'Terminale S', 'order' => 11, 'cycle' => 'lycee'],
+            ['name' => 'Terminale L', 'order' => 12, 'cycle' => 'lycee'],
+            ['name' => 'Terminale G', 'order' => 13, 'cycle' => 'lycee'],
         ];
 
         // Matières communes avec leurs codes

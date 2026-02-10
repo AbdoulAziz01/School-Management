@@ -60,15 +60,39 @@
                                     <a href="{{ route('admin.academic-years.edit', $year) }}" class="btn btn-outline-secondary" title="Modifier">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form action="{{ route('admin.academic-years.destroy', $year) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-outline-danger" 
-                                                onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette année scolaire ?')"
-                                                title="Supprimer">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-outline-danger" title="Supprimer"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteYearModal{{ $year->id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Modal de confirmation de suppression -->
+                                <div class="modal fade" id="deleteYearModal{{ $year->id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title">
+                                                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                <p>Êtes-vous sûr de vouloir supprimer l'année scolaire <strong>{{ $year->name }}</strong> ?</p>
+                                                <p class="text-danger"><i class="fas fa-warning me-1"></i>Cette action est irréversible.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                <form action="{{ route('admin.academic-years.destroy', $year) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger">
+                                                        <i class="fas fa-trash me-1"></i>Supprimer
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>

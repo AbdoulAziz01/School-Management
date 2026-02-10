@@ -76,66 +76,16 @@
         </div>
     @endif
 
-    <!-- Élèves non affectés -->
-    <div class="mb-4 shadow-sm card">
-        <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0">
-                <i class="fas fa-user-clock"></i> Élèves non affectés
-                <span class="badge bg-dark float-end">{{ $unassignedStudents->count() }}</span>
-            </h5>
-        </div>
-        <div class="card-body">
-            @if($unassignedStudents->isEmpty())
-                <div class="py-5 text-center text-muted">
-                    <i class="mb-3 fas fa-user-check fa-4x text-success"></i>
-                    <p class="h5">Tous les élèves sont affectés à une classe</p>
-                    <p class="text-muted">Aucune affectation en attente</p>
-                </div>
-            @else
-                <div class="table-responsive">
-                    <table class="table align-middle table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="12%">Identifiant</th>
-                                <th width="25%">Nom complet</th>
-                                <th width="25%">Email</th>
-                                <th width="25%">Classe</th>
-                                <th width="13%" class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($unassignedStudents as $student)
-                            <tr>
-                                <td><strong class="text-primary">{{ $student->identifier }}</strong></td>
-                                <td>{{ $student->name }}</td>
-                                <td><small>{{ $student->email }}</small></td>
-                                <td>
-                                    <form action="{{ route('admin.students.assign.store') }}" method="POST" class="assign-form">
-                                        @csrf
-                                        <input type="hidden" name="student_id" value="{{ $student->id }}">
-                                        <select name="class_id" class="form-select form-select-sm class-select" required>
-                                            <option value="">Sélectionner une classe</option>
-                                            @foreach($classes as $class)
-                                                <option value="{{ $class->id }}">
-                                                    {{ $class->name }} - {{ $class->level->name ?? 'N/A' }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </form>
-                                </td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-primary btn-sm btn-assign" data-student-id="{{ $student->id }}">
-                                        <i class="fas fa-user-plus"></i> Affecter
-                                    </button>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </div>
-    </div>
+    {{--
+    Section commentée car la variable $unassignedStudents n'est pas définie
+    Cette section affichait la liste des élèves non affectés à une classe
+    Pour la réactiver, il faudrait :
+    1. Récupérer les élèves non affectés dans ClassController@show
+    2. Passer cette variable à la vue
+    3. Décommenter cette section
+    --}}
+    
+    <!-- Enseignants affectés -->
 
     <!-- Enseignants affectés -->
     <div class="mb-4 shadow-sm card">

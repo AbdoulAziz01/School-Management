@@ -18,7 +18,7 @@ class ClassController extends Controller
      */
     public function index()
     {
-        $classes = SchoolClass::with(['academicYear', 'level', 'students'])
+        $classes = SchoolClass::with(['academicYear', 'level', 'students', 'teachers.subjects'])
             ->withCount('students')
             ->orderBy('academic_year_id', 'desc')
             ->orderBy('name')
@@ -76,7 +76,7 @@ class ClassController extends Controller
             DB::commit();
             
             return redirect()
-                ->route('classes.show', $class)
+                ->route('admin.classes.show', $class)
                 ->with('success', 'La classe a été créée avec succès.');
                 
         } catch (\Exception $e) {
@@ -113,7 +113,10 @@ class ClassController extends Controller
         // Récupérer les matières disponibles
         $subjects = \App\Models\Subject::orderBy('name')->get();
         
-        return view('admin.classes.show', compact('class', 'availableTeachers', 'subjects'));
+        // Récupérer les étudiants déjà affectés à cette classe
+        $assignedStudents = $class->students()->paginate(10);
+        
+        return view('admin.classes.show', compact('class', 'availableTeachers', 'subjects', 'assignedStudents'));
     }
 
     /**
@@ -157,7 +160,7 @@ class ClassController extends Controller
             $class->update($validated);
             
             return redirect()
-                ->route('classes.show', $class)
+                ->route('admin.classes.show', $class)
                 ->with('success', 'La classe a été mise à jour avec succès.');
                 
         } catch (\Exception $e) {
@@ -190,7 +193,7 @@ class ClassController extends Controller
             DB::commit();
             
             return redirect()
-                ->route('academic-years.show', $class->academic_year_id)
+                ->route('admin.academic-years.show', $class->academic_year_id)
                 ->with('success', 'La classe a été supprimée avec succès.');
                 
         } catch (\Exception $e) {

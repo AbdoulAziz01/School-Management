@@ -36,10 +36,21 @@ class StudentController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            // Récupérer toutes les classes avec leurs relations
+            // Récupérer toutes les classes avec leurs relations et le nombre d'élèves
             $classes = SchoolClass::with(['level', 'academicYear'])
+                ->withCount(['students' => function($query) {
+                    $query->whereIn('role', ['student', 'eleve']);
+                }])
                 ->orderBy('name')
                 ->get();
+
+            // Grouper les étudiants par classe pour l'onglet "Par classe"
+            $studentsByClass = User::with(['class', 'class.level'])
+                ->whereIn('role', ['student', 'eleve'])
+                ->whereNotNull('class_id')
+                ->orderBy('name')
+                ->get()
+                ->groupBy('class_id');
 
             // Si c'est une requête AJAX, on retourne uniquement le contenu de l'onglet
             if (request()->ajax()) {
@@ -66,7 +77,8 @@ class StudentController extends Controller
                 'students' => $students,
                 'unassignedStudents' => $unassignedStudents,
                 'classes' => $classes,
-                'active_tab' => 'list'
+                'studentsByClass' => $studentsByClass,
+                'active_tab' => request('tab', 'list')
             ]);
 
         } catch (\Exception $e) {
@@ -478,16 +490,60 @@ public function pending()
             abort(404, 'Utilisateur non trouvé ou n\'est pas un étudiant');
         }
 
-        // Charger uniquement les relations existantes et nécessaires
+        // Charger les relations
         $student->load([
             'class', 
             'class.academicYear', 
-            'class.level'
+            'class.level',
+            'grades',
+            'grades.subject'
         ]);
+
+        // Récupérer les notes groupées par matière
+        $gradesBySubject = $student->grades->groupBy('subject.name')->map(function ($subjectGrades) {
+            $avg = $subjectGrades->avg('grade');
+            return [
+                'subject' => $subjectGrades->first()->subject->name ?? 'Inconnu',
+                'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,
+                'grades' => $subjectGrades->sortByDesc('date'),
+                'average' => round($avg, 2),
+                'count' => $subjectGrades->count()
+            ];
+        });
+
+        // Calculer la moyenne générale pondérée
+        $totalCoef = $gradesBySubject->sum('coefficient');
+        $weightedSum = $gradesBySubject->sum(fn($g) => $g['average'] * $g['coefficient']);
+        $generalAverage = $totalCoef > 0 ? round($weightedSum / $totalCoef, 2) : 0;
+
+        // Récupérer les absences
+        $attendances = \App\Models\Attendance::where('user_id', $student->id)
+            ->with(['subject', 'teacher'])
+            ->orderByDesc('date')
+            ->get();
+
+        // Statistiques d'absences
+        $attendanceStats = [
+            'total' => $attendances->count(),
+            'present' => $attendances->where('status', 'present')->count(),
+            'absent' => $attendances->where('status', 'absent')->count(),
+            'late' => $attendances->where('status', 'late')->count(),
+            'excused' => $attendances->where('status', 'excused')->count(),
+            'justified' => $attendances->where('justified', true)->count(),
+        ];
+
+        // Taux de présence
+        $attendanceStats['presence_rate'] = $attendanceStats['total'] > 0 
+            ? round(($attendanceStats['present'] / $attendanceStats['total']) * 100, 1) 
+            : 100;
 
         return view('admin.students.show', [
             'student' => $student,
-            'schoolClass' => $student->class // Alias pour la compatibilité avec la vue
+            'schoolClass' => $student->class,
+            'gradesBySubject' => $gradesBySubject,
+            'generalAverage' => $generalAverage,
+            'attendances' => $attendances,
+            'attendanceStats' => $attendanceStats
         ]);
     }
 }

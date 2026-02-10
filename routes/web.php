@@ -4,40 +4,23 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\StudentController;
-use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
+use App\Http\Controllers\Student\StudentDashboardController;
+use App\Http\Controllers\Student\StudentProfileController;
+use App\Http\Controllers\Student\StudentGradesController;
+use App\Http\Controllers\Student\StudentScheduleController;
+use App\Http\Controllers\Student\StudentAttendanceController;
 use App\Http\Controllers\Admin\StudentAssignmentController;
 use App\Http\Controllers\Admin\PendingRegistrationController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\TeacherClassController;
-
-// Route de débogage temporaire
-Route::get('/debug/student', function() {
-    $user = Auth::user();
-    
-    if (!$user) {
-        return 'Aucun utilisateur connecté. <a href="'.route('login').'">Se connecter</a>';
-    }
-    
-    return [
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'role' => $user->role,
-            'is_authenticated' => Auth::check(),
-            'is_admin' => $user->role === 'admin',
-            'is_student' => $user->role === 'eleve'
-        ],
-        'session' => session()->all(),
-        'routes' => [
-            'login' => route('login'),
-            'student_dashboard' => route('student.dashboard'),
-            'admin_dashboard' => route('admin.dashboard')
-        ]
-    ];
-});
+use App\Http\Controllers\Teacher\TeacherDashboardController;
+use App\Http\Controllers\Teacher\TeacherClassesController;
+use App\Http\Controllers\Teacher\TeacherGradesController;
+use App\Http\Controllers\Teacher\TeacherAttendanceController;
+use App\Http\Controllers\Teacher\TeacherScheduleController;
+use App\Http\Controllers\Teacher\TeacherProfileController;
 
 // Page d'accueil
 Route::get('/', function () {
@@ -54,41 +37,96 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Tableau de bord étudiant
-    Route::middleware('role:eleve')->group(function () {
-        Route::get('/student/dashboard', [StudentDashboardController::class, 'index'])->name('student.dashboard');
-    });
-    
-    // Tableau de bord professeur
-    Route::middleware('role:professeur')->group(function () {
-        Route::get('/teacher/dashboard', function () {
-            return view('teacher.dashboard');
-        })->name('teacher.dashboard');
-    });
-    
-    // Gestion du profil utilisateur
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
     // Redirection vers le tableau de bord approprié selon le rôle
     Route::get('/dashboard', function () {
         if (auth()->user()->role === 'admin') {
             return redirect()->route('admin.dashboard');
         } elseif (auth()->user()->role === 'eleve') {
             return redirect()->route('student.dashboard');
+        } elseif (in_array(auth()->user()->role, ['professeur', 'teacher'])) {
+            return redirect()->route('teacher.dashboard');
         }
         return redirect()->route('home');
     })->name('dashboard');
 });
 
-// Routes étudiant
-Route::prefix('student')->middleware(['auth', 'role:eleve'])->group(function () {
-    Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('student.dashboard');
-    Route::get('/timetable', [StudentTimetableController::class, 'index'])->name('student.timetable');
-    Route::get('/assignments', [StudentAssignmentController::class, 'index'])->name('student.assignments');
-    Route::get('/grades', [StudentGradeController::class, 'index'])->name('student.grades');
-    Route::get('/attendance', [StudentAttendanceController::class, 'index'])->name('student.attendance');
+// Groupe de routes pour les étudiants
+Route::middleware(['auth', \App\Http\Middleware\StudentMiddleware::class])->prefix('student')->name('student.')->group(function () {
+    // Tableau de bord
+    Route::get('/dashboard', [StudentDashboardController::class, 'dashboard'])->name('dashboard');
+    
+    // Notes
+    Route::get('/grades', [StudentGradesController::class, 'index'])->name('grades');
+    
+    // Bulletin scolaire
+    Route::get('/bulletin', [StudentGradesController::class, 'bulletin'])->name('bulletin');
+    
+    // Emploi du temps
+    Route::get('/schedule', [StudentScheduleController::class, 'index'])->name('schedule');
+    
+    // Absences/Présences
+    Route::get('/attendance', [StudentAttendanceController::class, 'index'])->name('attendance');
+    
+    // Profil - Routes groupées
+    Route::prefix('profile')->name('profile.')->group(function () {
+        // Afficher le profil
+        Route::get('/', [StudentProfileController::class, 'index'])->name('index');
+        
+        // Édition du profil
+        Route::get('/edit', [StudentProfileController::class, 'edit'])->name('edit');
+        Route::put('/', [StudentProfileController::class, 'update'])->name('update');
+        
+        // Mise à jour de la photo de profil
+        Route::post('/photo', [StudentProfileController::class, 'updatePhoto'])->name('update-photo');
+        
+        // Mise à jour du mot de passe
+        Route::post('/password', [StudentProfileController::class, 'updatePassword'])->name('update-password');
+    });
+    
+    // Redirection de /student vers /student/dashboard
+    Route::get('/', function () {
+        return redirect()->route('student.dashboard');
+    });
+});
+
+// Routes pour les enseignants
+Route::middleware(['auth', \App\Http\Middleware\TeacherMiddleware::class])->prefix('teacher')->name('teacher.')->group(function () {
+    // Tableau de bord
+    Route::get('/dashboard', [TeacherDashboardController::class, 'index'])->name('dashboard');
+    
+    // Mes classes
+    Route::get('/classes', [TeacherClassesController::class, 'index'])->name('classes.index');
+    Route::get('/classes/{id}', [TeacherClassesController::class, 'show'])->name('classes.show');
+    
+    // Gestion des notes
+    Route::get('/grades', [TeacherGradesController::class, 'index'])->name('grades.index');
+    Route::get('/grades/create', [TeacherGradesController::class, 'create'])->name('grades.create');
+    Route::post('/grades', [TeacherGradesController::class, 'store'])->name('grades.store');
+    Route::get('/grades/{id}/edit', [TeacherGradesController::class, 'edit'])->name('grades.edit');
+    Route::put('/grades/{id}', [TeacherGradesController::class, 'update'])->name('grades.update');
+    Route::delete('/grades/{id}', [TeacherGradesController::class, 'destroy'])->name('grades.destroy');
+    
+    // Gestion des présences
+    Route::get('/attendance', [TeacherAttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('/attendance', [TeacherAttendanceController::class, 'store'])->name('attendance.store');
+    Route::get('/attendance/student/{studentId}', [TeacherAttendanceController::class, 'studentHistory'])->name('attendance.student-history');
+    
+    // Emploi du temps
+    Route::get('/schedule', [TeacherScheduleController::class, 'index'])->name('schedule');
+    
+    // Profil enseignant
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [TeacherProfileController::class, 'index'])->name('index');
+        Route::get('/edit', [TeacherProfileController::class, 'edit'])->name('edit');
+        Route::put('/', [TeacherProfileController::class, 'update'])->name('update');
+        Route::post('/password', [TeacherProfileController::class, 'updatePassword'])->name('update-password');
+        Route::post('/photo', [TeacherProfileController::class, 'updatePhoto'])->name('update-photo');
+    });
+    
+    // Redirection de /teacher vers /teacher/dashboard
+    Route::get('/', function () {
+        return redirect()->route('teacher.dashboard');
+    });
 });
 
 // Routes administrateur
@@ -156,17 +194,12 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::resource('academic-years', 'App\Http\Controllers\Admin\AcademicYearController')->names('admin.academic-years');
     Route::patch('/academic-years/{academicYear}/set-current', [\App\Http\Controllers\Admin\AcademicYearController::class, 'setCurrent'])
         ->name('admin.academic-years.set-current');
+    
+    // Gestion des matières
+    Route::resource('subjects', 'App\Http\Controllers\Admin\SubjectController')->names('admin.subjects');
 });
-
-// Autres routes publiques
-// ...
 
 // En cas de route non trouvée
 Route::fallback(function () {
     return response()->view('errors.404', [], 404);
 });
-
-// Route pour la page des inscriptions en attente (temporaire)
-Route::get('/pending', function() {
-    return view('admin.pending');
-})->name('admin.pending');

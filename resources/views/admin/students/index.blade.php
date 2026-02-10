@@ -34,6 +34,7 @@
     
     .tab-content {
         padding: 1rem 0;
+        padding-bottom: 2rem;
     }
     
     .card {
@@ -44,6 +45,55 @@
     .card-header {
         background-color: #f8f9fa;
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Responsive table */
+    @media (max-width: 768px) {
+        .nav-tabs .nav-link {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .table td, .table th {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+        }
+    }
+    
+    /* Accordion styles for classes */
+    .accordion-item {
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        margin-bottom: 0.5rem;
+        border-radius: 0.375rem !important;
+        overflow: hidden;
+    }
+    
+    .accordion-button {
+        padding: 1rem 1.25rem;
+        font-weight: 500;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+    }
+    
+    .accordion-body {
+        padding: 0;
+    }
+    
+    .accordion-body .table {
+        margin-bottom: 0;
+    }
+    
+    .accordion-body .table thead {
+        position: sticky;
+        top: 0;
+        z-index: 1;
     }
 </style>
 @endpush
@@ -79,6 +129,18 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
+            <button class="nav-link {{ $active_tab === 'byclass' ? 'active' : '' }}" 
+                    id="byclass-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#byclass-tab-pane" 
+                    type="button" 
+                    role="tab" 
+                    aria-controls="byclass-tab-pane" 
+                    aria-selected="{{ $active_tab === 'byclass' ? 'true' : 'false' }}">
+                <i class="fas fa-th-list me-2"></i>Par classe
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
             <button class="nav-link {{ $active_tab === 'assign' ? 'active' : '' }}" 
                     id="assign-tab" 
                     data-bs-toggle="tab" 
@@ -101,6 +163,18 @@
              aria-labelledby="list-tab" 
              tabindex="0">
             @include('admin.students._list', ['students' => $students])
+        </div>
+        
+        <!-- Onglet Par classe -->
+        <div class="tab-pane fade {{ $active_tab === 'byclass' ? 'show active' : '' }}" 
+             id="byclass-tab-pane" 
+             role="tabpanel" 
+             aria-labelledby="byclass-tab" 
+             tabindex="0">
+            @include('admin.students._by_class', [
+                'classes' => $classes,
+                'studentsByClass' => $studentsByClass
+            ])
         </div>
         
         <!-- Onglet Affectation aux classes -->

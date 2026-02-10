@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Tableau de bord - Étudiant')</title>
+    <title>@yield('title', 'Tableau de bord') - Espace Étudiant</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,209 +12,429 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- FullCalendar CSS -->
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    
+    @stack('styles')
+    
     <style>
+        :root {
+            --primary-color: #1e40af;
+            --primary-dark: #1e3a8a;
+            --sidebar-width: 250px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            background-color: #f8f9fa;
+            background-color: #f1f5f9;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             min-height: 100vh;
-            padding-top: 56px;
         }
         
+        /* Wrapper */
+        .wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
         .sidebar {
-            min-height: calc(100vh - 56px);
-            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+            width: var(--sidebar-width);
+            min-height: 100vh;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--primary-dark) 0%, var(--primary-color) 100%);
             color: white;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
-            z-index: 1000;
-            position: sticky;
-            top: 56px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1050;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
         
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.9);
-            padding: 10px 15px;
-            margin: 2px 10px;
-            border-radius: 5px;
-            transition: all 0.2s;
-            font-size: 0.95rem;
-        }
-        
-        .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            color: white;
-        }
-        
-        .sidebar .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.2);
-            color: white;
-            font-weight: 500;
-        }
-        
-        .navbar {
-            background: linear-gradient(90deg, #1e3a8a 0%, #1e40af 100%);
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
-        }
-        
-        .main-content {
+        .sidebar-header {
             padding: 20px;
-            width: 100%;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         
-        .card {
-            border: none;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
-            margin-bottom: 20px;
-        }
-        
-        .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #e3e6f0;
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
             font-weight: 600;
-            padding: 1rem 1.25rem;
         }
         
-        .table th {
-            border-top: none;
-            font-weight: 600;
-            color: #4e73df;
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            letter-spacing: 0.1em;
+        .sidebar-user {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
-            background-color: #4e73df;
+            background-color: rgba(255,255,255,0.2);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
+            font-size: 1.5rem;
+            margin: 0 auto 10px;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        
+        .sidebar-user h6 {
+            margin: 0;
+            font-weight: 500;
+        }
+        
+        .sidebar-user small {
+            opacity: 0.7;
+        }
+        
+        .sidebar-nav {
+            padding: 15px 0;
+        }
+        
+        .sidebar-nav .nav-link {
+            color: rgba(255, 255, 255, 0.85);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            text-decoration: none;
+        }
+        
+        .sidebar-nav .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .sidebar-nav .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left-color: white;
+            font-weight: 500;
+        }
+        
+        .sidebar-nav .nav-link i {
+            width: 24px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            min-height: 100vh;
+        }
+        
+        /* Top Navbar */
+        .top-navbar {
+            background: white;
+            padding: 15px 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+        
+        .top-navbar .page-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+        
+        .top-navbar .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-dropdown .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        
+        .user-dropdown .dropdown-toggle:hover {
+            background: #f3f4f6;
+        }
+        
+        .user-dropdown .user-avatar-sm {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        /* Content Area */
+        .content-area {
+            padding: 25px;
+            padding-bottom: 50px;
+        }
+        
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            background: white;
+        }
+        
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        /* Mobile Header */
+        .mobile-header {
+            display: none;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+            color: white;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .mobile-header .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            padding: 0;
+            cursor: pointer;
+        }
+        
+        .mobile-header h5 {
+            margin: 0;
             font-size: 1.1rem;
         }
         
-        .text-student-secondary {
-            color: #1e3a8a;
+        /* Responsive */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .mobile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .top-navbar {
+                display: none;
+            }
+            
+            .content-area {
+                padding: 15px;
+                padding-top: 80px;
+                padding-bottom: 50px;
+            }
+            
+            .sidebar-toggle {
+                display: block !important;
+            }
         }
         
-        .btn-student {
-            background-color: #1e40af;
-            color: white;
+        @media (max-width: 576px) {
+            .content-area {
+                padding: 10px;
+                padding-top: 75px;
+                padding-bottom: 40px;
+            }
+            
+            .card-body {
+                padding: 15px;
+            }
+            
+            .table-responsive {
+                font-size: 0.875rem;
+            }
+            
+            h1, .h1 { font-size: 1.5rem; }
+            h2, .h2 { font-size: 1.3rem; }
+            h3, .h3 { font-size: 1.15rem; }
         }
         
-        .btn-student:hover {
-            background-color: #1e3a8a;
-            color: white;
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #374151;
+            cursor: pointer;
+        }
+        
+        /* Overlay for mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1045;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
         }
     </style>
-    @livewireStyles
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ route('student.dashboard') }}">
-                <i class="fas fa-graduation-cap me-2"></i>{{ config('app.name') }}
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <div class="user-avatar me-2">
-                                {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <button class="menu-toggle" id="sidebarToggleMobile">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h5><i class="fas fa-graduation-cap me-2"></i>Espace Étudiant</h5>
+        <div style="width: 24px;"></div>
+    </div>
+    
+    <div class="wrapper">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-graduation-cap me-2"></i>{{ config('app.name', 'École') }}</h3>
+            </div>
+            
+            <div class="sidebar-user">
+                <div class="user-avatar">
+                    {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
+                </div>
+                <h6>{{ Auth::user()->name ?? 'Utilisateur' }}</h6>
+                <small>Étudiant</small>
+            </div>
+            
+            <div class="sidebar-nav">
+                <a href="{{ route('student.dashboard') }}" class="nav-link {{ request()->routeIs('student.dashboard') ? 'active' : '' }}">
+                    <i class="fas fa-home"></i>
+                    <span>Tableau de bord</span>
+                </a>
+                <a href="{{ route('student.grades') }}" class="nav-link {{ request()->routeIs('student.grades') ? 'active' : '' }}">
+                    <i class="fas fa-star"></i>
+                    <span>Mes notes</span>
+                </a>
+                <a href="{{ route('student.schedule') }}" class="nav-link {{ request()->routeIs('student.schedule') ? 'active' : '' }}">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Emploi du temps</span>
+                </a>
+                <a href="{{ route('student.attendance') }}" class="nav-link {{ request()->routeIs('student.attendance') ? 'active' : '' }}">
+                    <i class="fas fa-user-check"></i>
+                    <span>Mes présences</span>
+                </a>
+                <a href="{{ route('student.profile.index') }}" class="nav-link {{ request()->routeIs('student.profile.*') ? 'active' : '' }}">
+                    <i class="fas fa-user"></i>
+                    <span>Mon profil</span>
+                </a>
+                
+                <hr class="mx-3 my-3 border-light border-opacity-25">
+                
+                <!-- Déconnexion -->
+                <a href="{{ route('logout.get') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Déconnexion</span>
+                </a>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Navbar -->
+            <div class="top-navbar">
+                <div class="d-flex align-items-center">
+                    <button class="sidebar-toggle me-3" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="page-title">@yield('title', 'Tableau de bord')</h1>
+                </div>
+                
+                <div class="navbar-actions">
+                    <div class="dropdown user-dropdown">
+                        <button class="dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="user-avatar-sm">
+                                {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
                             </div>
-                            <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
-                        </a>
+                            <span class="d-none d-md-inline">{{ Auth::user()->name ?? 'Utilisateur' }}</span>
+                            <i class="fas fa-chevron-down ms-1" style="font-size: 0.7rem;"></i>
+                        </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fas fa-user me-2"></i>Profil</a></li>
+                            <li><a class="dropdown-item" href="{{ route('student.profile.index') }}"><i class="fas fa-user me-2"></i>Mon profil</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item">
-                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
-                                    </button>
-                                </form>
+                                <a href="{{ route('logout.get') }}" class="dropdown-item text-danger">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                </a>
                             </li>
                         </ul>
-                    </li>
-                </ul>
+                    </div>
+                </div>
             </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <div class="text-center mb-4">
-                        <div class="user-avatar mx-auto mb-2" style="width: 60px; height: 60px; font-size: 1.5rem;">
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                        </div>
-                        <h6 class="text-white mb-0">{{ Auth::user()->name }}</h6>
-                        <small class="text-white-50">Étudiant</small>
-                    </div>
-                    
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('student.dashboard') ? 'active' : '' }}" href="{{ route('student.dashboard') }}">
-                                <i class="fas fa-tachometer-alt me-2"></i>
-                                Tableau de bord
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-book me-2"></i>
-                                Mes notes
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                Emploi du temps
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-tasks me-2"></i>
-                                Devoirs
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-chart-line me-2"></i>
-                                Progression
-                            </a>
-                        </li>
-                        <li class="nav-item mt-3">
-                            <a class="nav-link text-warning" href="{{ route('profile.edit') }}">
-                                <i class="fas fa-cog me-2"></i>
-                                Paramètres
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-                    <h1 class="h3 mb-0">@yield('title', 'Tableau de bord')</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        @yield('actions')
-                    </div>
-                </div>
-
+            
+            <!-- Content Area -->
+            <div class="content-area">
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
@@ -232,13 +452,42 @@
                 @endif
 
                 @yield('content')
-            </main>
+            </div>
         </div>
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    @livewireScripts
+    
+    <script>
+        // Sidebar Toggle for Mobile
+        var sidebarToggle = document.getElementById('sidebarToggle');
+        var sidebarToggleMobile = document.getElementById('sidebarToggleMobile');
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+        
+        if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+        if (sidebarToggleMobile) sidebarToggleMobile.addEventListener('click', toggleSidebar);
+        
+        document.getElementById('sidebarOverlay')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.remove('active');
+            this.classList.remove('active');
+        });
+        
+        // Close sidebar when clicking a link on mobile
+        document.querySelectorAll('.sidebar .nav-link, .sidebar-nav .nav-link').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 992) {
+                    document.getElementById('sidebar').classList.remove('active');
+                    document.getElementById('sidebarOverlay').classList.remove('active');
+                }
+            });
+        });
+    </script>
+    
     @stack('scripts')
 </body>
 </html>

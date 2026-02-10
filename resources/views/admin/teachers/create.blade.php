@@ -1,104 +1,121 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Ajouter un enseignant') }}
-        </h2>
-    </x-slot>
+@extends('admin.layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
+@section('content')
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-plus"></i> Ajouter un enseignant
+                    </h5>
+                </div>
+
+                <div class="card-body">
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <form action="{{ route('admin.teachers.store') }}" method="POST">
                         @csrf
                         
-                        <div class="mb-6">
-                            <h3 class="text-lg font-medium mb-4">Informations personnelles</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <x-label for="name" :value="__('Nom complet')" />
-                                    <x-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus />
+                        <div class="mb-4">
+                            <h5 class="mb-3">Informations personnelles</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="name" class="form-label">Nom complet *</label>
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" 
+                                           id="name" name="name" value="{{ old('name') }}" required autofocus>
                                     @error('name')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="identifier" :value="__('Identifiant')" />
-                                    <x-input id="identifier" class="block mt-1 w-full" type="text" name="identifier" :value="old('identifier')" required />
+                                <div class="col-md-6 mb-3">
+                                    <label for="identifier" class="form-label">Identifiant *</label>
+                                    <input type="text" class="form-control @error('identifier') is-invalid @enderror" 
+                                           id="identifier" name="identifier" value="{{ old('identifier') }}" required>
                                     @error('identifier')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="email" :value="__('Email')" />
-                                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required />
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label">Email *</label>
+                                    <input type="email" class="form-control @error('email') is-invalid @enderror" 
+                                           id="email" name="email" value="{{ old('email') }}" required>
                                     @error('email')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="date_of_birth" :value="__('Date de naissance')" />
-                                    <x-input id="date_of_birth" class="block mt-1 w-full" type="date" name="date_of_birth" :value="old('date_of_birth')" />
+                                <div class="col-md-6 mb-3">
+                                    <label for="date_of_birth" class="form-label">Date de naissance</label>
+                                    <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" 
+                                           id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth') }}">
                                     @error('date_of_birth')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="phone" :value="__('Téléphone')" />
-                                    <x-input id="phone" class="block mt-1 w-full" type="text" name="phone" :value="old('phone')" />
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">Téléphone</label>
+                                    <input type="text" class="form-control @error('phone') is-invalid @enderror" 
+                                           id="phone" name="phone" value="{{ old('phone') }}">
                                     @error('phone')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="address" :value="__('Adresse')" />
-                                    <x-textarea id="address" class="block mt-1 w-full" name="address">{{ old('address') }}</x-textarea>
+                                <div class="col-12 mb-3">
+                                    <label for="address" class="form-label">Adresse</label>
+                                    <textarea class="form-control @error('address') is-invalid @enderror" 
+                                              id="address" name="address" rows="2">{{ old('address') }}</textarea>
                                     @error('address')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mb-6">
-                            <h3 class="text-lg font-medium mb-4">Informations de connexion</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <x-label for="password" :value="__('Mot de passe')" />
-                                    <x-input id="password" class="block mt-1 w-full"
-                                             type="password"
-                                             name="password"
-                                             required autocomplete="new-password" />
+                        <div class="mb-4">
+                            <h5 class="mb-3">Informations de connexion</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="password" class="form-label">Mot de passe *</label>
+                                    <input type="password" class="form-control @error('password') is-invalid @enderror" 
+                                           id="password" name="password" required autocomplete="new-password">
                                     @error('password')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="password_confirmation" :value="__('Confirmer le mot de passe')" />
-                                    <x-input id="password_confirmation" class="block mt-1 w-full"
-                                             type="password"
-                                             name="password_confirmation" required />
+                                <div class="col-md-6 mb-3">
+                                    <label for="password_confirmation" class="form-label">Confirmer le mot de passe *</label>
+                                    <input type="password" class="form-control" 
+                                           id="password_confirmation" name="password_confirmation" required>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-end mt-8">
-                            <a href="{{ route('admin.teachers.index') }}" class="btn btn-secondary mr-4">
-                                Annuler
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <a href="{{ route('admin.teachers.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Retour à la liste
                             </a>
-                            <x-button class="ml-4">
-                                {{ __('Enregistrer l\'enseignant') }}
-                            </x-button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Enregistrer l'enseignant
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</x-app-layout>
+</div>
+@endsection

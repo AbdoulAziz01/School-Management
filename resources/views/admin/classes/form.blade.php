@@ -9,21 +9,21 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
-                        <a href="{{ route('academic-years.index') }}">Années scolaires</a>
+                        <a href="{{ route('admin.academic-years.index') }}">Années scolaires</a>
                     </li>
                     @if($class->exists)
                         <li class="breadcrumb-item">
-                            <a href="{{ route('academic-years.show', $class->academic_year_id) }}">
+                            <a href="{{ route('admin.academic-years.show', $class->academic_year_id) }}">
                                 {{ $class->academicYear->name }}
                             </a>
                         </li>
                         <li class="breadcrumb-item">
-                            <a href="{{ route('classes.show', $class) }}">{{ $class->name }}</a>
+                            <a href="{{ route('admin.classes.show', $class) }}">{{ $class->name }}</a>
                         </li>
                         <li class="breadcrumb-item active" aria-current="page">Modifier</li>
                     @else
                         <li class="breadcrumb-item">
-                            <a href="{{ route('academic-years.show', $selectedAcademicYear) }}">
+                            <a href="{{ route('admin.academic-years.show', $selectedAcademicYear) }}">
                                 {{ $selectedAcademicYear->name }}
                             </a>
                         </li>
@@ -36,7 +36,7 @@
                 <h1 class="h3">
                     {{ $class->exists ? 'Modifier la classe : ' . $class->name : 'Créer une nouvelle classe' }}
                 </h1>
-                <a href="{{ $class->exists ? route('classes.show', $class) : route('academic-years.show', $selectedAcademicYear) }}" 
+                <a href="{{ $class->exists ? route('admin.classes.show', $class) : route('admin.academic-years.show', $selectedAcademicYear) }}" 
                    class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i> Retour
                 </a>
@@ -54,7 +54,7 @@
 
             <div class="card">
                 <div class="card-body">
-                    <form action="{{ $class->exists ? route('classes.update', $class) : route('classes.store') }}" 
+                    <form action="{{ $class->exists ? route('admin.classes.update', $class) : route('admin.classes.store') }}" 
                           method="POST"
                           class="needs-validation" 
                           novalidate>

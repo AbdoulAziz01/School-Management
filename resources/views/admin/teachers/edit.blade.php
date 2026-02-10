@@ -1,135 +1,134 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Modifier l\'enseignant') }}: {{ $teacher->name }}
-        </h2>
-    </x-slot>
+@extends('admin.layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
+@section('title', 'Modifier l\'enseignant')
+
+@section('content')
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 card-title">Modifier l'enseignant: {{ $teacher->name }}</h4>
+                    <a href="{{ route('admin.teachers.index') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Retour
+                    </a>
+                </div>
+                <div class="card-body">
                     <form action="{{ route('admin.teachers.update', $teacher) }}" method="POST">
                         @csrf
                         @method('PUT')
                         
-                        <div class="mb-6">
-                            <h3 class="text-lg font-medium mb-4">Informations personnelles</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <x-label for="name" :value="__('Nom complet')" />
-                                    <x-input id="name" class="block mt-1 w-full" type="text" name="name" 
-                                             :value="old('name', $teacher->name)" required autofocus />
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nom complet <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" 
+                                           id="name" name="name" value="{{ old('name', $teacher->name) }}" required>
                                     @error('name')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="identifier" :value="__('Identifiant')" />
-                                    <x-input id="identifier" class="block mt-1 w-full" type="text" 
-                                             name="identifier" :value="old('identifier', $teacher->identifier)" required />
+                                <div class="mb-3">
+                                    <label for="identifier" class="form-label">Identifiant <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('identifier') is-invalid @enderror" 
+                                           id="identifier" name="identifier" value="{{ old('identifier', $teacher->identifier) }}" required>
                                     @error('identifier')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="email" :value="__('Email')" />
-                                    <x-input id="email" class="block mt-1 w-full" type="email" 
-                                             name="email" :value="old('email', $teacher->email)" required />
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control @error('email') is-invalid @enderror" 
+                                           id="email" name="email" value="{{ old('email', $teacher->email) }}" required>
                                     @error('email')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="date_of_birth" :value="__('Date de naissance')" />
-                                    <x-input id="date_of_birth" class="block mt-1 w-full" type="date" 
-                                             name="date_of_birth" :value="old('date_of_birth', $teacher->date_of_birth ? $teacher->date_of_birth->format('Y-m-d') : '')" />
+                                <div class="mb-3">
+                                    <label for="date_of_birth" class="form-label">Date de naissance</label>
+                                    <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" 
+                                           id="date_of_birth" name="date_of_birth" 
+                                           value="{{ old('date_of_birth', $teacher->date_of_birth ? $teacher->date_of_birth->format('Y-m-d') : '') }}">
                                     @error('date_of_birth')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
+                            </div>
 
-                                <div>
-                                    <x-label for="phone" :value="__('Téléphone')" />
-                                    <x-input id="phone" class="block mt-1 w-full" type="text" 
-                                             name="phone" :value="old('phone', $teacher->phone)" />
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">Téléphone</label>
+                                    <input type="text" class="form-control @error('phone') is-invalid @enderror" 
+                                           id="phone" name="phone" value="{{ old('phone', $teacher->phone) }}">
                                     @error('phone')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <x-label for="status" :value="__('Statut')" />
-                                    <select id="status" name="status" class="block mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">Statut <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('status') is-invalid @enderror" 
+                                            id="status" name="status" required>
                                         <option value="pending" {{ old('status', $teacher->status) === 'pending' ? 'selected' : '' }}>En attente</option>
                                         <option value="approved" {{ old('status', $teacher->status) === 'approved' ? 'selected' : '' }}>Approuvé</option>
                                         <option value="rejected" {{ old('status', $teacher->status) === 'rejected' ? 'selected' : '' }}>Rejeté</option>
                                     </select>
                                     @error('status')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div class="md:col-span-2">
-                                    <x-label for="address" :value="__('Adresse')" />
-                                    <x-textarea id="address" class="block mt-1 w-full" name="address">
-                                        {{ old('address', $teacher->address) }}
-                                    </x-textarea>
+                                <div class="mb-3">
+                                    <label for="address" class="form-label">Adresse</label>
+                                    <textarea class="form-control @error('address') is-invalid @enderror" 
+                                              id="address" name="address" rows="3">{{ old('address', $teacher->address) }}</textarea>
                                     @error('address')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                </div>
+
+                                <div class="mb-3">
+                                    <h5 class="mb-3">Changer le mot de passe</h5>
+                                    <p class="text-muted small mb-2">Laissez ces champs vides pour conserver le mot de passe actuel.</p>
+                                    
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label">Nouveau mot de passe</label>
+                                        <input type="password" class="form-control @error('password') is-invalid @enderror" 
+                                               id="password" name="password" autocomplete="new-password">
+                                        @error('password')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="password_confirmation" class="form-label">Confirmer le mot de passe</label>
+                                        <input type="password" class="form-control" 
+                                               id="password_confirmation" name="password_confirmation" autocomplete="new-password">
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mb-6">
-                            <h3 class="text-lg font-medium mb-4">Changer le mot de passe</h3>
-                            <p class="text-sm text-gray-600 mb-4">Laissez ces champs vides pour conserver le mot de passe actuel.</p>
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <button type="button" onclick="if(confirm('Êtes-vous sûr de vouloir supprimer cet enseignant ?')) { document.getElementById('delete-form').submit(); }" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i> Supprimer
+                            </button>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <x-label for="password" :value="__('Nouveau mot de passe')" />
-                                    <x-input id="password" class="block mt-1 w-full"
-                                             type="password"
-                                             name="password"
-                                             autocomplete="new-password" />
-                                    @error('password')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <x-label for="password_confirmation" :value="__('Confirmer le nouveau mot de passe')" />
-                                    <x-input id="password_confirmation" class="block mt-1 w-full"
-                                             type="password"
-                                             name="password_confirmation" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between mt-8">
                             <div>
-                                <a href="{{ route('admin.teachers.show', $teacher) }}" class="btn btn-secondary mr-4">
-                                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                                <a href="{{ route('admin.teachers.index') }}" class="btn btn-secondary me-2">
+                                    <i class="fas fa-times me-1"></i> Annuler
                                 </a>
-                            </div>
-                            <div>
-                                <button type="button" onclick="if(confirm('Êtes-vous sûr de vouloir supprimer cet enseignant ?')) { document.getElementById('delete-form').submit(); }" 
-                                        class="btn btn-danger mr-4">
-                                    <i class="fas fa-trash mr-2"></i> Supprimer
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i> Enregistrer les modifications
                                 </button>
-                                
-                                <x-button class="bg-blue-600 hover:bg-blue-700">
-                                    <i class="fas fa-save mr-2"></i> Enregistrer les modifications
-                                </x-button>
                             </div>
                         </div>
                     </form>
 
-                    <form id="delete-form" action="{{ route('admin.teachers.destroy', $teacher) }}" method="POST" class="hidden">
+                    <form id="delete-form" action="{{ route('admin.teachers.destroy', $teacher) }}" method="POST" class="d-none">
                         @csrf
                         @method('DELETE')
                     </form>
@@ -137,4 +136,15 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+    function confirmDelete() {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cet enseignant ?')) {
+            document.getElementById('delete-form').submit();
+        }
+    }
+</script>
+@endpush

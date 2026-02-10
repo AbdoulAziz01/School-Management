@@ -61,6 +61,14 @@ class SchoolClass extends Model
     }
 
     /**
+     * Les groupes de cette classe
+     */
+    public function groups(): HasMany
+    {
+        return $this->hasMany(ClassGroup::class, 'school_class_id');
+    }
+
+    /**
      * Convertit les chiffres en lettres pour les noms de classe
      * Exemple : "6eme 1" devient "6ème A"
      */

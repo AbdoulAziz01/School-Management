@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             \Database\Seeders\LevelsAndSubjectsSeeder::class,
             \Database\Seeders\SchoolClassesSeeder::class, // Création des classes
             \Database\Seeders\GradesTableSeeder::class, // Ajout du seeder des notes
+            \Database\Seeders\AttendancesTableSeeder::class, // Ajout du seeder des présences
         ]);
     }
 

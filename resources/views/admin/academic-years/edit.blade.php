@@ -5,7 +5,7 @@
 <div class="flex-wrap pt-3 pb-2 mb-3 d-flex justify-content-between flex-md-nowrap align-items-center border-bottom">
     <h1 class="h2">Modifier l'année scolaire</h1>
     <div class="mb-2 btn-toolbar mb-md-0">
-        <a href="{{ route('academic-years.index') }}" class="btn btn-sm btn-outline-secondary">
+        <a href="{{ route('admin.academic-years.index') }}" class="btn btn-sm btn-outline-secondary">
             <i class="fas fa-arrow-left me-1"></i> Retour à la liste
         </a>
     </div>
@@ -13,7 +13,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form action="{{ route('academic-years.update', $academicYear) }}" method="POST">
+        <form action="{{ route('admin.academic-years.update', $academicYear) }}" method="POST">
             @csrf
             @method('PUT')
             
@@ -60,7 +60,7 @@
             </div>
             
             <div class="gap-2 d-grid d-md-flex justify-content-md-end">
-                <a href="{{ route('academic-years.index') }}" class="btn btn-outline-secondary me-md-2">
+                <a href="{{ route('admin.academic-years.index') }}" class="btn btn-outline-secondary me-md-2">
                     <i class="fas fa-times me-1"></i> Annuler
                 </a>
                 <button type="submit" class="btn btn-primary">
