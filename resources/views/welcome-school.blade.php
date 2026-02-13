@@ -6,17 +6,9 @@
     <title>School Management - Accueil</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* Thème ambre */
         body {
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
-            background-attachment: fixed;
-        }
-        
-        /* Alternative plus simple bleu-blanc */
-        body {
-            background: linear-gradient(to bottom right, #4e73df, #224abe, #1e3a8a, #ffffff);
+            background: linear-gradient(to bottom right, #f59e0b, #d97706, #b45309, #fffbeb);
             background-attachment: fixed;
         }
         
@@ -37,6 +29,26 @@
         .btn-custom:hover {
             transform: translateY(-3px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Couleurs ambre pour Bootstrap */
+        .text-primary { color: #d97706 !important; }
+        .btn-primary { 
+            background-color: #f59e0b !important; 
+            border-color: #f59e0b !important; 
+        }
+        .btn-primary:hover { 
+            background-color: #d97706 !important; 
+            border-color: #d97706 !important; 
+        }
+        .btn-outline-primary { 
+            color: #d97706 !important; 
+            border-color: #d97706 !important; 
+        }
+        .btn-outline-primary:hover { 
+            background-color: #d97706 !important; 
+            border-color: #d97706 !important; 
+            color: #fff !important;
         }
     </style>
 </head>

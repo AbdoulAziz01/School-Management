@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Gestion des étudiants')
+@section('title', 'Gestion des élèves')
 
 @push('styles')
 <style>
@@ -21,14 +21,14 @@
     
     .nav-tabs .nav-link:hover {
         border-color: transparent;
-        color: #0d6efd;
+        color: #fd7e14;
     }
     
     .nav-tabs .nav-link.active {
-        color: #0d6efd;
+        color: #fd7e14;
         background-color: transparent;
         border-color: transparent;
-        border-bottom-color: #0d6efd;
+        border-bottom-color: #fd7e14;
         font-weight: 600;
     }
     
@@ -78,8 +78,8 @@
     }
     
     .accordion-button:not(.collapsed) {
-        background-color: #e7f1ff;
-        color: #0d6efd;
+        background-color: #fff3e6;
+        color: #fd7e14;
     }
     
     .accordion-body {
@@ -201,7 +201,7 @@
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
         
-        // Gérer la sélection/désélection de tous les étudiants
+        // Gérer la sélection/désélection de tous les élèves
         const selectAllCheckbox = document.getElementById('select-all');
         if (selectAllCheckbox) {
             selectAllCheckbox.addEventListener('change', function(e) {

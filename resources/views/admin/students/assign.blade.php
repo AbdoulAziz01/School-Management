@@ -205,7 +205,7 @@
                                 <td>{{ $student->name }}</td>
                                 <td>{{ $student->email }}</td>
                                 <td>
-                                    <span class="badge bg-primary">
+                                    <span class="badge" style="background-color: #fd7e14;">
                                         {{ $student->class->name ?? 'Non affecté' }}
                                     </span>
                                 </td>

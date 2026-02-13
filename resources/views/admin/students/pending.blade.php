@@ -1,11 +1,11 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Étudiants en attente')
+@section('title', 'Élèves en attente')
 
 @section('content')
 <div class="container-fluid">
     <div class="mb-4 d-flex justify-content-between align-items-center">
-        <h1 class="mb-0 h3">Étudiants en attente d'approbation</h1>
+        <h1 class="mb-0 h3">Élèves en attente d'approbation</h1>
     </div>
 
     @if(session('success'))
@@ -17,7 +17,7 @@
 
     <div class="shadow-sm card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Liste des étudiants en attente</h5>
+            <h5 class="mb-0">Liste des élèves en attente</h5>
             <span class="badge bg-warning text-dark">{{ $students->count() }} en attente</span>
         </div>
         
@@ -26,7 +26,7 @@
                 <div class="mb-0 alert alert-info">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-info-circle me-2 fs-4"></i>
-                        <span>Aucun étudiant en attente d'approbation.</span>
+                        <span>Aucun élève en attente d'approbation.</span>
                     </div>
                 </div>
             @else
@@ -45,7 +45,7 @@
                         <tbody>
                             @foreach($students as $user)
                                 <tr>
-                                    <td><strong class="text-primary">{{ $user->identifier }}</strong></td>
+                                    <td><strong style="color: #fd7e14;">{{ $user->identifier }}</strong></td>
                                     <td>{{ $user->name }}</td>
                                     <td><small>{{ $user->email }}</small></td>
                                     <td>
@@ -82,7 +82,7 @@
                 @if($students->hasPages())
                     <div class="pt-3 mt-3 d-flex justify-content-between align-items-center border-top">
                         <div class="text-muted small">
-                            Affichage de <b>{{ $students->firstItem() }}</b> à <b>{{ $students->lastItem() }}</b> sur <b>{{ $students->total() }}</b> étudiants
+                            Affichage de <b>{{ $students->firstItem() }}</b> à <b>{{ $students->lastItem() }}</b> sur <b>{{ $students->total() }}</b> élèves
                         </div>
                         <div>
                             {{ $students->links() }}

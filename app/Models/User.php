@@ -37,7 +37,6 @@ class User extends Authenticatable
         'role',
         'status',
         'class_id',
-        'level_id',
         'date_of_birth',
         'phone',
         'address',

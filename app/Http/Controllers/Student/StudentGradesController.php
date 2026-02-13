@@ -39,7 +39,7 @@ class StudentGradesController extends Controller
                     
                     return [
                         'subject' => $subjectGrades->first()->subject->name,
-                        'subject_color' => $subjectGrades->first()->subject->color ?? '#3b82f6',
+                        'subject_color' => $subjectGrades->first()->subject->color ?? '#f59e0b',
                         'grades' => $subjectGrades->sortByDesc('date'),
                         'average' => round($avg, 2),
                         'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,
@@ -133,7 +133,7 @@ class StudentGradesController extends Controller
                     
                     return [
                         'subject' => $subjectGrades->first()->subject->name,
-                        'subject_color' => $subjectGrades->first()->subject->color ?? '#3b82f6',
+                        'subject_color' => $subjectGrades->first()->subject->color ?? '#f59e0b',
                         'grades' => $subjectGrades->sortByDesc('date'),
                         'average' => round($avg, 2),
                         'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,

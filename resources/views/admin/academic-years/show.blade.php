@@ -8,7 +8,7 @@
         <a href="{{ route('admin.academic-years.index') }}" class="btn btn-sm btn-outline-secondary me-2">
             <i class="fas fa-arrow-left me-1"></i> Retour à la liste
         </a>
-        <a href="{{ route('admin.academic-years.edit', $academicYear) }}" class="btn btn-sm btn-outline-primary me-2">
+        <a href="{{ route('admin.academic-years.edit', $academicYear) }}" class="btn btn-sm me-2" style="color: #fd7e14; border-color: #fd7e14;">
             <i class="fas fa-edit me-1"></i> Modifier
         </a>
         <form action="{{ route('admin.academic-years.destroy', $academicYear) }}" method="POST" class="d-inline">
@@ -142,7 +142,7 @@
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ route('admin.classes.show', $class) }}" 
-                                           class="btn btn-outline-primary" title="Voir">
+                                           class="btn" style="color: #fd7e14; border-color: #fd7e14;" title="Voir">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <a href="{{ route('admin.classes.edit', $class) }}" 

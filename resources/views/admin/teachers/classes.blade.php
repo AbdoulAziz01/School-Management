@@ -74,7 +74,7 @@
                                     <li class="list-group-item">
                                         <i class="fas fa-chalkboard me-2"></i>
                                         {{ $class->name }}
-                                        <span class="badge bg-primary ms-2">
+                                        <span class="badge ms-2" style="background-color: #fd7e14;">
                                             {{ $class->level->name ?? 'N/A' }}
                                         </span>
                                         <span class="badge bg-secondary ms-1">

@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .time-slot {
-        border-left: 4px solid #3b82f6;
+        border-left: 4px solid #f59e0b;
         margin-bottom: 12px;
         padding: 12px 15px;
         background-color: white;
@@ -44,7 +44,7 @@
     }
     
     .schedule-table th {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
         color: white;
         font-weight: 600;
         text-align: center;
@@ -98,7 +98,7 @@
     
     .day-header {
         font-weight: 600;
-        color: #1e3a8a;
+        color: #d97706;
         font-size: 1.1rem;
         padding: 10px 0;
         border-bottom: 2px solid #e5e7eb;
@@ -164,8 +164,8 @@
                             
                             @if($daySchedules->isNotEmpty())
                                 @foreach($daySchedules as $slot)
-                                    <div class="time-slot" style="border-left-color: {{ $slot->subject->color ?? '#3b82f6' }};">
-                                        <div class="subject-name" style="color: {{ $slot->subject->color ?? '#3b82f6' }};">
+                                    <div class="time-slot" style="border-left-color: {{ $slot->subject->color ?? '#f59e0b' }};">
+                                        <div class="subject-name" style="color: {{ $slot->subject->color ?? '#f59e0b' }};">
                                             {{ $slot->subject->name }}
                                         </div>
                                         <div class="time-info">
@@ -236,8 +236,8 @@
                                     
                                     <td>
                                         @if($slot)
-                                            <div class="schedule-cell" style="background-color: {{ $slot->subject->color ?? '#3b82f6' }}20; border-left: 3px solid {{ $slot->subject->color ?? '#3b82f6' }};">
-                                                <div class="subject" style="color: {{ $slot->subject->color ?? '#3b82f6' }};">
+                                            <div class="schedule-cell" style="background-color: {{ $slot->subject->color ?? '#f59e0b' }}20; border-left: 3px solid {{ $slot->subject->color ?? '#f59e0b' }};">
+                                                <div class="subject" style="color: {{ $slot->subject->color ?? '#f59e0b' }};">
                                                     {{ $slot->subject->name }}
                                                 </div>
                                                 <div class="details text-muted">
@@ -273,7 +273,7 @@
                         foreach($dayCourses as $course) {
                             $subjects->push((object)[
                                 'name' => $course->subject->name,
-                                'color' => $course->subject->color ?? '#3b82f6'
+                                'color' => $course->subject->color ?? '#f59e0b'
                             ]);
                         }
                     }

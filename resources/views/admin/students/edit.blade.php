@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Modifier l\'étudiant')
+@section('title', 'Modifier l\'élève')
 
 @section('content')
 <div class="container-fluid">
@@ -8,7 +8,7 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0 card-title">Modifier l'étudiant</h4>
+                    <h4 class="mb-0 card-title">Modifier l'élève</h4>
                     <a href="{{ route('admin.students.show', $student) }}" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left me-1"></i> Annuler
                     </a>

@@ -9,6 +9,7 @@ use App\Http\Controllers\Student\StudentProfileController;
 use App\Http\Controllers\Student\StudentGradesController;
 use App\Http\Controllers\Student\StudentScheduleController;
 use App\Http\Controllers\Student\StudentAttendanceController;
+use App\Http\Controllers\Student\StudentBulletinController;
 use App\Http\Controllers\Admin\StudentAssignmentController;
 use App\Http\Controllers\Admin\PendingRegistrationController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -58,8 +59,9 @@ Route::middleware(['auth', \App\Http\Middleware\StudentMiddleware::class])->pref
     // Notes
     Route::get('/grades', [StudentGradesController::class, 'index'])->name('grades');
     
-    // Bulletin scolaire
-    Route::get('/bulletin', [StudentGradesController::class, 'bulletin'])->name('bulletin');
+    // Bulletin scolaire (système sénégalais)
+    Route::get('/bulletin', [StudentBulletinController::class, 'index'])->name('bulletin');
+    Route::get('/bulletin/annual', [StudentBulletinController::class, 'annual'])->name('bulletin.annual');
     
     // Emploi du temps
     Route::get('/schedule', [StudentScheduleController::class, 'index'])->name('schedule');
@@ -162,6 +164,7 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
 
     // Gestion des étudiants - Routes personnalisées (DOIT être avant la ressource)
     Route::get('/students/assign', [StudentController::class, 'showAssignForm'])->name('admin.students.assign');
+    Route::post('/students/assign', [StudentController::class, 'storeAssignment'])->name('admin.students.assign.store');
     Route::post('/students/assign/bulk', [StudentController::class, 'assignToClassBulk'])->name('admin.students.assign.bulk');
     Route::post('/students/{student}/assign', [StudentController::class, 'assignToClass'])->name('admin.students.assign-to-class');
     Route::delete('/students/{student}/unassign', [StudentController::class, 'unassign'])->name('admin.students.unassign');

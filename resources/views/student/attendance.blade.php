@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .attendance-card {
-        border-left: 4px solid #4e73df;
+        border-left: 4px solid #f59e0b;
         margin-bottom: 1rem;
         transition: all 0.3s;
     }

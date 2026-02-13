@@ -133,7 +133,7 @@
                                 <div class="d-flex align-items-center">
                                     <div class="flex-shrink-0 me-2">
                                         <div class="avatar-sm">
-                                            <div class="avatar-title bg-light text-primary rounded-circle">
+                                            <div class="avatar-title bg-light rounded-circle" style="color: #fd7e14;">
                                                 <i class="fas fa-user"></i>
                                             </div>
                                         </div>

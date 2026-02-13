@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
-use App\Models\TeacherAssignment;
 use App\Models\Schedule;
 use App\Models\Timetable;
 use App\Models\AcademicYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TeacherScheduleController extends Controller
 {
@@ -20,16 +20,28 @@ class TeacherScheduleController extends Controller
         $teacher = Auth::user();
         $currentYear = AcademicYear::where('is_current', true)->first();
         
-        // Récupérer les affectations de l'enseignant
-        $assignments = TeacherAssignment::with(['schoolClass', 'subject'])
-            ->where('teacher_id', $teacher->id)
-            ->when($currentYear, function($query) use ($currentYear) {
-                return $query->where('academic_year_id', $currentYear->id);
-            })
+        // Récupérer les classes assignées via class_teacher
+        $assignedClasses = $teacher->assignedClasses ?? collect();
+        
+        // Récupérer les matières assignées via teacher_subjects
+        $assignedSubjects = DB::table('teacher_subjects')
+            ->join('subjects', 'teacher_subjects.subject_id', '=', 'subjects.id')
+            ->where('teacher_subjects.teacher_id', $teacher->id)
+            ->select('subjects.*')
             ->get();
         
-        // Récupérer l'emploi du temps depuis la table schedules ou timetables
-        $schedule = [];
+        // Créer une collection d'affectations pour la compatibilité avec la vue
+        $assignments = collect();
+        foreach ($assignedClasses as $class) {
+            foreach ($assignedSubjects as $subject) {
+                $assignments->push((object)[
+                    'class_id' => $class->id,
+                    'subject_id' => $subject->id,
+                    'schoolClass' => $class,
+                    'subject' => $subject
+                ]);
+            }
+        }
         
         // Créneaux horaires
         $timeSlots = [
@@ -45,11 +57,6 @@ class TeacherScheduleController extends Controller
         // Jours de la semaine
         $days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
         
-        // Tenter de récupérer depuis la table timetables
-        $timetables = Timetable::with(['schoolClass', 'subject'])
-            ->where('teacher_id', $teacher->id)
-            ->get();
-        
         // Organiser par jour et créneau
         $scheduleGrid = [];
         foreach ($days as $day) {
@@ -58,6 +65,11 @@ class TeacherScheduleController extends Controller
                 $scheduleGrid[$day][$slot] = null;
             }
         }
+        
+        // Tenter de récupérer depuis la table timetables
+        $timetables = Timetable::with(['schoolClass', 'subject'])
+            ->where('teacher_id', $teacher->id)
+            ->get();
         
         foreach ($timetables as $timetable) {
             $day = $timetable->day ?? $timetable->day_of_week;

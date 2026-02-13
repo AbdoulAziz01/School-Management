@@ -57,7 +57,7 @@
                                                 <span class="text-muted">{{ $class->academicYear->name }}</span>
                                             </td>
                                             <td class="text-nowrap">
-                                                <span class="badge {{ $class->students_count > 0 ? 'bg-primary' : 'bg-light text-dark' }}">
+                                                <span class="badge" style="{{ $class->students_count > 0 ? 'background-color: #fd7e14;' : 'background-color: #f8f9fa; color: #212529;' }}">
                                                     {{ $class->students_count }} élève(s)
                                                 </span>
                                             </td>
@@ -81,7 +81,7 @@
                                             <td class="text-nowrap text-end">
                                                 <div class="btn-group btn-group-sm">
                                                     <a href="{{ route('admin.classes.show', $class) }}" 
-                                                       class="btn btn-sm btn-outline-primary" 
+                                                       class="btn btn-sm" style="color: #fd7e14; border-color: #fd7e14;" 
                                                        title="Voir les détails"
                                                        data-bs-toggle="tooltip">
                                                         <i class="fas fa-eye"></i>

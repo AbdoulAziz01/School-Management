@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Tableau de bord') - Espace Étudiant</title>
+    <title>@yield('title', 'Tableau de bord') - Espace Élève</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -19,9 +19,11 @@
     
     <style>
         :root {
-            --primary-color: #1e40af;
-            --primary-dark: #1e3a8a;
-            --sidebar-width: 250px;
+            --primary-color: #f59e0b;
+            --primary-dark: #d97706;
+            --primary-light: #fef3c7;
+            --sidebar-width: 280px;
+            --bg-dark: #1c1917;
         }
         
         * {
@@ -31,7 +33,7 @@
         }
         
         body {
-            background-color: #f1f5f9;
+            background: linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fef3c7 100%);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             min-height: 100vh;
         }
@@ -47,90 +49,210 @@
             width: var(--sidebar-width);
             min-height: 100vh;
             height: 100vh;
-            background: linear-gradient(180deg, var(--primary-dark) 0%, var(--primary-color) 100%);
-            color: white;
+            background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%);
+            color: #fef3c7;
             position: fixed;
             left: 0;
             top: 0;
             z-index: 1050;
-            transition: transform 0.3s ease;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3);
         }
         
         .sidebar-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 25px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(251, 191, 36, 0.2);
         }
         
-        .sidebar-header h3 {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-        
-        .sidebar-user {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .user-avatar {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background-color: rgba(255,255,255,0.2);
-            color: white;
+        .sidebar-header .logo-icon-box {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
             font-size: 1.5rem;
-            margin: 0 auto 10px;
-            border: 3px solid rgba(255,255,255,0.3);
+            color: #1c1917;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+            animation: glow-pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.6); }
+        }
+        
+        .sidebar-header .logo-text h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        
+        .sidebar-header .logo-text small {
+            color: rgba(251, 191, 36, 0.6);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .sidebar-user {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+            margin: 15px;
+            padding: 15px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            transition: all 0.4s ease;
+        }
+        
+        .sidebar-user:hover {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%);
+            border-color: rgba(251, 191, 36, 0.4);
+        }
+        
+        .user-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #1c1917;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        
+        .sidebar-user .user-info {
+            flex: 1;
         }
         
         .sidebar-user h6 {
-            margin: 0;
-            font-weight: 500;
+            margin: 0 0 4px 0;
+            font-weight: 600;
+            color: #fef3c7;
+            font-size: 0.95rem;
         }
         
         .sidebar-user small {
-            opacity: 0.7;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #57534e 0%, #44403c 100%);
+            color: #fbbf24;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .menu-section {
+            padding: 20px 20px 10px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(251, 191, 36, 0.5);
         }
         
         .sidebar-nav {
-            padding: 15px 0;
+            padding: 0;
         }
         
         .sidebar-nav .nav-link {
-            color: rgba(255, 255, 255, 0.85);
-            padding: 12px 20px;
+            color: #a8a29e;
+            padding: 12px 16px;
+            margin: 3px 12px;
             display: flex;
             align-items: center;
-            transition: all 0.2s;
-            border-left: 3px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
             text-decoration: none;
+            position: relative;
+            font-size: 0.9rem;
         }
         
         .sidebar-nav .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+            padding-left: 22px;
         }
         
         .sidebar-nav .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.15);
-            color: white;
-            border-left-color: white;
-            font-weight: 500;
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.2) 0%, transparent 100%);
+            color: #fbbf24;
+            font-weight: 600;
+        }
+        
+        .sidebar-nav .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 0 4px 4px 0;
         }
         
         .sidebar-nav .nav-link i {
-            width: 24px;
-            margin-right: 10px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(251, 191, 36, 0.1);
+            border-radius: 10px;
+            margin-right: 12px;
             text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-nav .nav-link:hover i,
+        .sidebar-nav .nav-link.active i {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #1c1917;
+        }
+        
+        .sidebar-nav .nav-link.logout-link {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        .sidebar-nav .nav-link.logout-link i {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+        
+        .sidebar-nav .nav-link.logout-link:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        .sidebar-nav .nav-link.logout-link:hover i {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .menu-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, rgba(251, 191, 36, 0.2) 50%, transparent 100%);
+            margin: 15px 20px;
+            border: none;
         }
         
         /* Main Content */
@@ -144,19 +266,20 @@
         .top-navbar {
             background: white;
             padding: 15px 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08);
             display: flex;
             justify-content: space-between;
             align-items: center;
             position: sticky;
             top: 0;
             z-index: 999;
+            border-bottom: 1px solid #fde68a;
         }
         
         .top-navbar .page-title {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #1f2937;
+            color: #92400e;
             margin: 0;
         }
         
@@ -176,18 +299,19 @@
             padding: 5px 10px;
             border-radius: 8px;
             transition: background 0.2s;
+            color: #92400e;
         }
         
         .user-dropdown .dropdown-toggle:hover {
-            background: #f3f4f6;
+            background: #fef3c7;
         }
         
         .user-dropdown .user-avatar-sm {
             width: 35px;
             height: 35px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            color: white;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #1c1917;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -204,40 +328,105 @@
         /* Cards */
         .card {
             border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08);
             background: white;
+            border: 1px solid #fde68a;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(245, 158, 11, 0.15);
+            transform: translateY(-2px);
         }
         
         .card-header {
-            background: white;
-            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%);
+            border-bottom: 2px solid #fde68a;
             padding: 15px 20px;
             font-weight: 600;
+            color: #92400e;
+            border-radius: 16px 16px 0 0 !important;
         }
         
         .card-body {
             padding: 20px;
         }
         
+        /* Alerts */
+        .alert {
+            border-radius: 12px;
+            border: none;
+        }
+        
+        .alert-success {
+            background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+        
+        .alert-danger {
+            background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #dc2626;
+            color: #92400e;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border: none;
+            color: #1c1917;
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: #1c1917;
+        }
+        
+        /* Tables */
+        .table thead th {
+            background: linear-gradient(90deg, #fffbeb 0%, #fef3c7 100%);
+            color: #92400e;
+            font-weight: 600;
+            border-bottom: 2px solid #fde68a;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #fffbeb;
+        }
+        
+        /* Headings */
+        h1, h2, h3, h4, h5, h6 {
+            color: #92400e;
+        }
+        
+        a {
+            color: #d97706;
+        }
+        
+        a:hover {
+            color: #b45309;
+        }
+        
         /* Mobile Header */
         .mobile-header {
             display: none;
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
-            color: white;
+            background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+            color: #fbbf24;
             padding: 15px 20px;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 1040;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         
         .mobile-header .menu-toggle {
             background: none;
             border: none;
-            color: white;
+            color: #fbbf24;
             font-size: 1.5rem;
             padding: 0;
             cursor: pointer;
@@ -246,6 +435,7 @@
         .mobile-header h5 {
             margin: 0;
             font-size: 1.1rem;
+            color: #fbbf24;
         }
         
         /* Responsive */
@@ -309,7 +499,7 @@
             background: none;
             border: none;
             font-size: 1.25rem;
-            color: #374151;
+            color: #92400e;
             cursor: pointer;
         }
         
@@ -321,7 +511,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             z-index: 1045;
         }
         
@@ -336,7 +526,7 @@
         <button class="menu-toggle" id="sidebarToggleMobile">
             <i class="fas fa-bars"></i>
         </button>
-        <h5><i class="fas fa-graduation-cap me-2"></i>Espace Étudiant</h5>
+        <h5><i class="fas fa-graduation-cap me-2"></i>Espace Élève</h5>
         <div style="width: 24px;"></div>
     </div>
     
@@ -347,15 +537,27 @@
         <!-- Sidebar -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h3><i class="fas fa-graduation-cap me-2"></i>{{ config('app.name', 'École') }}</h3>
+                <div class="logo-icon-box">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="logo-text">
+                    <h3>EduManager</h3>
+                    <small>Espace Élève</small>
+                </div>
             </div>
             
             <div class="sidebar-user">
                 <div class="user-avatar">
                     {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
                 </div>
-                <h6>{{ Auth::user()->name ?? 'Utilisateur' }}</h6>
-                <small>Étudiant</small>
+                <div class="user-info">
+                    <h6>{{ Auth::user()->name ?? 'Utilisateur' }}</h6>
+                    <small><i class="fas fa-user-graduate"></i> Élève</small>
+                </div>
+            </div>
+            
+            <div class="menu-section">
+                <i class="fas fa-th-large me-1"></i> Navigation
             </div>
             
             <div class="sidebar-nav">
@@ -375,16 +577,20 @@
                     <i class="fas fa-user-check"></i>
                     <span>Mes présences</span>
                 </a>
+                
+                <div class="menu-separator"></div>
+                
+                <div class="menu-section">
+                    <i class="fas fa-cog me-1"></i> Compte
+                </div>
+                
                 <a href="{{ route('student.profile.index') }}" class="nav-link {{ request()->routeIs('student.profile.*') ? 'active' : '' }}">
-                    <i class="fas fa-user"></i>
+                    <i class="fas fa-user-circle"></i>
                     <span>Mon profil</span>
                 </a>
                 
-                <hr class="mx-3 my-3 border-light border-opacity-25">
-                
-                <!-- Déconnexion -->
-                <a href="{{ route('logout.get') }}" class="nav-link">
-                    <i class="fas fa-sign-out-alt"></i>
+                <a href="{{ route('logout.get') }}" class="nav-link logout-link">
+                    <i class="fas fa-power-off"></i>
                     <span>Déconnexion</span>
                 </a>
             </div>

@@ -17,7 +17,7 @@ class SubjectController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Subject::with('teacherAssignments');
+        $query = Subject::with('teachers');
         
         // Recherche par nom ou code
         if ($request->filled('search')) {

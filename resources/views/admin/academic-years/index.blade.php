@@ -54,7 +54,7 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{{ route('admin.academic-years.show', $year) }}" class="btn btn-outline-primary" title="Voir">
+                                    <a href="{{ route('admin.academic-years.show', $year) }}" class="btn" style="color: #fd7e14; border-color: #fd7e14;" title="Voir">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <a href="{{ route('admin.academic-years.edit', $year) }}" class="btn btn-outline-secondary" title="Modifier">

@@ -11,7 +11,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -27,17 +27,17 @@
         }
         
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25);
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             border: none;
         }
         
         .btn-primary:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #6a4192 100%);
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
@@ -49,7 +49,7 @@
             <div class="col-md-8 col-lg-6">
                 <div class="auth-card">
                     <div class="mb-4 text-center">
-                        <i class="mb-3 fas fa-graduation-cap text-primary fa-3x"></i>
+                        <i class="mb-3 fas fa-graduation-cap fa-3x" style="color: #f59e0b;"></i>
                         <h2 class="mb-3 h3 font-weight-normal">Connexion à Mohamad PSL School</h2>
                         <p class="text-muted">Accédez à votre espace personnel</p>
                     </div>

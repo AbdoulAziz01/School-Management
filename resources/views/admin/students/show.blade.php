@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Détails de l\'étudiant')
+@section('title', 'Détails de l\'élève')
 
 @section('content')
 <div class="container-fluid">
@@ -8,9 +8,9 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <div class="card-header d-flex justify-content-between align-items-center text-white" style="background-color: #fd7e14;">
                     <h4 class="card-title mb-0">
-                        <i class="fas fa-user-graduate me-2"></i>Profil de l'étudiant
+                        <i class="fas fa-user-graduate me-2"></i>Profil de l'élève
                     </h4>
                     <div>
                         <a href="{{ route('admin.students.index') }}" class="btn btn-light btn-sm">
@@ -25,7 +25,7 @@
                     <div class="row">
                         <div class="col-md-2 text-center">
                             <div class="avatar avatar-xxl mx-auto mb-3">
-                                <span class="text-white avatar-text rounded-circle bg-primary d-flex align-items-center justify-content-center" style="font-size: 2.5rem; width: 100px; height: 100px;">
+                                <span class="text-white avatar-text rounded-circle d-flex align-items-center justify-content-center" style="font-size: 2.5rem; width: 100px; height: 100px; background-color: #fd7e14;">
                                     {{ strtoupper(substr($student->name, 0, 1)) }}
                                 </span>
                             </div>
@@ -34,7 +34,7 @@
                             </span>
                         </div>
                         <div class="col-md-5">
-                            <h5 class="text-primary mb-3">{{ $student->name }}</h5>
+                            <h5 class="mb-3" style="color: #fd7e14;">{{ $student->name }}</h5>
                             <table class="table table-sm table-borderless">
                                 <tr><td><strong>Identifiant :</strong></td><td>{{ $student->identifier ?? '-' }}</td></tr>
                                 <tr><td><strong>Email :</strong></td><td>{{ $student->email }}</td></tr>
@@ -44,7 +44,7 @@
                             </table>
                         </div>
                         <div class="col-md-5">
-                            <h5 class="text-primary mb-3">Informations scolaires</h5>
+                            <h5 class="mb-3" style="color: #fd7e14;">Informations scolaires</h5>
                             <table class="table table-sm table-borderless">
                                 <tr><td><strong>Classe :</strong></td><td><span class="badge bg-info fs-6">{{ $student->class->name ?? 'Non affecté' }}</span></td></tr>
                                 @if($student->class && $student->class->level)
@@ -65,7 +65,7 @@
     <!-- Statistiques rapides -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card text-white" style="background-color: #fd7e14;">
                 <div class="card-body text-center">
                     <h2 class="mb-0">{{ $generalAverage }}/20</h2>
                     <small>Moyenne Générale</small>
@@ -108,7 +108,7 @@
                 <div class="card-body">
                     @if($gradesBySubject->isEmpty())
                         <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>Aucune note enregistrée pour cet étudiant.
+                            <i class="fas fa-info-circle me-2"></i>Aucune note enregistrée pour cet élève.
                         </div>
                     @else
                         <div class="table-responsive">
@@ -143,7 +143,7 @@
                                                 @if($data['average'] >= 16)
                                                     <span class="badge bg-success">Excellent</span>
                                                 @elseif($data['average'] >= 14)
-                                                    <span class="badge bg-primary">Très Bien</span>
+                                                    <span class="badge" style="background-color: #fd7e14;">Très Bien</span>
                                                 @elseif($data['average'] >= 12)
                                                     <span class="badge bg-info">Bien</span>
                                                 @elseif($data['average'] >= 10)
@@ -165,7 +165,7 @@
                                             @if($generalAverage >= 16)
                                                 <span class="badge bg-success ms-2">Mention Très Bien</span>
                                             @elseif($generalAverage >= 14)
-                                                <span class="badge bg-primary ms-2">Mention Bien</span>
+                                                <span class="badge ms-2" style="background-color: #fd7e14;">Mention Bien</span>
                                             @elseif($generalAverage >= 12)
                                                 <span class="badge bg-info ms-2">Mention Assez Bien</span>
                                             @elseif($generalAverage >= 10)
@@ -210,8 +210,8 @@
                             <span class="badge bg-info rounded-pill">{{ $attendanceStats['excused'] ?? 0 }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-file-check text-primary me-2"></i>Justifiées</span>
-                            <span class="badge bg-primary rounded-pill">{{ $attendanceStats['justified'] ?? 0 }}</span>
+                            <span><i class="fas fa-file-check me-2" style="color: #fd7e14;"></i>Justifiées</span>
+                            <span class="badge rounded-pill" style="background-color: #fd7e14;">{{ $attendanceStats['justified'] ?? 0 }}</span>
                         </li>
                     </ul>
                 </div>

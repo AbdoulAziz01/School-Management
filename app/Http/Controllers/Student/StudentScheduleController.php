@@ -75,7 +75,7 @@ class StudentScheduleController extends Controller
                 (object)[
                     'start_time' => '08:00',
                     'end_time' => '09:00',
-                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#3b82f6'],
+                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#f59e0b'],
                     'teacher' => (object)['name' => 'M. Dupont'],
                     'classroom' => (object)['name' => 'Salle 101'],
                     'classGroup' => null
@@ -83,7 +83,7 @@ class StudentScheduleController extends Controller
                 (object)[
                     'start_time' => '09:00',
                     'end_time' => '10:00',
-                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#3b82f6'],
+                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#f59e0b'],
                     'teacher' => (object)['name' => 'M. Dupont'],
                     'classroom' => (object)['name' => 'Salle 101'],
                     'classGroup' => null
@@ -142,7 +142,7 @@ class StudentScheduleController extends Controller
                 (object)[
                     'start_time' => '10:15',
                     'end_time' => '11:15',
-                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#3b82f6'],
+                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#f59e0b'],
                     'teacher' => (object)['name' => 'M. Dupont'],
                     'classroom' => (object)['name' => 'Salle 101'],
                     'classGroup' => null
@@ -204,7 +204,7 @@ class StudentScheduleController extends Controller
                 (object)[
                     'start_time' => '08:00',
                     'end_time' => '09:00',
-                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#3b82f6'],
+                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#f59e0b'],
                     'teacher' => (object)['name' => 'M. Dupont'],
                     'classroom' => (object)['name' => 'Salle 101'],
                     'classGroup' => null
@@ -271,7 +271,7 @@ class StudentScheduleController extends Controller
                 (object)[
                     'start_time' => '10:15',
                     'end_time' => '11:15',
-                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#3b82f6'],
+                    'subject' => (object)['name' => 'Mathématiques', 'color' => '#f59e0b'],
                     'teacher' => (object)['name' => 'M. Dupont'],
                     'classroom' => (object)['name' => 'Salle 101'],
                     'classGroup' => null

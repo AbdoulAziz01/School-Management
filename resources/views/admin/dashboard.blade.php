@@ -88,8 +88,8 @@
                             <h6 class="stat-label">Inscriptions en attente</h6>
                             <h2 class="stat-value">{{ $pendingCount ?? 0 }}</h2>
                         </div>
-                        <div class="p-3 bg-primary bg-opacity-10 rounded-circle">
-                            <i class="fas fa-user-clock text-primary fs-4"></i>
+                        <div class="p-3 rounded-circle" style="background-color: rgba(253, 126, 20, 0.1);">
+                            <i class="fas fa-user-clock fs-4" style="color: #fd7e14;"></i>
                         </div>
                     </div>
                     <div class="mt-3">

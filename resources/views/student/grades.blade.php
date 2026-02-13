@@ -33,7 +33,7 @@
     }
     
     .grade-excellent { background: #dcfce7; color: #166534; }
-    .grade-good { background: #dbeafe; color: #1e40af; }
+    .grade-good { background: #fef3c7; color: #b45309; }
     .grade-average { background: #fef3c7; color: #92400e; }
     .grade-poor { background: #fee2e2; color: #991b1b; }
     
@@ -49,7 +49,7 @@
     }
     
     .bulletin-btn {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
         border: none;
         padding: 12px 24px;
         font-weight: 600;
@@ -59,7 +59,7 @@
     
     .bulletin-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
     }
     
     .grade-table th {
@@ -193,7 +193,7 @@
         @foreach($grades as $subjectData)
             <div class="col-lg-6">
                 <div class="card grade-card">
-                    <div class="card-header" style="background: {{ $subjectData['subject_color'] ?? '#3b82f6' }};">
+                    <div class="card-header" style="background: {{ $subjectData['subject_color'] ?? '#f59e0b' }};">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
                                 <div class="subject-icon me-3" style="background: rgba(255,255,255,0.2);">
@@ -297,7 +297,7 @@
                                 <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Légende</h6>
                                 <div class="mb-3">
                                     <div class="d-flex align-items-center mb-2">
-                                        <span class="me-2" style="width: 16px; height: 16px; background: #4e73df; border-radius: 50%;"></span>
+                                        <span class="me-2" style="width: 16px; height: 16px; background: #f59e0b; border-radius: 50%;"></span>
                                         <span><strong>Notes réelles</strong></span>
                                     </div>
                                     <small class="text-muted">Vos moyennes mensuelles réelles</small>
@@ -415,15 +415,15 @@ document.addEventListener('DOMContentLoaded', function() {
         data: {
             labels: labels,
             datasets: [
-                {
+                {   
                     label: 'Notes réelles',
                     data: realGrades,
-                    borderColor: '#4e73df',
-                    backgroundColor: 'rgba(78, 115, 223, 0.15)',
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
                     borderWidth: 3,
                     fill: true,
                     tension: 0.3,
-                    pointBackgroundColor: '#4e73df',
+                    pointBackgroundColor: '#f59e0b',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointRadius: 5,

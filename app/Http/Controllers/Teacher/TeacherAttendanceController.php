@@ -84,8 +84,7 @@ class TeacherAttendanceController extends Controller
                 ],
                 [
                     'status' => $attendanceData['status'],
-                    'recorded_by' => $teacher->id,
-                    'notes' => $attendanceData['notes'] ?? null,
+                    'reason' => $attendanceData['notes'] ?? null,
                 ]
             );
         }

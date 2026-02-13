@@ -31,11 +31,21 @@
     }
     
     .welcome-banner {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
         border-radius: 15px;
-        color: white;
+        color: #1f2937;
         padding: 2rem;
         margin-bottom: 2rem;
+        border: 1px solid #f59e0b;
+    }
+    
+    .welcome-banner h2 {
+        color: #92400e;
+        font-weight: 700;
+    }
+    
+    .welcome-banner p {
+        color: #78350f;
     }
     
     .quick-link-card {
@@ -70,16 +80,16 @@
     <div class="row align-items-center">
         <div class="col-md-8">
             <h2 class="mb-2">Bonjour, {{ $user->name }} ! 👋</h2>
-            <p class="mb-0 opacity-75">Bienvenue sur votre espace étudiant. Consultez vos notes, votre emploi du temps et bien plus encore.</p>
+            <p class="mb-0">Bienvenue sur votre espace élève. Consultez vos notes, votre emploi du temps et bien plus encore.</p>
         </div>
         <div class="col-md-4 text-end d-none d-md-block">
-            <i class="fas fa-graduation-cap fa-4x opacity-50"></i>
+            <i class="fas fa-graduation-cap fa-4x" style="color: #d97706; opacity: 0.6;"></i>
         </div>
     </div>
 </div>
 
 <!-- Cartes de statistiques -->
-<div class="row g-4 mb-4">
+<div class="mb-4 row g-4">
     <div class="col-12 col-sm-6 col-lg-3">
         <div class="card stat-card">
             <div class="card-body">
@@ -146,15 +156,15 @@
 </div>
 
 <!-- Accès rapides -->
-<div class="row g-4 mb-4">
+<div class="mb-4 row g-4">
     <div class="col-12">
         <h5 class="mb-3"><i class="fas fa-bolt me-2 text-warning"></i>Accès rapides</h5>
     </div>
     <div class="col-6 col-md-3">
         <a href="{{ route('student.grades') }}" class="text-decoration-none">
-            <div class="card quick-link-card h-100 text-center py-4">
+            <div class="py-4 text-center card quick-link-card h-100">
                 <div class="card-body">
-                    <i class="fas fa-graduation-cap fa-2x text-primary mb-3"></i>
+                    <i class="mb-3 fas fa-graduation-cap fa-2x text-primary"></i>
                     <h6 class="mb-0">Mes notes</h6>
                 </div>
             </div>
@@ -162,19 +172,19 @@
     </div>
     <div class="col-6 col-md-3">
         <a href="{{ route('student.schedule') }}" class="text-decoration-none">
-            <div class="card quick-link-card h-100 text-center py-4">
+            <div class="py-4 text-center card quick-link-card h-100">
                 <div class="card-body">
-                    <i class="fas fa-calendar-alt fa-2x text-success mb-3"></i>
+                    <i class="mb-3 fas fa-calendar-alt fa-2x text-success"></i>
                     <h6 class="mb-0">Emploi du temps</h6>
                 </div>
-            </div>
+            </div>  
         </a>
     </div>
     <div class="col-6 col-md-3">
         <a href="{{ route('student.attendance') }}" class="text-decoration-none">
-            <div class="card quick-link-card h-100 text-center py-4">
+            <div class="py-4 text-center card quick-link-card h-100">
                 <div class="card-body">
-                    <i class="fas fa-user-check fa-2x text-info mb-3"></i>
+                    <i class="mb-3 fas fa-user-check fa-2x text-info"></i>
                     <h6 class="mb-0">Mes présences</h6>
                 </div>
             </div>
@@ -182,9 +192,9 @@
     </div>
     <div class="col-6 col-md-3">
         <a href="{{ route('student.profile.index') }}" class="text-decoration-none">
-            <div class="card quick-link-card h-100 text-center py-4">
+            <div class="py-4 text-center card quick-link-card h-100">
                 <div class="card-body">
-                    <i class="fas fa-user fa-2x text-warning mb-3"></i>
+                    <i class="mb-3 fas fa-user fa-2x text-warning"></i>
                     <h6 class="mb-0">Mon profil</h6>
                 </div>
             </div>
@@ -227,8 +237,8 @@
                         </table>
                     </div>
                 @else
-                    <div class="text-center py-4">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <div class="py-4 text-center">
+                        <i class="mb-3 fas fa-inbox fa-3x text-muted"></i>
                         <p class="text-muted">Aucune note récente</p>
                     </div>
                 @endif
@@ -247,7 +257,7 @@
                 @if($upcomingCourses->count() > 0)
                     <div class="list-group list-group-flush">
                         @foreach($upcomingCourses as $course)
-                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div class="px-0 list-group-item d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-1">{{ $course->subject->name ?? 'N/A' }}</h6>
                                     <small class="text-muted">
@@ -262,8 +272,8 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="text-center py-4">
-                        <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+                    <div class="py-4 text-center">
+                        <i class="mb-3 fas fa-calendar-check fa-3x text-muted"></i>
                         <p class="text-muted">Aucun cours prévu aujourd'hui</p>
                     </div>
                 @endif

@@ -36,7 +36,7 @@
         
         .school-header {
             text-align: center;
-            border-bottom: 3px solid #1e3a8a;
+            border-bottom: 3px solid #d97706;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
@@ -44,7 +44,7 @@
         .school-logo {
             width: 80px;
             height: 80px;
-            background: #1e3a8a;
+            background: #d97706;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -57,7 +57,7 @@
         .school-name {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #1e3a8a;
+            color: #d97706;
             margin-bottom: 5px;
         }
         
@@ -67,7 +67,7 @@
         }
         
         .bulletin-title {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
             color: white;
             text-align: center;
             padding: 15px;
@@ -106,7 +106,7 @@
         }
         
         .grades-table th {
-            background: #1e3a8a;
+            background: #d97706;
             color: white;
             padding: 12px 10px;
             text-align: center;
@@ -149,13 +149,13 @@
         }
         
         .grade-excellent { color: #166534; }
-        .grade-good { color: #1e40af; }
+        .grade-good { color: #b45309; }
         .grade-average { color: #92400e; }
         .grade-poor { color: #991b1b; }
         
         .summary-box {
-            background: #f0f9ff;
-            border: 2px solid #3b82f6;
+            background: #fffbeb;
+            border: 2px solid #f59e0b;
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 25px;
@@ -163,7 +163,7 @@
         
         .summary-title {
             font-weight: 700;
-            color: #1e3a8a;
+            color: #d97706;
             margin-bottom: 15px;
             font-size: 1.1rem;
         }
@@ -181,7 +181,7 @@
         .summary-value {
             font-size: 1.8rem;
             font-weight: 700;
-            color: #1e3a8a;
+            color: #d97706;
         }
         
         .summary-label {
@@ -274,7 +274,7 @@
             }
             
             .grades-table th {
-                background: #1e3a8a !important;
+                background: #d97706 !important;
                 -webkit-print-color-adjust: exact !important;
             }
             

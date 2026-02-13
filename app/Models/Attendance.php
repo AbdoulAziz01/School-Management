@@ -14,21 +14,10 @@ class Attendance extends Model
      */
     protected $fillable = [
         'user_id',
-        'subject_id',
-        'teacher_id',
-        'class_id',
         'date',
-        'start_time',
-        'end_time',
         'status', // present, absent, late, excused
-        'minutes_late',
-        'session_type', // cours, examen, contrôle, etc.
-        'classroom',
-        'comments',
         'reason',
         'justified',
-        'recorded_by',
-        'notes',
     ];
 
     /**

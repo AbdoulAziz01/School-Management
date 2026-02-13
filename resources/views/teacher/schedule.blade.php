@@ -1,6 +1,4 @@
-php artisan db:seed --class=LevelsAndSubjectsSeeder
-php artisan db:seed --class=DefaultClassesSeederphp artisan db:seed --class=LevelsAndSubjectsSeeder
-php artisan db:seed --class=DefaultClassesSeeder@extends('teacher.layouts.app')
+@extends('teacher.layouts.app')
 
 @section('title', 'Emploi du temps - Enseignant')
 

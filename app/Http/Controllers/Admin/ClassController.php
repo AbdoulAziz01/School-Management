@@ -116,7 +116,105 @@ class ClassController extends Controller
         // Récupérer les étudiants déjà affectés à cette classe
         $assignedStudents = $class->students()->paginate(10);
         
-        return view('admin.classes.show', compact('class', 'availableTeachers', 'subjects', 'assignedStudents'));
+        // ========= STATISTIQUES DE LA CLASSE =========
+        $studentIds = $class->students()->pluck('id')->toArray();
+        
+        // Moyenne générale de la classe
+        $classAverage = 0;
+        $totalGrades = 0;
+        $passCount = 0; // >= 10/20
+        $failCount = 0; // < 10/20
+        $studentAverages = [];
+        $gradeDistribution = [
+            'excellent' => 0, // >= 16
+            'good' => 0,      // >= 14
+            'average' => 0,   // >= 12
+            'passing' => 0,   // >= 10
+            'failing' => 0    // < 10
+        ];
+        
+        // Évolution par mois (pour le graphique)
+        $monthlyAverages = [];
+        
+        if (count($studentIds) > 0) {
+            // Calcul des moyennes par élève
+            foreach ($studentIds as $studentId) {
+                $grades = \App\Models\Grade::where('user_id', $studentId)
+                    ->whereHas('subject')
+                    ->get();
+                
+                if ($grades->count() > 0) {
+                    $studentAvg = $grades->avg('grade');
+                    $studentAverages[$studentId] = $studentAvg;
+                    
+                    // Distribution des notes
+                    if ($studentAvg >= 16) {
+                        $gradeDistribution['excellent']++;
+                    } elseif ($studentAvg >= 14) {
+                        $gradeDistribution['good']++;
+                    } elseif ($studentAvg >= 12) {
+                        $gradeDistribution['average']++;
+                    } elseif ($studentAvg >= 10) {
+                        $gradeDistribution['passing']++;
+                    } else {
+                        $gradeDistribution['failing']++;
+                    }
+                    
+                    // Réussite / Échec
+                    if ($studentAvg >= 10) {
+                        $passCount++;
+                    } else {
+                        $failCount++;
+                    }
+                }
+            }
+            
+            // Moyenne de la classe
+            if (count($studentAverages) > 0) {
+                $classAverage = array_sum($studentAverages) / count($studentAverages);
+            }
+            
+            // Évolution mensuelle des notes (6 derniers mois)
+            for ($i = 5; $i >= 0; $i--) {
+                $month = now()->subMonths($i);
+                $monthStart = $month->copy()->startOfMonth();
+                $monthEnd = $month->copy()->endOfMonth();
+                
+                $monthGrades = \App\Models\Grade::whereIn('user_id', $studentIds)
+                    ->whereBetween('date', [$monthStart, $monthEnd])
+                    ->get();
+                
+                $monthlyAverages[] = [
+                    'month' => $month->translatedFormat('M Y'),
+                    'average' => $monthGrades->count() > 0 ? round($monthGrades->avg('grade'), 2) : null,
+                    'count' => $monthGrades->count()
+                ];
+            }
+            
+            $totalGrades = \App\Models\Grade::whereIn('user_id', $studentIds)->count();
+        }
+        
+        // Meilleure et plus basse moyenne
+        $bestAverage = count($studentAverages) > 0 ? max($studentAverages) : 0;
+        $lowestAverage = count($studentAverages) > 0 ? min($studentAverages) : 0;
+        $studentsWithGrades = count($studentAverages);
+        
+        // Statistiques compilées
+        $classStats = [
+            'average' => round($classAverage, 2),
+            'best_average' => round($bestAverage, 2),
+            'lowest_average' => round($lowestAverage, 2),
+            'total_students' => count($studentIds),
+            'students_with_grades' => $studentsWithGrades,
+            'total_grades' => $totalGrades,
+            'pass_count' => $passCount,
+            'fail_count' => $failCount,
+            'pass_rate' => $studentsWithGrades > 0 ? round(($passCount / $studentsWithGrades) * 100, 1) : 0,
+            'grade_distribution' => $gradeDistribution,
+            'monthly_averages' => $monthlyAverages
+        ];
+        
+        return view('admin.classes.show', compact('class', 'availableTeachers', 'subjects', 'assignedStudents', 'classStats'));
     }
 
     /**

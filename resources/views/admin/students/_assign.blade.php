@@ -48,7 +48,7 @@
                                     <td>{{ $student->email }}</td>
                                     <td>
                                         @if($student->class)
-                                            <span class="badge bg-primary">{{ $student->class->name }}</span>
+                                            <span class="badge" style="background-color: #fd7e14;">{{ $student->class->name }}</span>
                                         @else
                                             <span class="badge bg-secondary">Non affecté</span>
                                         @endif
@@ -56,7 +56,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center">Aucun étudiant trouvé</td>
+                                    <td colspan="4" class="text-center">Aucun élève trouvé</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -69,7 +69,7 @@
 
 @push('scripts')
 <script>
-    // Gestion de la sélection/désélection de tous les étudiants
+    // Gestion de la sélection/désélection de tous les élèves
     document.getElementById('select-all').addEventListener('change', function(e) {
         const checkboxes = document.querySelectorAll('.student-checkbox');
         checkboxes.forEach(checkbox => {

@@ -69,10 +69,14 @@
                                             <td><code>{{ $subject->code }}</code></td>
                                             <td>{{ $subject->name }}</td>
                                             <td>
-                                                @php
-                                                    $teacherCount = $subject->teacherAssignments->groupBy('teacher_id')->count();
-                                                @endphp
-                                                <span class="badge bg-primary">{{ $teacherCount }} professeur(s)</span>
+                                                <span class="badge mb-1" style="background-color: #fd7e14;">{{ $subject->teachers->count() }} professeur(s)</span>
+                                                @if($subject->teachers->count() > 0)
+                                                    <div class="small text-muted">
+                                                        @foreach($subject->teachers as $teacher)
+                                                            <span class="d-block"><i class="fas fa-user-tie me-1"></i>{{ $teacher->name }}</span>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td>
                                                 <a href="{{ route('admin.subjects.show', $subject) }}" class="btn btn-sm btn-info" title="Voir">

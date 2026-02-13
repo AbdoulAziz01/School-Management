@@ -18,7 +18,7 @@
                             <span class="badge bg-secondary">Inactive</span>
                         @endif
                         @if($subject->is_core_subject)
-                            <span class="badge bg-primary">Principale</span>
+                            <span class="badge" style="background-color: #fd7e14;">Principale</span>
                         @else
                             <span class="badge bg-info">Optionnelle</span>
                         @endif
@@ -80,7 +80,7 @@
                     @php
                         $teacherCount = $subject->teacherAssignments->groupBy('teacher_id')->count();
                     @endphp
-                    <span class="badge bg-primary">{{ $teacherCount }} professeur(s)</span>
+                    <span class="badge" style="background-color: #fd7e14;">{{ $teacherCount }} professeur(s)</span>
                 </div>
                 <div class="card-body">
                     @if($subject->teacherAssignments->count() > 0)

@@ -6,7 +6,7 @@
         </div>
     </div>
     <div class="col-md-6 text-end">
-        <span class="badge bg-primary fs-6">{{ $classes->count() }} classes</span>
+        <span class="badge fs-6" style="background-color: #fd7e14;">{{ $classes->count() }} classes</span>
         <span class="badge bg-success fs-6 ms-2">{{ $classes->sum('students_count') }} élèves affectés</span>
     </div>
 </div>
@@ -27,7 +27,7 @@
                         aria-controls="collapse{{ $class->id }}">
                     <div class="d-flex align-items-center justify-content-between w-100 me-3">
                         <div>
-                            <i class="fas fa-chalkboard-teacher me-2 text-primary"></i>
+                            <i class="fas fa-chalkboard-teacher me-2" style="color: #fd7e14;"></i>
                             <strong>{{ $class->name }}</strong>
                             @if($class->level)
                                 <small class="text-muted ms-2">({{ $class->level->name }})</small>
@@ -66,7 +66,7 @@
                                     @foreach($classStudents->sortBy('name') as $student)
                                         <tr>
                                             <td>
-                                                <span class="badge bg-primary">{{ $student->identifier ?? 'N/A' }}</span>
+                                                <span class="badge" style="background-color: #fd7e14;">{{ $student->identifier ?? 'N/A' }}</span>
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center">
@@ -92,7 +92,7 @@
                                             <td class="text-end">
                                                 <div class="btn-group btn-group-sm" role="group">
                                                     <a href="{{ route('admin.students.show', $student) }}" 
-                                                       class="btn btn-outline-primary" 
+                                                       class="btn" style="color: #fd7e14; border-color: #fd7e14;" 
                                                        title="Voir détails">
                                                         <i class="fas fa-eye"></i>
                                                     </a>

@@ -29,9 +29,8 @@ class StudentController extends Controller
                 ->orderBy('name')
                 ->paginate(20);
                 
-            // Récupérer les étudiants non affectés pour l'onglet d'affectation
+            // Récupérer les étudiants non affectés pour l'onglet d'affectation (tous statuts)
             $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
-                ->where('status', 'approved')
                 ->whereNull('class_id')
                 ->orderBy('name')
                 ->get();
@@ -96,16 +95,14 @@ class StudentController extends Controller
      */
     public function showAssignForm()
     {
-        // Récupérer les élèves approuvés sans classe avec pagination
+        // Récupérer les élèves sans classe avec pagination (tous statuts)
         $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
-            ->where('status', User::STATUS_APPROVED)
             ->whereNull('class_id')
             ->orderBy('name')
             ->paginate(15, ['*'], 'unassigned_page');
             
-        // Récupérer les élèves déjà affectés à une classe avec pagination
+        // Récupérer les élèves déjà affectés à une classe avec pagination (tous statuts)
         $assignedStudents = User::whereIn('role', ['student', 'eleve'])
-            ->where('status', User::STATUS_APPROVED)
             ->whereNotNull('class_id')
             ->with('class')
             ->orderBy('name')
@@ -149,22 +146,54 @@ class StudentController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Les élèves ont été affectés à la classe avec succès.'
-            ]);
+            $count = count($validated['students']);
+            $message = $count > 1 
+                ? "Les {$count} élèves ont été affectés à la classe avec succès."
+                : "L'élève a été affecté à la classe avec succès.";
+
+            return redirect()->route('admin.students.index', ['tab' => 'assignment'])
+                ->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'affectation : ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()
+                ->with('error', 'Erreur lors de l\'affectation : ' . $e->getMessage());
         }
     }
     
     /**
-     * Affecte un élève à une classe
+     * Traite l'affectation d'un élève à une classe via formulaire
+     */
+    public function storeAssignment(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:users,id',
+            'class_id' => 'required|exists:classes,id'
+        ]);
+        
+        try {
+            DB::beginTransaction();
+            
+            $student = User::findOrFail($request->student_id);
+            $student->update([
+                'class_id' => $request->class_id,
+                'status' => 'approved'
+            ]);
+            
+            DB::commit();
+            
+            return redirect()->route('admin.students.assign')
+                ->with('success', 'Élève affecté avec succès à la classe.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('admin.students.assign')
+                ->with('error', 'Erreur lors de l\'affectation : ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Affecte un élève à une classe (API JSON)
      */
     public function assignToClass(Request $request, User $student)
     {
@@ -251,7 +280,7 @@ class StudentController extends Controller
 
             return redirect()
                 ->route('admin.students.show', $student)
-                ->with('success', 'Étudiant créé avec succès. Identifiant: ' . $identifier);
+                ->with('success', 'Élève créé avec succès. Identifiant: ' . $identifier);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -320,13 +349,13 @@ class StudentController extends Controller
 
             return redirect()
                 ->route('admin.students.show', $student)
-                ->with('success', 'Étudiant mis à jour avec succès.');
+                ->with('success', 'Élève mis à jour avec succès.');
 
         } catch (\Exception $e) {
             DB::rollBack();
             return back()
                 ->withInput()
-                ->with('error', 'Une erreur est survenue lors de la mise à jour de l\'étudiant.');
+                ->with('error', 'Une erreur est survenue lors de la mise à jour de l\'élève.');
         }
     }
 
@@ -419,7 +448,7 @@ public function pending()
 
         $student->update(['status' => 'approved']);
 
-        return back()->with('success', 'Étudiant approuvé avec succès.');
+        return back()->with('success', 'Élève approuvé avec succès.');
     }
 
     /**
@@ -478,7 +507,7 @@ public function pending()
         // Ici, vous pourriez ajouter une notification par email
         // $student->notify(new StudentRejected());
 
-        return back()->with('success', 'Inscription de l\'étudiant rejetée.');
+        return back()->with('success', 'Inscription de l\'élève rejetée.');
     }
 
     /**

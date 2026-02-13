@@ -20,8 +20,8 @@
         
         .sidebar {
             min-height: calc(100vh - 56px);
-            background: #1e3a8a;
-            color: white;
+            background: #1c1917;
+            color: #fef3c7;
             box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
             z-index: 1000;
             position: sticky;
@@ -46,8 +46,8 @@
         }
         
         .sidebar .nav-link.active {
-            background-color: white;
-            color: #1e3a8a;
+            background-color: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
             font-weight: 500;
         }
         

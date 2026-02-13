@@ -31,8 +31,8 @@
                                  class="rounded-circle" 
                                  style="width: 120px; height: 120px; object-fit: cover;">
                         @else
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto" 
-                                 style="width: 120px; height: 120px; font-size: 3rem;">
+                            <div class="text-white rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+                                 style="width: 120px; height: 120px; font-size: 3rem; background-color: #fd7e14;">
                                 {{ strtoupper(substr($teacher->name, 0, 1)) }}
                             </div>
                         @endif
@@ -95,7 +95,7 @@
                     <h5 class="mb-0">
                         <i class="fas fa-chalkboard me-2"></i>Classes affectées
                     </h5>
-                    <span class="badge bg-primary">{{ $teacher->assignedClasses->count() }} classe(s)</span>
+                    <span class="badge" style="background-color: #fd7e14;">{{ $teacher->assignedClasses->count() }} classe(s)</span>
                 </div>
                 <div class="card-body">
                     @if($teacher->assignedClasses->isEmpty())
@@ -160,7 +160,7 @@
                             @foreach($teacher->subjects as $subject)
                                 <div class="col-md-6 col-lg-4 mb-2">
                                     <div class="border rounded p-2 d-flex align-items-center">
-                                        <i class="fas fa-book text-primary me-2"></i>
+                                        <i class="fas fa-book me-2" style="color: #fd7e14;"></i>
                                         <span>{{ $subject->name }}</span>
                                     </div>
                                 </div>

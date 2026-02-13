@@ -12,17 +12,17 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#1e40af',
-          dark: '#1e3a8a',
-          light: '#3b82f6',
+          DEFAULT: '#f59e0b',
+          dark: '#d97706',
+          light: '#fbbf24',
         },
         secondary: {
-          DEFAULT: '#1e3a8a',
-          light: '#2563eb',
+          DEFAULT: '#d97706',
+          light: '#f59e0b',
         },
         accent: {
-          DEFAULT: '#3b82f6',
-          dark: '#2563eb',
+          DEFAULT: '#f59e0b',
+          dark: '#d97706',
         },
         success: colors.green,
         warning: colors.amber,

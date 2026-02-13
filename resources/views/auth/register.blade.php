@@ -10,7 +10,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            background: linear-gradient(to bottom right, #1e40af, #3b82f6, #93c5fd, #ffffff);
+            background: linear-gradient(to bottom right, #f59e0b, #d97706, #fbbf24, #fffbeb);
             background-attachment: fixed;
         }
         
@@ -19,6 +19,21 @@
             backdrop-filter: blur(10px);
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .text-primary { color: #d97706 !important; }
+        .btn-primary { 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border: none;
+        }
+        .btn-primary:hover { 
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25);
         }
     </style>
 </head>

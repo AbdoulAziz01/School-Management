@@ -48,7 +48,7 @@
                         <div class="card-header bg-light">
                             <h5 class="mb-0">
                                 {{ $academicYear->name }}
-                                <span class="badge bg-primary">{{ $yearAssignments->count() }} affectation(s)</span>
+                                <span class="badge" style="background-color: #fd7e14;">{{ $yearAssignments->count() }} affectation(s)</span>
                             </h5>
                         </div>
                         <div class="card-body p-0">

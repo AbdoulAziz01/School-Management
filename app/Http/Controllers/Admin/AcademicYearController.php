@@ -70,6 +70,7 @@ class AcademicYearController extends Controller
         $academicYear->load([
             'classes.level',
             'classes.students',
+            'classes.teachers',
             'teacherAssignments.teacher', 
             'teacherAssignments.subject', 
             'teacherAssignments.schoolClass'
@@ -81,7 +82,22 @@ class AcademicYearController extends Controller
         $academicYear->students_count = $academicYear->classes->sum(function($class) {
             return $class->students->count();
         });
-        $academicYear->unique_teachers_count = $academicYear->teacherAssignments->unique('teacher_id')->count();
+        
+        // Compter les professeurs uniques via la table class_teacher
+        // On utilise une requête directe pour être sûr de compter tous les professeurs
+        $classIds = $academicYear->classes->pluck('id')->toArray();
+        $uniqueTeachersCount = 0;
+        
+        if (count($classIds) > 0) {
+            $uniqueTeachersCount = DB::table('class_teacher')
+                ->join('users', 'class_teacher.teacher_id', '=', 'users.id')
+                ->whereIn('class_teacher.class_id', $classIds)
+                ->whereIn('users.role', ['teacher', 'enseignant'])
+                ->distinct('class_teacher.teacher_id')
+                ->count('class_teacher.teacher_id');
+        }
+        
+        $academicYear->unique_teachers_count = $uniqueTeachersCount;
         
         // Add students_count to each class for display
         foreach ($academicYear->classes as $class) {

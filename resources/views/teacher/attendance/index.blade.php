@@ -89,7 +89,7 @@
                                         <td>
                                             <input type="hidden" name="attendances[{{ $index }}][user_id]" value="{{ $student->id }}">
                                             <div class="d-flex align-items-center">
-                                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-size: 0.85rem;">
+                                                <div class="rounded-circle text-white d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-size: 0.85rem; background-color: #f59e0b;">
                                                     {{ strtoupper(substr($student->name, 0, 2)) }}
                                                 </div>
                                                 {{ $student->name }}

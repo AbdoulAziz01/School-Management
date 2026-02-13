@@ -1,7 +1,7 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Liste des élèves</h5>
-        <span class="badge bg-primary">{{ $students->total() }} élève(s)</span>
+        <span class="badge" style="background-color: #fd7e14;">{{ $students->total() }} élève(s)</span>
     </div>
     
     <div class="card-body">
@@ -28,11 +28,11 @@
                     <tbody>
                         @foreach($students as $student)
                             <tr>
-                                <td><strong class="text-primary">{{ $student->identifier ?? 'N/A' }}</strong></td>
+                                <td><strong style="color: #fd7e14;">{{ $student->identifier ?? 'N/A' }}</strong></td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-sm me-2">
-                                            <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                            <div class="avatar-title rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background-color: rgba(253, 126, 20, 0.1); color: #fd7e14;">
                                                 <i class="fas fa-user-graduate"></i>
                                             </div>
                                         </div>
@@ -44,7 +44,7 @@
                                 <td><small>{{ $student->email }}</small></td>
                                 <td>
                                     @if($student->class)
-                                        <span class="badge bg-primary">{{ $student->class->name ?? 'N/A' }}</span>
+                                        <span class="badge" style="background-color: #fd7e14;">{{ $student->class->name ?? 'N/A' }}</span>
                                     @else
                                         <span class="badge bg-secondary">Non affecté</span>
                                     @endif
@@ -60,7 +60,7 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.students.show', $student) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Voir les détails">
+                                        <a href="{{ route('admin.students.show', $student) }}" class="btn btn-sm btn-outline-warning" style="color: #fd7e14; border-color: #fd7e14;" data-bs-toggle="tooltip" title="Voir les détails">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <a href="{{ route('admin.students.edit', $student) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Modifier">
