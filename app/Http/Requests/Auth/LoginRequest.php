@@ -42,10 +42,17 @@ public function rules(): array
     {
         $this->ensureIsNotRateLimited();
 
+        $login = trim((string) $this->input('identifier'));
+
         $credentials = [
-            'identifier' => $this->identifier,
             'password' => $this->password,
         ];
+
+        if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            $credentials['email'] = $login;
+        } else {
+            $credentials['identifier'] = $login;
+        }
 
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
@@ -107,6 +114,6 @@ public function rules(): array
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('identifier')).'|'.$this->ip());
+        return Str::transliterate(Str::lower(trim((string) $this->input('identifier'))).'|'.$this->ip());
     }
 }

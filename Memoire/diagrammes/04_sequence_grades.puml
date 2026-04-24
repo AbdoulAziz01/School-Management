@@ -1,0 +1,57 @@
+@startuml
+title Diagramme de Sequence - Saisie de notes puis consultation du bulletin
+skinparam sequenceArrowThickness 1.2
+
+actor Enseignant as T
+actor Eleve as S
+participant "Navigateur" as Browser
+participant "TeacherMiddleware" as MW
+participant "TeacherGrades\nController" as TCtrl
+participant "User (teacher)" as TM
+participant "Grade (Model)" as GM
+participant "DB::transaction" as TRX
+database "MySQL" as DB
+participant "StudentGrades\nController" as SCtrl
+participant "StudentBulletin\nController" as BCtrl
+
+== 1. Saisie des notes par l'enseignant ==
+
+T -> Browser : Remplit formulaire notes\n(classe, matiere, type, coef, date, notes[])
+Browser -> MW : POST /teacher/grades
+MW -> MW : Verifie role in {teacher, professeur}
+MW -> TCtrl : store(Request)
+
+TCtrl -> TCtrl : validate(): grade in [0,20],\ncoefficient in [0.5,5]
+TCtrl -> TM : Auth::user()->assignedClasses()\n->where('classes.id', class_id)->exists()
+TM -> DB : SELECT ... FROM class_teacher\nWHERE teacher_id=? AND class_id=?
+TM --> TCtrl : hasAccess = true
+
+TCtrl -> TRX : DB::beginTransaction()
+loop pour chaque note saisie
+    TCtrl -> GM : Grade::create([user_id, subject_id,\ngrade, type, date, coefficient, ...])
+    GM -> DB : INSERT INTO grades
+    DB --> GM : id
+end
+TCtrl -> TRX : DB::commit()
+TCtrl --> Browser : 302 redirect\n+ flash('Notes enregistrees')
+
+== 2. Consultation du bulletin par l'eleve ==
+
+S -> Browser : Clic "Bulletin"
+Browser -> SCtrl : GET /student/bulletin
+SCtrl -> GM : $user->grades()\n->where('semester', $sem)\n->with('subject')->get()
+GM -> DB : SELECT g.*, s.* FROM grades g\nJOIN subjects s ON g.subject_id=s.id\nWHERE user_id=? AND semester=?
+DB --> GM : Collection<Grade>
+GM --> SCtrl : grades
+
+SCtrl -> SCtrl : groupBy('subject.name')
+loop pour chaque matiere
+    SCtrl -> SCtrl : avg = grades.avg('grade')\ncoef = subject.coefficient\nappreciation = getAppreciation(avg)
+end
+
+SCtrl -> SCtrl : totalCoef = Somme coef\nweightedSum = Somme (avg x coef)\ngeneralAverage = weightedSum / totalCoef
+
+SCtrl --> Browser : view('student.bulletin', [grades,\ngeneralAverage, studentInfo, ...])
+Browser -> S : Bulletin affiche\n(HTML rendu)
+
+@enduml

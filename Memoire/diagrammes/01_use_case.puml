@@ -1,0 +1,94 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+title Diagramme de Cas d'Utilisation - EduManager
+
+actor "Administrateur" as Admin
+actor "Enseignant" as Teacher
+actor "Eleve" as Student
+actor "Service IA" as AI <<system>>
+
+rectangle "EduManager" {
+
+  usecase "S'inscrire" as UC_Register
+  usecase "Se connecter" as UC_Login
+  usecase "Se deconnecter" as UC_Logout
+  usecase "Gerer son profil" as UC_Profile
+  usecase "Discuter avec le chatbot" as UC_Chat
+
+  package "Administration" {
+    usecase "Approuver / rejeter une inscription" as UC_Approve
+    usecase "Gerer les eleves" as UC_MgrStudents
+    usecase "Gerer les enseignants" as UC_MgrTeachers
+    usecase "Gerer les classes" as UC_MgrClasses
+    usecase "Gerer les matieres" as UC_MgrSubjects
+    usecase "Gerer les annees academiques" as UC_MgrYears
+    usecase "Affecter un eleve a une classe" as UC_AssignStudent
+    usecase "Affecter un enseignant\n(classe + matiere + annee)" as UC_AssignTeacher
+  }
+
+  package "Pedagogie" {
+    usecase "Saisir des notes" as UC_EnterGrades
+    usecase "Modifier / supprimer une note" as UC_EditGrade
+    usecase "Faire l'appel (presences)" as UC_Attendance
+    usecase "Consulter ses classes" as UC_ViewClasses
+    usecase "Consulter l'emploi du temps" as UC_Schedule
+    usecase "Consulter historique eleve" as UC_StudentHistory
+  }
+
+  package "Scolarite eleve" {
+    usecase "Consulter ses notes" as UC_ViewGrades
+    usecase "Consulter son bulletin semestriel" as UC_Bulletin
+    usecase "Consulter ses presences" as UC_ViewAttendance
+  }
+}
+
+' Heritage des cas communs
+UC_Login <|-- UC_Logout
+UC_Profile ..> UC_Login : <<include>>
+UC_Chat ..> UC_Login : <<include>>
+
+' Administrateur
+Admin --> UC_Login
+Admin --> UC_Profile
+Admin --> UC_Chat
+Admin --> UC_Approve
+Admin --> UC_MgrStudents
+Admin --> UC_MgrTeachers
+Admin --> UC_MgrClasses
+Admin --> UC_MgrSubjects
+Admin --> UC_MgrYears
+Admin --> UC_AssignStudent
+Admin --> UC_AssignTeacher
+
+' Enseignant
+Teacher --> UC_Register
+Teacher --> UC_Login
+Teacher --> UC_Profile
+Teacher --> UC_Chat
+Teacher --> UC_EnterGrades
+Teacher --> UC_EditGrade
+Teacher --> UC_Attendance
+Teacher --> UC_ViewClasses
+Teacher --> UC_Schedule
+Teacher --> UC_StudentHistory
+
+' Eleve
+Student --> UC_Register
+Student --> UC_Login
+Student --> UC_Profile
+Student --> UC_Chat
+Student --> UC_ViewGrades
+Student --> UC_Bulletin
+Student --> UC_ViewAttendance
+Student --> UC_Schedule
+
+' Extensions
+UC_EditGrade ..> UC_EnterGrades : <<extend>>
+UC_Bulletin ..> UC_ViewGrades : <<extend>>
+
+' Systeme externe
+UC_Chat --> AI : <<uses>>
+
+@enduml

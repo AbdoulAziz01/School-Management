@@ -76,12 +76,6 @@
                     <h1 class="mb-4 display-4 fw-bold text-primary">
                         Bienvenue sur le système<br>de gestion scolaire
                     </h1>
-                    
-                    <p class="mb-5 lead text-muted">
-                        Application de gestion d'école développée avec Laravel. 
-                        On ajoutera bientôt les espaces admin, prof et élève.
-                    </p>
-                    
                     <div class="gap-3 d-grid d-md-flex justify-content-md-center">
                         <a href="{{ route('login') }}" class="btn btn-primary btn-custom">
                             Se connecter

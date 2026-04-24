@@ -1,0 +1,36 @@
+@startuml
+title Diagramme d'Etats-Transitions - Compte utilisateur
+skinparam state {
+  BackgroundColor #FEFEFE
+  BorderColor #444
+}
+
+[*] --> Brouillon : Utilisateur remplit\nle formulaire /register
+
+Brouillon --> EnAttente : Soumission du formulaire\n(status = pending)\n[email verifie auto]
+
+state EnAttente {
+  EnAttente : Le compte existe en base
+  EnAttente : Connexion impossible
+  EnAttente : En attente de decision admin
+}
+
+EnAttente --> Rejete : Admin clique\n"Rejeter"\n/ status = rejected
+EnAttente --> Approuve : Admin clique\n"Approuver"\n+ affecte class_id\n/ status = approved
+
+state Approuve {
+  Approuve : Peut se connecter
+  Approuve : Accede a son dashboard
+  [*] --> Actif
+  Actif --> SessionOuverte : Login OK
+  SessionOuverte --> Actif : Logout / session expiree
+  Actif --> MotDePasseReinitialise : Admin reinitialise\nle mot de passe
+  MotDePasseReinitialise --> Actif : Nouveau mot de passe pose
+}
+
+Rejete --> [*] : (optionnel)\nSuppression manuelle
+
+Approuve --> Supprime : destroy() par admin\n(cascade sur grades,\nattendances, etc.)
+Supprime --> [*]
+
+@enduml

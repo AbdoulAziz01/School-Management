@@ -1,0 +1,62 @@
+@startuml
+title Diagramme d'Activite - Prise de presence par l'enseignant
+skinparam activityBackgroundColor #FEFEFE
+
+start
+:L'enseignant se connecte;
+:Accede a /teacher/attendance;
+
+if (L'enseignant a des classes affectees ?) then (non)
+  :Affiche "Aucune classe affectee";
+  stop
+else (oui)
+endif
+
+:Selectionne une classe dans la liste;
+:Selectionne la date (par defaut aujourd'hui);
+
+:Le systeme recupere les eleves\nde la classe (role=eleve, status=approved);
+:Recupere les presences existantes\npour cette date (keyBy user_id);
+
+if (Des presences existent deja ?) then (oui)
+  :Pre-remplit le formulaire\navec les statuts existants;
+else (non)
+  :Tous les eleves par defaut = "present";
+endif
+
+:Affiche la liste des eleves\nmarques/a marquer;
+
+repeat
+  :Pour chaque eleve,\nchoisit un statut:
+  present / absent / late / excused;
+  :(Optionnel) Ajoute un motif;
+repeat while (Encore des eleves ?)
+
+:Clique sur "Enregistrer";
+
+:POST /teacher/attendance;
+
+partition "Serveur" {
+  :Valide les donnees\n(status in {present,absent,late,excused});
+
+  if (L'enseignant a acces a la classe\n(class_teacher) ?) then (non)
+    :Retourne erreur 403;
+    stop
+  else (oui)
+  endif
+
+  :DB::beginTransaction();
+
+  repeat
+    :Attendance::updateOrCreate(\n[user_id, date],\n[status, reason]);
+  repeat while (Encore des enregistrements ?)
+
+  :DB::commit();
+}
+
+:Redirection avec\nflash('Presences enregistrees');
+
+:L'enseignant voit la confirmation;
+
+stop
+@enduml

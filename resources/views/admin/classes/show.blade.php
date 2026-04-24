@@ -156,11 +156,11 @@
                 <div class="col-md-4">
                     <div class="p-3 border rounded">
                         <h6 class="mb-3"><i class="fas fa-users me-2"></i>Répartition des Résultats</h6>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="mb-2 d-flex justify-content-between">
                             <span><i class="fas fa-check text-success me-2"></i>Élèves >= 10/20</span>
                             <span class="badge bg-success">{{ $classStats['pass_count'] }}</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="mb-2 d-flex justify-content-between">
                             <span><i class="fas fa-times text-danger me-2"></i>Élèves < 10/20</span>
                             <span class="badge bg-danger">{{ $classStats['fail_count'] }}</span>
                         </div>
@@ -175,7 +175,7 @@
                 <div class="col-md-8">
                     <div class="p-3 border rounded">
                         <h6 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Distribution des Moyennes</h6>
-                        <div class="row text-center">
+                        <div class="text-center row">
                             <div class="col">
                                 <div class="p-2 rounded" style="background-color: #28a745; color: white;">
                                     <div class="fs-4 fw-bold">{{ $classStats['grade_distribution']['excellent'] }}</div>
@@ -215,9 +215,9 @@
     
     <!-- Graphique d'évolution -->
     <div class="mb-4 shadow-sm card">
-        <div class="card-header bg-info text-white">
+        <div class="text-white card-header bg-info">
             <h5 class="mb-0">
-                <i class="fas fa-chart-line"></i> Évolution des Performances (6 derniers mois)
+                <i class="fas fa-chart-line"></i> Évolution des Performances
             </h5>
         </div>
         <div class="card-body">

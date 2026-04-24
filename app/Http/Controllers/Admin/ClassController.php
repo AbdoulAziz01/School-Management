@@ -118,6 +118,7 @@ class ClassController extends Controller
         
         // ========= STATISTIQUES DE LA CLASSE =========
         $studentIds = $class->students()->pluck('id')->toArray();
+        $academicYear = $class->academicYear;
         
         // Moyenne générale de la classe
         $classAverage = 0;
@@ -136,17 +137,60 @@ class ClassController extends Controller
         // Évolution par mois (pour le graphique)
         $monthlyAverages = [];
         
+        $applyAcademicYearFilter = function ($query) use ($academicYear) {
+            if (!$academicYear) {
+                return $query;
+            }
+
+            return $query->where(function ($subQuery) use ($academicYear) {
+                $subQuery->where('academic_year_id', $academicYear->id);
+
+                if ($academicYear->start_date && $academicYear->end_date) {
+                    $subQuery->orWhere(function ($dateQuery) use ($academicYear) {
+                        $dateQuery->whereNull('academic_year_id')
+                            ->whereBetween('date', [$academicYear->start_date, $academicYear->end_date]);
+                    });
+                }
+            });
+        };
+
+        $calculateWeightedAverage = function ($grades) {
+            if ($grades->isEmpty()) {
+                return null;
+            }
+
+            $weightedSum = 0;
+            $totalCoef = 0;
+
+            foreach ($grades->groupBy('subject_id') as $subjectGrades) {
+                $subjectAvg = $subjectGrades->avg('grade');
+                if ($subjectAvg === null) {
+                    continue;
+                }
+
+                $coefficient = $subjectGrades->first()->subject->coefficient ?? 1;
+                $weightedSum += $subjectAvg * $coefficient;
+                $totalCoef += $coefficient;
+            }
+
+            return $totalCoef > 0 ? $weightedSum / $totalCoef : null;
+        };
+
         if (count($studentIds) > 0) {
-            // Calcul des moyennes par élève
+            $allGradesQuery = \App\Models\Grade::whereIn('user_id', $studentIds)
+                ->whereHas('subject')
+                ->with('subject');
+            $allGradesQuery = $applyAcademicYearFilter($allGradesQuery);
+            $allGrades = $allGradesQuery->get();
+
+            // Calcul des moyennes par élève (pondérées par coefficient)
             foreach ($studentIds as $studentId) {
-                $grades = \App\Models\Grade::where('user_id', $studentId)
-                    ->whereHas('subject')
-                    ->get();
-                
-                if ($grades->count() > 0) {
-                    $studentAvg = $grades->avg('grade');
+                $studentGrades = $allGrades->where('user_id', $studentId);
+                $studentAvg = $calculateWeightedAverage($studentGrades);
+
+                if ($studentAvg !== null) {
                     $studentAverages[$studentId] = $studentAvg;
-                    
+
                     // Distribution des notes
                     if ($studentAvg >= 16) {
                         $gradeDistribution['excellent']++;
@@ -159,7 +203,7 @@ class ClassController extends Controller
                     } else {
                         $gradeDistribution['failing']++;
                     }
-                    
+
                     // Réussite / Échec
                     if ($studentAvg >= 10) {
                         $passCount++;
@@ -179,19 +223,35 @@ class ClassController extends Controller
                 $month = now()->subMonths($i);
                 $monthStart = $month->copy()->startOfMonth();
                 $monthEnd = $month->copy()->endOfMonth();
-                
-                $monthGrades = \App\Models\Grade::whereIn('user_id', $studentIds)
-                    ->whereBetween('date', [$monthStart, $monthEnd])
-                    ->get();
-                
+
+                $monthGradesQuery = \App\Models\Grade::whereIn('user_id', $studentIds)
+                    ->whereHas('subject')
+                    ->with('subject')
+                    ->whereBetween('date', [$monthStart, $monthEnd]);
+                $monthGradesQuery = $applyAcademicYearFilter($monthGradesQuery);
+                $monthGrades = $monthGradesQuery->get();
+
+                $monthlyStudentAverages = $monthGrades
+                    ->groupBy('user_id')
+                    ->map(function ($grades) use ($calculateWeightedAverage) {
+                        return $calculateWeightedAverage($grades);
+                    })
+                    ->filter(function ($average) {
+                        return $average !== null;
+                    });
+
+                $monthAverage = $monthlyStudentAverages->count() > 0
+                    ? $monthlyStudentAverages->avg()
+                    : null;
+
                 $monthlyAverages[] = [
                     'month' => $month->translatedFormat('M Y'),
-                    'average' => $monthGrades->count() > 0 ? round($monthGrades->avg('grade'), 2) : null,
+                    'average' => $monthAverage !== null ? round($monthAverage, 2) : null,
                     'count' => $monthGrades->count()
                 ];
             }
-            
-            $totalGrades = \App\Models\Grade::whereIn('user_id', $studentIds)->count();
+
+            $totalGrades = $allGrades->count();
         }
         
         // Meilleure et plus basse moyenne

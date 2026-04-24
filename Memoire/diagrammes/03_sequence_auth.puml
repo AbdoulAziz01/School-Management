@@ -1,0 +1,56 @@
+@startuml
+title Diagramme de Sequence - Authentification et redirection par role
+skinparam sequenceArrowThickness 1.2
+
+actor Utilisateur as U
+participant "Navigateur" as Browser
+participant "Route /login\n(web.php)" as Route
+participant "AuthenticatedSession\nController" as Ctrl
+participant "LoginRequest" as Req
+participant "RateLimiter" as RL
+participant "Auth (Guard)" as Auth
+participant "User (Model)" as Model
+database "MySQL\n(users)" as DB
+
+U -> Browser : Saisit identifiant + mot de passe
+Browser -> Route : POST /login {identifier, password}
+Route -> Ctrl : store(LoginRequest)
+Ctrl -> Req : authenticate()
+Req -> RL : tooManyAttempts(key)
+RL --> Req : false
+Req -> Req : Detection email ou identifier\n(filter_var FILTER_VALIDATE_EMAIL)
+Req -> Auth : attempt(credentials, remember)
+Auth -> Model : where(email|identifier)->first()
+Model -> DB : SELECT * FROM users
+DB --> Model : row
+Model --> Auth : User
+Auth -> Auth : Hash::check(password, hashed)
+Auth --> Req : true
+Req -> Model : Auth::user()->status
+alt status == 'rejected'
+    Req -> Auth : Auth::logout()
+    Req --> Ctrl : ValidationException
+    Ctrl --> Browser : 302 back()\n+ flash('error')
+else status == 'pending'
+    Req -> Auth : Auth::logout()
+    Req --> Ctrl : ValidationException
+    Ctrl --> Browser : 302 back()\n+ flash('error')
+else status == 'approved'
+    Req -> RL : clear(key)
+    Req --> Ctrl : OK
+    Ctrl -> Ctrl : session()->regenerate()
+    Ctrl -> Ctrl : redirectToDashboard(user)
+    alt role == 'admin'
+        Ctrl --> Browser : 302 /admin/dashboard
+    else role == 'professeur' ou 'teacher'
+        Ctrl --> Browser : 302 /teacher/dashboard
+    else role == 'eleve'
+        Ctrl --> Browser : 302 /student/dashboard
+    else
+        Ctrl --> Browser : 302 /
+    end
+end
+
+Browser -> U : Tableau de bord adapte
+
+@enduml

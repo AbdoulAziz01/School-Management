@@ -22,6 +22,7 @@ use App\Http\Controllers\Teacher\TeacherGradesController;
 use App\Http\Controllers\Teacher\TeacherAttendanceController;
 use App\Http\Controllers\Teacher\TeacherScheduleController;
 use App\Http\Controllers\Teacher\TeacherProfileController;
+use App\Http\Controllers\ChatController;
 
 // Page d'accueil
 Route::get('/', function () {
@@ -200,6 +201,21 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     
     // Gestion des matières
     Route::resource('subjects', 'App\Http\Controllers\Admin\SubjectController')->names('admin.subjects');
+});
+
+// Routes du Chatbot IA - Protégées par authentification
+Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
+    // Page du chat
+    Route::get('/', [ChatController::class, 'index'])->name('index');
+    
+    // Envoyer un message
+    Route::post('/send', [ChatController::class, 'sendMessage'])->name('send');
+    
+    // Vérification de l'état du service
+    Route::get('/health', [ChatController::class, 'healthCheck'])->name('health');
+    
+    // Schéma de la BDD (admin uniquement)
+    Route::get('/schema', [ChatController::class, 'getSchema'])->name('schema');
 });
 
 // En cas de route non trouvée

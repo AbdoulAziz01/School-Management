@@ -1,0 +1,24 @@
+# Framework Web
+Flask==3.0.0
+flask-cors==4.0.0
+requests==2.31.0
+python-dotenv==1.0.0
+
+# LangChain et composants
+langchain==0.1.20
+langchain-google-genai==0.0.7
+langchain-community==0.0.38
+langchain-experimental==0.0.49
+
+# Base de données
+PyMySQL==1.1.0
+SQLAlchemy==2.0.25
+
+# Google AI
+google-generativeai==0.4.0
+
+# Pydantic compatible Python 3.14
+pydantic==2.10.0
+
+# NumPy compatible
+numpy==1.26.4

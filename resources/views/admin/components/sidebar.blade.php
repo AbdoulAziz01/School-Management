@@ -60,11 +60,11 @@
         .user-card {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
             margin: 15px;
-            padding: 15px;
-            border-radius: 16px;
+            padding: 20px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
             border: 1px solid rgba(251, 191, 36, 0.2);
             position: relative;
             overflow: hidden;
@@ -94,14 +94,14 @@
         }
         
         .user-avatar {
-            width: 52px;
-            height: 52px;
+            width: 65px;
+            height: 65px;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            border-radius: 14px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 1.4rem;
             font-weight: 700;
             color: #1c1917;
             flex-shrink: 0;
@@ -120,8 +120,8 @@
             position: absolute;
             bottom: -2px;
             right: -2px;
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             background: #fbbf24;
             border: 2px solid #1c1917;
             border-radius: 50%;
@@ -135,8 +135,8 @@
         .user-info h6 {
             color: #fef3c7;
             font-weight: 600;
-            margin: 0 0 4px 0;
-            font-size: 0.95rem;
+            margin: 0 0 6px 0;
+            font-size: 1.05rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -148,9 +148,9 @@
             gap: 6px;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: #1c1917;
-            padding: 5px 12px;
-            border-radius: 8px;
-            font-size: 0.75rem;
+            padding: 6px 14px;
+            border-radius: 9px;
+            font-size: 0.8rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -299,7 +299,7 @@
     </div>
     
     <!-- User Card - Format Horizontal Compact -->
-    <div class="user-card">
+    <div class="user-card ">
         <div class="user-avatar">
             {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
         </div>
