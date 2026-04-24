@@ -69,6 +69,8 @@
             position: relative;
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100px;
+            height: auto;
         }
         
         .user-card::before {
@@ -91,6 +93,23 @@
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%);
             border-color: rgba(251, 191, 36, 0.4);
             transform: scale(1.02);
+            transition: all 0.3s ease;  
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
         }
         
         .user-avatar {
@@ -305,7 +324,7 @@
         </div>
         <div class="user-info">
             <h6>{{ Auth::user()->name }}</h6>
-            <span class="badge-admin"><span class="crown-icon">👑</span> Admin</span>
+            <span class="badge-admin"><span class="cown-icon">👑</span> Admin</span>
         </div>
     </div>
     
