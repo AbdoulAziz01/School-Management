@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | School Bot (Botpress) — API JSON Bearer
+    |--------------------------------------------------------------------------
+    |
+    */
+    'school_bot' => [
+        'secret' => env('SCHOOL_BOT_SECRET'),
+        'passing_grade_min' => env('SCHOOL_BOT_PASSING_GRADE_MIN', 10.0),
+    ],
+
 ];
