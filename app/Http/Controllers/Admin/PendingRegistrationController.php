@@ -17,17 +17,16 @@ class PendingRegistrationController extends Controller
  */
 public function pending()
 {
-    $students = User::where('status', 'pending')
+    $students = User::whereIn('role', ['eleve', 'student'])
+        ->where('status', 'pending')
         ->with('class')
         ->orderBy('created_at', 'desc')
         ->get();
-    
-    // Journalisation pour le débogage
-    \Log::info('Inscriptions en attente', [
+
+    Log::info('Inscriptions en attente', [
         'count' => $students->count(),
-        'students' => $students->pluck('name', 'id')
     ]);
-    
+
     return view('admin.registrations.pending', ['pendingUsers' => $students]);
 }
 
@@ -37,15 +36,23 @@ public function pending()
 public function index()
 {
     $pendingUsers = User::with(['subjects'])
+        ->whereIn('role', ['eleve', 'student'])
         ->where('status', 'pending')
         ->orderBy('created_at', 'desc')
         ->paginate(10);
-    
+
     return view('admin.registrations.pending', compact('pendingUsers'));
 }
 
     public function approve(Request $request, User $user)
     {
+        // Garde-fou : on ne valide que des élèves en attente
+        abort_unless(
+            in_array($user->role, ['eleve', 'student'], true) && $user->status === 'pending',
+            404,
+            'Inscription introuvable ou non éligible.'
+        );
+
         $request->validate([
             'class_id' => 'required|exists:classes,id',
         ]);
@@ -53,7 +60,6 @@ public function index()
         try {
             DB::beginTransaction();
             
-            // Mettre à jour le statut et la classe de l'utilisateur
             $user->update([
                 'status' => 'approved',
                 'class_id' => $request->class_id
@@ -80,6 +86,12 @@ public function index()
     
     public function reject(User $user)
     {
+        abort_unless(
+            in_array($user->role, ['eleve', 'student'], true) && $user->status === 'pending',
+            404,
+            'Inscription introuvable ou non éligible.'
+        );
+
         try {
             $user->status = 'rejected';
             $user->save();

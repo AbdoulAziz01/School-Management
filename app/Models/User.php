@@ -12,15 +12,19 @@ use App\Models\Grade;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles; // ← HasApiTokens RETIRÉ
+    use HasFactory, Notifiable, HasRoles;
 
-    // Constantes pour les rôles
-    public const ROLE_ADMIN = 'admin';
+    // Constantes pour les rôles (alignées avec l'enum DB après migration 2026_01_12)
+    public const ROLE_ADMIN   = 'admin';
     public const ROLE_TEACHER = 'teacher';
-    public const ROLE_STUDENT = 'student';
+    public const ROLE_STUDENT = 'eleve';
+
+    // Aliases historiques tolérés dans les vérifications de rôle
+    public const ROLE_TEACHER_ALIASES = ['teacher', 'professeur'];
+    public const ROLE_STUDENT_ALIASES = ['eleve', 'student'];
 
     // Constantes pour les statuts
-    public const STATUS_PENDING = 'pending';
+    public const STATUS_PENDING  = 'pending';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
 
@@ -149,7 +153,7 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
-    // Méthodes utilitaires
+    // Méthodes utilitaires (tolérantes aux alias historiques)
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
@@ -157,12 +161,12 @@ class User extends Authenticatable
 
     public function isTeacher(): bool
     {
-        return $this->role === self::ROLE_TEACHER;
+        return in_array($this->role, self::ROLE_TEACHER_ALIASES, true);
     }
 
     public function isStudent(): bool
     {
-        return $this->role === self::ROLE_STUDENT;
+        return in_array($this->role, self::ROLE_STUDENT_ALIASES, true);
     }
 
     public function isPending(): bool

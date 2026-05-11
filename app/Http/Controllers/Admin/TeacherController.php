@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
@@ -18,8 +19,8 @@ class TeacherController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::where('role', User::ROLE_TEACHER);
-        
+        $query = User::whereIn('role', User::ROLE_TEACHER_ALIASES);
+
         // Recherche par nom, email ou identifiant
         if ($request->filled('search')) {
             $search = $request->search;
@@ -81,9 +82,10 @@ class TeacherController extends Controller
                 ->route('admin.teachers.index')
                 ->with('success', 'L\'enseignant a été créé avec succès.');
         } catch (\Exception $e) {
+            Log::error('Erreur création enseignant', ['error' => $e->getMessage()]);
             return back()
                 ->withInput()
-                ->with('error', 'Une erreur est survenue lors de la création de l\'enseignant : ' . $e->getMessage());
+                ->with('error', 'Une erreur est survenue lors de la création de l\'enseignant.');
         }
     }
 
@@ -92,7 +94,7 @@ class TeacherController extends Controller
      */
     public function show($id)
     {
-        $teacher = User::where('role', 'teacher')
+        $teacher = User::whereIn('role', User::ROLE_TEACHER_ALIASES)
             ->with(['assignedClasses.level', 'assignedClasses.academicYear', 'assignedClasses.students', 'subjects'])
             ->findOrFail($id);
         return view('admin.teachers.show', compact('teacher'));
@@ -103,11 +105,9 @@ class TeacherController extends Controller
      */
     public function edit(User $teacher)
     {
-        // Vérification simple du rôle admin
-        if (auth()->user()->role !== 'admin') {
-            abort(403, 'Accès non autorisé.');
-        }
-        
+        // Garde-fou : la cible doit bien être un enseignant
+        abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
+
         return view('admin.teachers.edit', compact('teacher'));
     }
 
@@ -116,10 +116,7 @@ class TeacherController extends Controller
      */
     public function update(Request $request, User $teacher)
     {
-        // Vérification simple du rôle admin
-        if (auth()->user()->role !== 'admin') {
-            abort(403, 'Accès non autorisé.');
-        }
+        abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -164,9 +161,13 @@ class TeacherController extends Controller
                 ->route('admin.teachers.index')
                 ->with('success', 'Les informations de l\'enseignant ont été mises à jour avec succès.');
         } catch (\Exception $e) {
+            Log::error('Erreur mise à jour enseignant', [
+                'teacher_id' => $teacher->id,
+                'error'      => $e->getMessage(),
+            ]);
             return back()
                 ->withInput()
-                ->with('error', 'Une erreur est survenue lors de la mise à jour : ' . $e->getMessage());
+                ->with('error', 'Une erreur est survenue lors de la mise à jour.');
         }
     }
 
@@ -175,13 +176,9 @@ class TeacherController extends Controller
      */
     public function destroy(User $teacher)
     {
-        // Vérification simple du rôle admin
-        if (auth()->user()->role !== 'admin') {
-            abort(403, 'Accès non autorisé.');
-        }
+        abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
 
         try {
-            // Vérifier si l'enseignant a des affectations
             if ($teacher->teacherAssignments()->exists()) {
                 return back()
                     ->with('error', 'Impossible de supprimer cet enseignant car il a des affectations en cours.');
@@ -193,8 +190,11 @@ class TeacherController extends Controller
                 ->route('admin.teachers.index')
                 ->with('success', 'L\'enseignant a été supprimé avec succès.');
         } catch (\Exception $e) {
-            return back()
-                ->with('error', 'Une erreur est survenue lors de la suppression : ' . $e->getMessage());
+            Log::error('Erreur suppression enseignant', [
+                'teacher_id' => $teacher->id,
+                'error'      => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Une erreur est survenue lors de la suppression.');
         }
     }
 }

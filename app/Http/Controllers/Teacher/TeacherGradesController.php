@@ -83,35 +83,40 @@ class TeacherGradesController extends Controller
     {
         $teacher = Auth::user();
         $currentYear = AcademicYear::where('is_current', true)->first();
-        
-        // Récupérer les classes affectées via class_teacher
-        $classes = $teacher->assignedClasses()->with('level')->get();
-        
-        // Récupérer les matières du professeur
+
+        $classes  = $teacher->assignedClasses()->with('level')->get();
         $subjects = $teacher->subjects;
-        
-        $selectedClassId = $request->get('class_id');
+
+        $selectedClassId   = $request->get('class_id');
         $selectedSubjectId = $request->get('subject_id');
-        $students = collect();
-        
+        $students          = collect();
+
         if ($selectedClassId) {
+            // Garde-fou IDOR : le prof doit être affecté à cette classe
+            $hasAccess = $teacher->assignedClasses()
+                ->where('classes.id', $selectedClassId)
+                ->exists();
+
+            if (! $hasAccess) {
+                return back()->with('error', 'Vous n\'avez pas accès à cette classe.');
+            }
+
             $students = User::where('class_id', $selectedClassId)
-                ->whereIn('role', ['student', 'eleve'])
-                ->where('status', 'approved')
+                ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+                ->where('status', User::STATUS_APPROVED)
                 ->orderBy('name')
                 ->get();
         }
-        
-        // Types de notes disponibles
+
         $gradeTypes = [
-            'devoir' => 'Devoir',
+            'devoir'   => 'Devoir',
             'controle' => 'Contrôle',
-            'examen' => 'Examen',
-            'oral' => 'Oral',
-            'tp' => 'Travaux Pratiques',
-            'projet' => 'Projet'
+            'examen'   => 'Examen',
+            'oral'     => 'Oral',
+            'tp'       => 'Travaux Pratiques',
+            'projet'   => 'Projet',
         ];
-        
+
         return view('teacher.grades.create', compact(
             'classes',
             'subjects',
@@ -128,55 +133,104 @@ class TeacherGradesController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'class_id' => 'required|exists:classes,id',
-            'subject_id' => 'required|exists:subjects,id',
-            'type' => 'required|string',
-            'date' => 'required|date',
-            'coefficient' => 'required|numeric|min:0.5|max:5',
-            'grades' => 'required|array',
-            'grades.*.user_id' => 'required|exists:users,id',
-            'grades.*.grade' => 'nullable|numeric|min:0|max:20'
+            'class_id'         => 'required|exists:classes,id',
+            'subject_id'       => 'required|exists:subjects,id',
+            'type'             => 'required|string',
+            'date'             => 'required|date',
+            'coefficient'      => 'required|numeric|min:0.5|max:5',
+            'semester'         => 'nullable|integer|in:1,2',
+            'grades'           => 'required|array',
+            'grades.*.user_id' => 'required|integer|exists:users,id',
+            'grades.*.grade'   => 'nullable|numeric|min:0|max:20',
         ]);
-        
-        $teacher = Auth::user();
+
+        $teacher     = Auth::user();
         $currentYear = AcademicYear::where('is_current', true)->first();
-        
-        // Vérifier l'accès à la classe via class_teacher
-        $hasAccess = $teacher->assignedClasses()->where('classes.id', $request->class_id)->exists();
-        
-        if (!$hasAccess) {
+
+        // 1. Le prof doit être affecté à cette classe
+        $hasClassAccess = $teacher->assignedClasses()
+            ->where('classes.id', $request->class_id)
+            ->exists();
+
+        if (! $hasClassAccess) {
             return back()->with('error', 'Vous n\'avez pas accès à cette classe.');
         }
-        
+
+        // 2. Le prof doit enseigner cette matière (via subjects ou TeacherAssignment)
+        $teachesSubject = $teacher->subjects()
+                ->where('subjects.id', $request->subject_id)
+                ->exists()
+            || TeacherAssignment::where('teacher_id', $teacher->id)
+                ->where('subject_id', $request->subject_id)
+                ->when($currentYear, fn ($q) => $q->where('academic_year_id', $currentYear->id))
+                ->exists();
+
+        if (! $teachesSubject) {
+            return back()->with('error', 'Vous n\'enseignez pas cette matière.');
+        }
+
+        // 3. Tous les user_id soumis doivent appartenir à la classe ciblée et être des élèves approuvés
+        $submittedUserIds = collect($request->grades)->pluck('user_id')->unique();
+        $validStudentIds  = User::where('class_id', $request->class_id)
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->where('status', User::STATUS_APPROVED)
+            ->whereIn('id', $submittedUserIds)
+            ->pluck('id')
+            ->all();
+
+        if (count($validStudentIds) !== $submittedUserIds->count()) {
+            return back()->with('error', 'Certains élèves ne font pas partie de cette classe.');
+        }
+
+        $semester = $request->input('semester', $this->guessCurrentSemester());
+
         DB::beginTransaction();
-        
         try {
             foreach ($request->grades as $gradeData) {
-                if (isset($gradeData['grade']) && $gradeData['grade'] !== null && $gradeData['grade'] !== '') {
-                    Grade::create([
-                        'user_id' => $gradeData['user_id'],
-                        'subject_id' => $request->subject_id,
-                        'grade' => $gradeData['grade'],
-                        'type' => $request->type,
-                        'date' => $request->date,
-                        'coefficient' => $request->coefficient,
-                        'comments' => $gradeData['comments'] ?? null,
-                        'appreciation' => $gradeData['appreciation'] ?? null,
-                    ]);
+                $value = $gradeData['grade'] ?? null;
+                if ($value === null || $value === '') {
+                    continue;
                 }
+
+                Grade::create([
+                    'user_id'          => (int) $gradeData['user_id'],
+                    'subject_id'       => $request->subject_id,
+                    'grade'            => $value,
+                    'type'             => $request->type,
+                    'date'             => $request->date,
+                    'coefficient'      => $request->coefficient,
+                    'semester'         => $semester,
+                    'academic_year_id' => $currentYear?->id,
+                    'comments'         => $gradeData['comments'] ?? null,
+                    'appreciation'     => $gradeData['appreciation'] ?? null,
+                ]);
             }
-            
+
             DB::commit();
-            
+
             return redirect()->route('teacher.grades.index', [
-                'class_id' => $request->class_id,
-                'subject_id' => $request->subject_id
+                'class_id'   => $request->class_id,
+                'subject_id' => $request->subject_id,
             ])->with('success', 'Notes enregistrées avec succès.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Erreur lors de l\'enregistrement des notes: ' . $e->getMessage());
+            \Log::error('Erreur enregistrement notes', [
+                'teacher_id' => $teacher->id,
+                'error'      => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Erreur lors de l\'enregistrement des notes.');
         }
+    }
+
+    /**
+     * Heuristique simple pour déterminer le semestre courant
+     * (système sénégalais : S1 oct-jan, S2 fév-juin).
+     */
+    private function guessCurrentSemester(): int
+    {
+        $month = now()->month;
+        return ($month >= 10 || $month <= 1) ? 1 : 2;
     }
 
     /**

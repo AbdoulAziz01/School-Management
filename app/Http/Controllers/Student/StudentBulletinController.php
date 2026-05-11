@@ -86,46 +86,60 @@ class StudentBulletinController extends Controller
     }
 
     /**
-     * Calcul des données du bulletin par matière
+     * Pré-récupère la table des coefficients level_subject pour un niveau donné.
+     * Évite de re-requêter la BDD pour chaque matière de chaque élève.
+     *
+     * @return array<int, int|float> map subject_id => coefficient
      */
-    private function calculateBulletinData($grades, $level)
+    private function fetchLevelCoefficients($level): array
     {
-        $bulletinData = [];
-        
-        // Grouper les notes par matière
+        if (! $level) {
+            return [];
+        }
+
+        return DB::table('level_subject')
+            ->where('level_id', $level->id)
+            ->pluck('coefficient', 'subject_id')
+            ->toArray();
+    }
+
+    /**
+     * Calcul des données du bulletin par matière (pour UN élève).
+     *
+     * @param  \Illuminate\Support\Collection  $grades  Notes de l'élève (avec subject eager loaded)
+     * @param  mixed  $level  Niveau (Level ou null)
+     * @param  array<int,int|float>|null  $coefficients  Coefficients pré-calculés (optionnel)
+     */
+    private function calculateBulletinData($grades, $level, ?array $coefficients = null)
+    {
+        $coefficients ??= $this->fetchLevelCoefficients($level);
+
+        $bulletinData    = [];
         $gradesBySubject = $grades->groupBy('subject_id');
-        
+
         foreach ($gradesBySubject as $subjectId => $subjectGrades) {
-            $subject = Subject::find($subjectId);
-            if (!$subject) continue;
-            
-            // Récupérer le coefficient depuis la relation niveau-matière
-            $coefficient = 1;
-            if ($level) {
-                $levelSubject = DB::table('level_subject')
-                    ->where('level_id', $level->id)
-                    ->where('subject_id', $subjectId)
-                    ->first();
-                if ($levelSubject) {
-                    $coefficient = $levelSubject->coefficient;
-                }
+            // Le subject est eager-loaded depuis l'appelant : pas de Subject::find() ici
+            $subject = $subjectGrades->first()->subject ?? null;
+            if (! $subject) {
+                continue;
             }
-            
-            // Extraire les notes par type
-            $devoir1 = $subjectGrades->where('type', 'devoir1')->first();
-            $devoir2 = $subjectGrades->where('type', 'devoir2')->first();
+
+            $coefficient = $coefficients[$subjectId] ?? 1;
+
+            $devoir1     = $subjectGrades->where('type', 'devoir1')->first();
+            $devoir2     = $subjectGrades->where('type', 'devoir2')->first();
             $composition = $subjectGrades->where('type', 'composition')->first();
-            
-            // Calculer la moyenne (système sénégalais)
-            // Moyenne des devoirs: (D1 + D2) / 2
-            // Moyenne matière: Moyenne devoirs * 0.4 + Composition * 0.6
+
+            // Système sénégalais :
+            // Moyenne devoirs = (D1 + D2) / 2
+            // Moyenne matière = Moyenne devoirs * 0.4 + Composition * 0.6
             $moyenneDevoirs = null;
             $moyenneMatiere = null;
-            
+
             if ($devoir1 && $devoir2) {
                 $moyenneDevoirs = ($devoir1->grade + $devoir2->grade) / 2;
             }
-            
+
             if ($moyenneDevoirs !== null && $composition) {
                 $moyenneMatiere = ($moyenneDevoirs * 0.4) + ($composition->grade * 0.6);
             } elseif ($composition) {
@@ -133,27 +147,68 @@ class StudentBulletinController extends Controller
             } elseif ($moyenneDevoirs !== null) {
                 $moyenneMatiere = $moyenneDevoirs;
             }
-            
+
             $bulletinData[] = [
-                'subject' => $subject->name,
-                'subject_code' => $subject->code,
-                'coefficient' => $coefficient,
-                'devoir1' => $devoir1 ? round($devoir1->grade, 2) : null,
-                'devoir2' => $devoir2 ? round($devoir2->grade, 2) : null,
-                'composition' => $composition ? round($composition->grade, 2) : null,
-                'moyenne_devoirs' => $moyenneDevoirs ? round($moyenneDevoirs, 2) : null,
-                'moyenne_matiere' => $moyenneMatiere ? round($moyenneMatiere, 2) : null,
-                'points' => $moyenneMatiere ? round($moyenneMatiere * $coefficient, 2) : null,
-                'appreciation' => $this->getAppreciation($moyenneMatiere),
+                'subject'         => $subject->name,
+                'subject_code'    => $subject->code,
+                'coefficient'     => $coefficient,
+                'devoir1'         => $devoir1 ? round($devoir1->grade, 2) : null,
+                'devoir2'         => $devoir2 ? round($devoir2->grade, 2) : null,
+                'composition'     => $composition ? round($composition->grade, 2) : null,
+                'moyenne_devoirs' => $moyenneDevoirs !== null ? round($moyenneDevoirs, 2) : null,
+                'moyenne_matiere' => $moyenneMatiere !== null ? round($moyenneMatiere, 2) : null,
+                'points'          => $moyenneMatiere !== null ? round($moyenneMatiere * $coefficient, 2) : null,
+                'appreciation'    => $this->getAppreciation($moyenneMatiere),
             ];
         }
-        
-        // Trier par coefficient décroissant
-        usort($bulletinData, function($a, $b) {
-            return $b['coefficient'] - $a['coefficient'];
-        });
-        
+
+        usort($bulletinData, fn ($a, $b) => $b['coefficient'] <=> $a['coefficient']);
+
         return $bulletinData;
+    }
+
+    /**
+     * Calcule en UNE requête les moyennes pondérées de tous les élèves d'une classe.
+     * Remplace les boucles N+1 dans calculateRank() et calculateClassStats().
+     *
+     * @return array<int, float> map user_id => moyenne
+     */
+    private function calculateClassAverages($class, int $semester, $academicYear): array
+    {
+        if (! $class) {
+            return [];
+        }
+
+        // 1. IDs des élèves approuvés de la classe (1 requête)
+        $studentIds = User::where('class_id', $class->id)
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->where('status', User::STATUS_APPROVED)
+            ->pluck('id');
+
+        if ($studentIds->isEmpty()) {
+            return [];
+        }
+
+        // 2. Toutes les notes des élèves en UNE requête, groupées par user_id
+        $gradesByStudent = Grade::whereIn('user_id', $studentIds)
+            ->where('semester', $semester)
+            ->where('academic_year_id', $academicYear->id)
+            ->with('subject')
+            ->get()
+            ->groupBy('user_id');
+
+        // 3. Coefficients level_subject pré-calculés (1 requête)
+        $coefficients = $this->fetchLevelCoefficients($class->level);
+
+        // 4. Calcul en mémoire (zéro requête supplémentaire)
+        $averages = [];
+        foreach ($studentIds as $studentId) {
+            $studentGrades = $gradesByStudent->get($studentId, collect());
+            $bulletinData  = $this->calculateBulletinData($studentGrades, $class->level, $coefficients);
+            $averages[$studentId] = $this->calculateWeightedAverage($bulletinData);
+        }
+
+        return $averages;
     }
 
     /**
@@ -175,97 +230,61 @@ class StudentBulletinController extends Controller
     }
 
     /**
-     * Calculer le rang de l'élève dans sa classe
+     * Calculer le rang de l'élève dans sa classe (optimisé : pas de N+1).
      */
     private function calculateRank($user, $class, $semester, $academicYear)
     {
-        if (!$class) {
+        if (! $class) {
             return ['rank' => null, 'total' => 0];
         }
-        
-        // Récupérer tous les élèves de la classe
-        $students = User::where('class_id', $class->id)
-            ->where('role', 'eleve')
-            ->where('status', 'approved')
-            ->get();
-        
-        $averages = [];
-        
-        foreach ($students as $student) {
-            $grades = Grade::where('user_id', $student->id)
-                ->where('semester', $semester)
-                ->where('academic_year_id', $academicYear->id)
-                ->with('subject')
-                ->get();
-            
-            $bulletinData = $this->calculateBulletinData($grades, $class->level);
-            $average = $this->calculateWeightedAverage($bulletinData);
-            
-            $averages[] = [
-                'student_id' => $student->id,
-                'average' => $average
-            ];
+
+        $averages = $this->calculateClassAverages($class, $semester, $academicYear);
+
+        if (empty($averages)) {
+            return ['rank' => null, 'total' => 0];
         }
-        
-        // Trier par moyenne décroissante
-        usort($averages, function($a, $b) {
-            return $b['average'] <=> $a['average'];
-        });
-        
-        // Trouver le rang de l'élève
-        $rank = null;
-        foreach ($averages as $index => $avg) {
-            if ($avg['student_id'] === $user->id) {
-                $rank = $index + 1;
+
+        // Tri décroissant en gardant les user_id
+        arsort($averages);
+
+        $rank  = null;
+        $index = 1;
+        foreach ($averages as $studentId => $avg) {
+            if ((int) $studentId === (int) $user->id) {
+                $rank = $index;
                 break;
             }
+            $index++;
         }
-        
+
         return [
-            'rank' => $rank,
-            'total' => count($averages)
+            'rank'  => $rank,
+            'total' => count($averages),
         ];
     }
 
     /**
-     * Calculer les statistiques de la classe
+     * Calculer les statistiques de la classe (optimisé : pas de N+1).
      */
     private function calculateClassStats($class, $semester, $academicYear)
     {
-        if (!$class) {
+        if (! $class) {
             return ['average' => null, 'highest' => null, 'lowest' => null];
         }
-        
-        $students = User::where('class_id', $class->id)
-            ->where('role', 'eleve')
-            ->where('status', 'approved')
-            ->get();
-        
-        $averages = [];
-        
-        foreach ($students as $student) {
-            $grades = Grade::where('user_id', $student->id)
-                ->where('semester', $semester)
-                ->where('academic_year_id', $academicYear->id)
-                ->with('subject')
-                ->get();
-            
-            $bulletinData = $this->calculateBulletinData($grades, $class->level);
-            $average = $this->calculateWeightedAverage($bulletinData);
-            
-            if ($average > 0) {
-                $averages[] = $average;
-            }
-        }
-        
+
+        $averages = array_filter(
+            $this->calculateClassAverages($class, $semester, $academicYear),
+            fn ($a) => $a > 0
+        );
+
         if (empty($averages)) {
             return ['average' => null, 'highest' => null, 'lowest' => null];
         }
-        
+
         return [
             'average' => round(array_sum($averages) / count($averages), 2),
             'highest' => round(max($averages), 2),
-            'lowest' => round(min($averages), 2),
+            'lowest'  => round(min($averages), 2),
         ];
     }
 

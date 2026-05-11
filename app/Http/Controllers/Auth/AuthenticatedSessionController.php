@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -50,31 +52,36 @@ class AuthenticatedSessionController extends Controller
             return $this->redirectToDashboard($user);
             
         } catch (\Exception $e) {
-            // Journaliser l'erreur complète pour le débogage
-            \Log::error('Erreur lors de la connexion : ' . $e->getMessage());
-            \Log::error($e->getTraceAsString());
-            
-            // Rediriger avec un message d'erreur plus détaillé en environnement de développement
-            $errorMessage = config('app.env') === 'local' 
+            Log::error('Erreur lors de la connexion : ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $errorMessage = config('app.env') === 'local'
                 ? 'Erreur lors de la connexion : ' . $e->getMessage()
                 : 'Une erreur est survenue lors de la connexion. Veuillez réessayer.';
-                
+
             return back()->with('error', $errorMessage);
         }
     }
-    
+
     /**
-     * Redirect to the appropriate dashboard based on user role
+     * Redirect to the appropriate dashboard based on user role.
+     * Tolère les alias historiques (professeur/teacher, eleve/student).
      */
     protected function redirectToDashboard($user): RedirectResponse
     {
-        $route = match($user->role) {
-            'admin'     => 'admin.dashboard',
-            'professeur' => 'teacher.dashboard',
-            'eleve'     => 'student.dashboard',
-            default     => 'home',
-        };
-        
+        $role = $user->role;
+
+        if ($role === User::ROLE_ADMIN) {
+            $route = 'admin.dashboard';
+        } elseif (in_array($role, User::ROLE_TEACHER_ALIASES, true)) {
+            $route = 'teacher.dashboard';
+        } elseif (in_array($role, User::ROLE_STUDENT_ALIASES, true)) {
+            $route = 'student.dashboard';
+        } else {
+            $route = 'home';
+        }
+
         return redirect()->intended(route($route, [], false));
     }
 

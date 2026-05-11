@@ -18,32 +18,39 @@ class TeacherAttendanceController extends Controller
      */
     public function index(Request $request)
     {
-        $teacher = Auth::user();
+        $teacher     = Auth::user();
         $currentYear = AcademicYear::where('is_current', true)->first();
-        
-        // Récupérer les classes de l'enseignant via class_teacher
+
         $classes = $teacher->assignedClasses()->with('level')->get();
-        
+
         $selectedClassId = $request->get('class_id');
-        $selectedDate = $request->get('date', Carbon::today()->format('Y-m-d'));
-        $students = collect();
-        $attendances = collect();
-        
+        $selectedDate    = $request->get('date', Carbon::today()->format('Y-m-d'));
+        $students        = collect();
+        $attendances     = collect();
+
         if ($selectedClassId) {
-            // Récupérer les élèves de la classe
+            // Garde-fou IDOR : l'enseignant doit être affecté à cette classe
+            $hasAccess = $teacher->assignedClasses()
+                ->where('classes.id', $selectedClassId)
+                ->exists();
+
+            if (! $hasAccess) {
+                return redirect()->route('teacher.attendance.index')
+                    ->with('error', 'Vous n\'avez pas accès à cette classe.');
+            }
+
             $students = User::where('class_id', $selectedClassId)
-                ->whereIn('role', ['student', 'eleve'])
-                ->where('status', 'approved')
+                ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+                ->where('status', User::STATUS_APPROVED)
                 ->orderBy('name')
                 ->get();
-            
-            // Récupérer les présences du jour
+
             $attendances = Attendance::where('date', $selectedDate)
                 ->whereIn('user_id', $students->pluck('id'))
                 ->get()
                 ->keyBy('user_id');
         }
-        
+
         return view('teacher.attendance.index', compact(
             'classes',
             'students',
@@ -59,28 +66,41 @@ class TeacherAttendanceController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'class_id' => 'required|exists:classes,id',
-            'date' => 'required|date',
-            'attendances' => 'required|array',
-            'attendances.*.user_id' => 'required|exists:users,id',
-            'attendances.*.status' => 'required|in:present,absent,late,excused'
+            'class_id'              => 'required|exists:classes,id',
+            'date'                  => 'required|date',
+            'attendances'           => 'required|array',
+            'attendances.*.user_id' => 'required|integer|exists:users,id',
+            'attendances.*.status'  => 'required|in:present,absent,late,excused',
         ]);
-        
+
         $teacher = Auth::user();
-        $currentYear = AcademicYear::where('is_current', true)->first();
-        
-        // Vérifier l'accès à la classe via class_teacher
-        $hasAccess = $teacher->assignedClasses()->where('classes.id', $request->class_id)->exists();
-        
-        if (!$hasAccess) {
+
+        // Garde-fou : prof affecté à la classe ?
+        $hasAccess = $teacher->assignedClasses()
+            ->where('classes.id', $request->class_id)
+            ->exists();
+
+        if (! $hasAccess) {
             return back()->with('error', 'Vous n\'avez pas accès à cette classe.');
         }
-        
+
+        // Garde-fou : tous les user_id soumis doivent être des élèves de cette classe
+        $submittedUserIds = collect($request->attendances)->pluck('user_id')->unique();
+        $validStudentIds  = User::where('class_id', $request->class_id)
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->whereIn('id', $submittedUserIds)
+            ->pluck('id')
+            ->all();
+
+        if (count($validStudentIds) !== $submittedUserIds->count()) {
+            return back()->with('error', 'Certains élèves ne font pas partie de cette classe.');
+        }
+
         foreach ($request->attendances as $attendanceData) {
             Attendance::updateOrCreate(
                 [
-                    'user_id' => $attendanceData['user_id'],
-                    'date' => $request->date,
+                    'user_id' => (int) $attendanceData['user_id'],
+                    'date'    => $request->date,
                 ],
                 [
                     'status' => $attendanceData['status'],
@@ -88,10 +108,10 @@ class TeacherAttendanceController extends Controller
                 ]
             );
         }
-        
+
         return redirect()->route('teacher.attendance.index', [
             'class_id' => $request->class_id,
-            'date' => $request->date
+            'date'     => $request->date,
         ])->with('success', 'Présences enregistrées avec succès.');
     }
 

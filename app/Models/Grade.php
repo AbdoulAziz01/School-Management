@@ -21,6 +21,8 @@ class Grade extends Model
         'date',
         'type',
         'coefficient',
+        'semester',
+        'academic_year_id',
     ];
 
     /**
@@ -29,9 +31,19 @@ class Grade extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'date' => 'date',
-        'grade' => 'decimal:2',
+        'date'             => 'date',
+        'grade'            => 'decimal:2',
+        'semester'         => 'integer',
+        'academic_year_id' => 'integer',
     ];
+
+    /**
+     * L'année académique à laquelle cette note est rattachée.
+     */
+    public function academicYear(): BelongsTo
+    {
+        return $this->belongsTo(AcademicYear::class);
+    }
 
     /**
      * Obtenir l'utilisateur associé à cette note.

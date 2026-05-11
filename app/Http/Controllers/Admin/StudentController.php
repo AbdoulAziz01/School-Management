@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AcademicYear;
+use App\Models\Level;
 use App\Models\SchoolClass;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class StudentController extends Controller
@@ -81,12 +84,12 @@ class StudentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Erreur affichage liste élèves', ['error' => $e->getMessage()]);
+
             if (request()->ajax()) {
-                return response()->json([
-                    'error' => 'Une erreur est survenue : ' . $e->getMessage()
-                ], 500);
+                return response()->json(['error' => 'Une erreur est survenue.'], 500);
             }
-            return redirect()->back()->with('error', 'Une erreur est survenue : ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Une erreur est survenue.');
         }
     }
 
@@ -130,25 +133,30 @@ class StudentController extends Controller
     {
         try {
             $validated = $request->validate([
-                'class_id' => 'required|exists:classes,id',
-                'students' => 'required|array',
-                'students.*' => 'exists:users,id'
+                'class_id'   => 'required|exists:classes,id',
+                'students'   => 'required|array',
+                'students.*' => [
+                    'integer',
+                    Rule::exists('users', 'id')->where(
+                        fn ($q) => $q->whereIn('role', User::ROLE_STUDENT_ALIASES)
+                    ),
+                ],
             ]);
 
             DB::beginTransaction();
 
-            // Mettre à jour la classe pour les étudiants sélectionnés
-            User::whereIn('id', $validated['students'])
+            // Garde-fou : on n'affecte QUE des élèves (jamais admin/prof par erreur)
+            $affected = User::whereIn('id', $validated['students'])
+                ->whereIn('role', User::ROLE_STUDENT_ALIASES)
                 ->update([
                     'class_id' => $validated['class_id'],
-                    'status' => 'approved' // Mettre à jour le statut lors de l'affectation
+                    'status'   => User::STATUS_APPROVED,
                 ]);
 
             DB::commit();
 
-            $count = count($validated['students']);
-            $message = $count > 1 
-                ? "Les {$count} élèves ont été affectés à la classe avec succès."
+            $message = $affected > 1
+                ? "Les {$affected} élèves ont été affectés à la classe avec succès."
                 : "L'élève a été affecté à la classe avec succès.";
 
             return redirect()->route('admin.students.index', ['tab' => 'assignment'])
@@ -156,8 +164,8 @@ class StudentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()
-                ->with('error', 'Erreur lors de l\'affectation : ' . $e->getMessage());
+            Log::error('Erreur affectation en masse', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Erreur lors de l\'affectation.');
         }
     }
     
@@ -167,28 +175,37 @@ class StudentController extends Controller
     public function storeAssignment(Request $request)
     {
         $request->validate([
-            'student_id' => 'required|exists:users,id',
-            'class_id' => 'required|exists:classes,id'
+            'student_id' => [
+                'required',
+                'integer',
+                Rule::exists('users', 'id')->where(
+                    fn ($q) => $q->whereIn('role', User::ROLE_STUDENT_ALIASES)
+                ),
+            ],
+            'class_id'   => 'required|exists:classes,id',
         ]);
-        
+
         try {
             DB::beginTransaction();
-            
-            $student = User::findOrFail($request->student_id);
+
+            $student = User::whereIn('role', User::ROLE_STUDENT_ALIASES)
+                ->findOrFail($request->student_id);
+
             $student->update([
                 'class_id' => $request->class_id,
-                'status' => 'approved'
+                'status'   => User::STATUS_APPROVED,
             ]);
-            
+
             DB::commit();
-            
+
             return redirect()->route('admin.students.assign')
                 ->with('success', 'Élève affecté avec succès à la classe.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Erreur storeAssignment', ['error' => $e->getMessage()]);
             return redirect()->route('admin.students.assign')
-                ->with('error', 'Erreur lors de l\'affectation : ' . $e->getMessage());
+                ->with('error', 'Erreur lors de l\'affectation.');
         }
     }
 
@@ -197,31 +214,39 @@ class StudentController extends Controller
      */
     public function assignToClass(Request $request, User $student)
     {
+        // Garde-fou : empêcher l'affectation d'un non-élève (admin/prof)
+        abort_unless(
+            in_array($student->role, User::ROLE_STUDENT_ALIASES, true),
+            404,
+            'Utilisateur introuvable ou n\'est pas un élève.'
+        );
+
         $request->validate([
-            'class_id' => 'required|exists:classes,id'
+            'class_id' => 'required|exists:classes,id',
         ]);
-        
+
         try {
             DB::beginTransaction();
-            
+
             $student->update([
                 'class_id' => $request->class_id,
-                'status' => 'approved' // Mettre à jour le statut lors de l'affectation
+                'status'   => User::STATUS_APPROVED,
             ]);
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Élève affecté avec succès à la classe',
-                'student' => $student->load('class')
+                'student' => $student->load('class'),
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Erreur assignToClass', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'affectation : ' . $e->getMessage()
+                'message' => 'Erreur lors de l\'affectation.',
             ], 500);
         }
     }
@@ -284,10 +309,10 @@ class StudentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Erreur lors de la création d\'un élève : ' . $e->getMessage());
+            Log::error('Erreur lors de la création d\'un élève : ' . $e->getMessage());
             return back()
                 ->withInput()
-                ->with('error', 'Erreur lors de la création de l\'élève : ' . $e->getMessage());
+                ->with('error', 'Erreur lors de la création de l\'élève.');
         }
     }
 
@@ -297,9 +322,7 @@ class StudentController extends Controller
      */
     public function edit(User $student)
     {
-        if ($student->role !== 'eleve') {
-            abort(404);
-        }
+        abort_unless($student->isStudent(), 404);
 
         $classes = SchoolClass::with('academicYear')
             ->orderBy('name')
@@ -316,9 +339,7 @@ class StudentController extends Controller
      */
     public function update(Request $request, User $student)
     {
-        if ($student->role !== 'eleve') {
-            abort(404);
-        }
+        abort_unless($student->isStudent(), 404);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -364,9 +385,7 @@ class StudentController extends Controller
      */
     public function destroy(User $student)
     {
-        if ($student->role !== 'eleve') {
-            abort(404);
-        }
+        abort_unless($student->isStudent(), 404);
 
         try {
             DB::beginTransaction();
@@ -384,8 +403,11 @@ class StudentController extends Controller
                 ->with('success', 'Élève supprimé avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()
-                ->with('error', 'Une erreur est survenue lors de la suppression de l\'élève : ' . $e->getMessage());
+            Log::error('Erreur suppression élève', [
+                'student_id' => $student->id,
+                'error'      => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Une erreur est survenue lors de la suppression de l\'élève.');
         }
     }
 
@@ -394,9 +416,7 @@ class StudentController extends Controller
      */
     public function showResetPasswordForm(User $student)
     {
-        if ($student->role !== 'eleve') {
-            abort(404);
-        }
+        abort_unless($student->isStudent(), 404);
 
         return view('admin.students.reset-password', compact('student'));
     }
@@ -406,9 +426,7 @@ class StudentController extends Controller
      */
     public function resetPassword(Request $request, User $student)
     {
-        if ($student->role !== 'eleve') {
-            abort(404);
-        }
+        abort_unless($student->isStudent(), 404);
 
         $validated = $request->validate([
             'password' => 'required|string|min:8|confirmed',
@@ -428,11 +446,11 @@ class StudentController extends Controller
      */
 public function pending()
 {
-    $students = User::where('status', 'pending')
-        ->where('role', 'student')
+    $students = User::where('status', User::STATUS_PENDING)
+        ->whereIn('role', User::ROLE_STUDENT_ALIASES)
         ->with('class')
         ->orderBy('created_at', 'desc')
-        ->paginate(10); // Ajout de la pagination avec 10 éléments par page
+        ->paginate(10);
 
     return view('admin.students.pending', compact('students'));
 }
@@ -442,11 +460,11 @@ public function pending()
      */
     public function approve(User $student)
     {
-        if ($student->role !== 'eleve' || $student->status !== 'pending') {
+        if (! $student->isStudent() || ! $student->isPending()) {
             return back()->with('error', 'Action non autorisée.');
         }
 
-        $student->update(['status' => 'approved']);
+        $student->update(['status' => User::STATUS_APPROVED]);
 
         return back()->with('success', 'Élève approuvé avec succès.');
     }
@@ -498,14 +516,11 @@ public function pending()
      */
     public function reject(User $student)
     {
-        if ($student->role !== User::ROLE_STUDENT || !$student->isPending()) {
+        if (! $student->isStudent() || ! $student->isPending()) {
             return back()->with('error', 'Action non autorisée.');
         }
 
         $student->update(['status' => User::STATUS_REJECTED]);
-        
-        // Ici, vous pourriez ajouter une notification par email
-        // $student->notify(new StudentRejected());
 
         return back()->with('success', 'Inscription de l\'élève rejetée.');
     }
@@ -515,9 +530,7 @@ public function pending()
      */
     public function show(User $student)
     {
-        if (!in_array($student->role, ['student', 'eleve'])) {
-            abort(404, 'Utilisateur non trouvé ou n\'est pas un étudiant');
-        }
+        abort_unless($student->isStudent(), 404, 'Utilisateur non trouvé ou n\'est pas un étudiant');
 
         // Charger les relations
         $student->load([
