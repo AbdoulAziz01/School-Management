@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,11 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Modifier la colonne role pour accepter 'eleve' au lieu de 'student'
-        \DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'teacher', 'eleve') DEFAULT 'eleve'");
-        
-        // Mettre à jour les rôles existants de 'student' à 'eleve'
-        \DB::table('users')
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'teacher', 'eleve') DEFAULT 'eleve'");
+        } elseif ($driver === 'pgsql') {
+            // PostgreSQL : pas de MODIFY/ENUM MySQL — on passe en VARCHAR puis données + défaut
+            DB::statement('ALTER TABLE users ALTER COLUMN role DROP DEFAULT');
+            DB::statement('ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING (role::text)');
+            DB::statement("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'eleve'");
+        }
+
+        DB::table('users')
             ->where('role', 'student')
             ->update(['role' => 'eleve']);
     }
@@ -25,12 +32,18 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Revenir à la configuration précédente
-        \DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'teacher', 'student') DEFAULT 'student'");
-        
-        // Remettre les rôles à leur valeur précédente
-        \DB::table('users')
+        DB::table('users')
             ->where('role', 'eleve')
             ->update(['role' => 'student']);
+
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'teacher', 'student') DEFAULT 'student'");
+        } elseif ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE users ALTER COLUMN role DROP DEFAULT');
+            DB::statement('ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING (role::text)');
+            DB::statement("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'student'");
+        }
     }
 };
