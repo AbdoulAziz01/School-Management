@@ -37,5 +37,6 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
+    @include('partials.botpress-webchat')
 </body>
 </html>

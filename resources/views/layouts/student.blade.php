@@ -694,6 +694,7 @@
         });
     </script>
     
+    @include('partials.botpress-webchat')
     @stack('scripts')
 </body>
 </html>
