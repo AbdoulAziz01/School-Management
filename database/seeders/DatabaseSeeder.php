@@ -26,6 +26,9 @@ class DatabaseSeeder extends Seeder
             \Database\Seeders\GradesTableSeeder::class, // Ajout du seeder des notes
             \Database\Seeders\AttendancesTableSeeder::class, // Ajout du seeder des présences
         ]);
+
+        // Démo complète SN (7 classes, ~330 élèves, profs, notes 2 semestres) — destructif :
+        // php artisan db:seed --class=SenegalSevenClassesDemoSeeder
     }
 
     /**

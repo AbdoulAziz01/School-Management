@@ -50,6 +50,10 @@ class User extends Authenticatable
         'city',
         'postal_code',
         'country',
+        'gender',
+        'guardian_phone',
+        'conduct_evaluation',
+        'assiduity_comment',
     ];
     
     /**

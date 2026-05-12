@@ -9,7 +9,7 @@ class Level extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'order', 'cycle'];
+    protected $fillable = ['name', 'order', 'cycle', 'serie'];
 
     public function classes()
     {
@@ -19,7 +19,7 @@ class Level extends Model
     public function subjects()
     {
         return $this->belongsToMany(Subject::class, 'level_subject')
-                    ->withPivot('coefficient')
+                    ->withPivot('coefficient', 'is_compulsory')
                     ->withTimestamps();
     }
 }

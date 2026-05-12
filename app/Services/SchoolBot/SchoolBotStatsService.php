@@ -66,9 +66,11 @@ class SchoolBotStatsService
             return 0;
         }
 
+        // PostgreSQL exige que SELECT ne soit pas * quand GROUP BY user_id (pas MySQL).
         return DB::table('grades')
             ->whereIn('user_id', $studentIds)
             ->whereNotNull('academic_year_id')
+            ->select('user_id')
             ->groupBy('user_id')
             ->havingRaw('COUNT(DISTINCT academic_year_id) >= 2')
             ->get()
