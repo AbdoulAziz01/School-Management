@@ -54,6 +54,28 @@ class SchoolBotController extends Controller
         ]);
     }
 
+    /**
+     * Élèves et enseignants (ex. identifiants E… / P…), sans exposer l’email.
+     */
+    public function searchUsers(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        if ($q === '') {
+            return response()->json(['message' => 'Le paramètre « q » est requis.'], 422);
+        }
+        if (strlen($q) > 200) {
+            return response()->json(['message' => 'Requête trop longue (max 200 caractères).'], 422);
+        }
+
+        $items = $this->statsService->userSearchQuery($q)->limit(25)->get()
+            ->map(fn (User $u) => $this->userSummaryForBot($u));
+
+        return response()->json([
+            'query' => $q,
+            'items' => $items,
+        ]);
+    }
+
     public function showStudent(int $id): JsonResponse
     {
         $user = User::query()
@@ -80,6 +102,25 @@ class SchoolBotController extends Controller
             'status' => $u->status,
             'class' => $u->class?->name,
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function userSummaryForBot(User $u): array
+    {
+        $row = [
+            'id' => $u->id,
+            'name' => $u->name,
+            'identifier' => $u->identifier,
+            'role' => $u->role,
+            'status' => $u->status,
+        ];
+        if ($u->isStudent()) {
+            $row['class'] = $u->class?->name;
+        }
+
+        return $row;
     }
 
     /**

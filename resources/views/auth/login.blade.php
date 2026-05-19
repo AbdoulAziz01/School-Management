@@ -50,7 +50,7 @@
                 <div class="auth-card">
                     <div class="mb-4 text-center">
                         <i class="mb-3 fas fa-graduation-cap fa-3x" style="color: #f59e0b;"></i>
-                        <h2 class="mb-3 h3 font-weight-normal">Connexion à Mohamad PSL School</h2>
+                        <h2 class="mb-3 h3 font-weight-normal">Connexion à EduManager</h2>
                         <p class="text-muted">Accédez à votre espace personnel</p>
                     </div>
 

@@ -96,9 +96,16 @@ class SenegalSevenClassesDemoSeeder extends Seeder
     /** @var array<string, User> keyed by teacher email */
     private array $teacherBySubjectName = [];
 
+    /** @var array<int, array<string, mixed>> Profil pédagogique par ordre de niveau (1 = 6e … 7 = Terminale) */
+    private array $classProfilesByOrder = [];
+
+    /** @var array<int, int> class_id => level order */
+    private array $classOrderById = [];
+
     public function run(): void
     {
-        $year = (int) date('Y');
+        // Année scolaire en cours (ex. en mai 2026 → 2025-2026, pas 2026-2027)
+        $year = now()->month >= 9 ? (int) date('Y') : (int) date('Y') - 1;
         $this->command->info('Nettoyage des données existantes (ordre compatible PostgreSQL / MySQL)…');
         $this->purgeAcademicData();
 
@@ -110,6 +117,8 @@ class SenegalSevenClassesDemoSeeder extends Seeder
             'is_current' => true,
         ]);
 
+        $this->classProfilesByOrder = $this->defineClassPerformanceProfiles();
+
         $this->createSubjects();
         $this->createLevelsAndLinks();
         $this->createAdmin();
@@ -120,12 +129,14 @@ class SenegalSevenClassesDemoSeeder extends Seeder
 
         foreach (collect($this->levels)->sortKeys() as $level) {
             $label = $this->classLabels[$level->order - 1] ?? $level->name;
-            $classesByLevel[$level->name] = SchoolClass::create([
+            $class = SchoolClass::create([
                 'name' => $label,
                 'academic_year_id' => $academicYear->id,
                 'level_id' => $level->id,
                 'capacity' => 55,
             ]);
+            $classesByLevel[$level->name] = $class;
+            $this->classOrderById[$class->id] = $level->order;
         }
 
         $studentNumber = 1;
@@ -146,8 +157,9 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                 $ageRange = $this->ageRangeForLevelOrder($level->order);
                 $dob = now()->subYears(random_int($ageRange[0], $ageRange[1]))->subDays(random_int(0, 300));
 
-                $tier = $this->randomPerformanceTier();
+                $tier = $this->randomPerformanceTierForClass($level->order);
                 $conduct = $this->conductForTier($tier);
+                $subjectAffinities = $this->generateSubjectAffinities($level);
                 $photo = 'https://ui-avatars.com/api/?background=f59e0b&color=fff&name='.urlencode($fn.' '.$ln);
 
                 $student = User::create([
@@ -171,6 +183,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                 ]);
 
                 $student->setAttribute('performance_tier', $tier);
+                $student->setAttribute('subject_affinities', $subjectAffinities);
                 $allStudents[] = $student;
             }
         }
@@ -191,6 +204,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
 
         $this->command->info('Notes (2 semestres : devoirs, interrogations, compositions, examens)…');
         $this->bulkGradesForStudents($allStudents, $academicYear);
+        $this->logClassAverageSummary($classCollection);
 
         $this->command->info('Absences et retards (échantillon)…');
         $this->bulkAttendances($allStudents);
@@ -399,67 +413,94 @@ class SenegalSevenClassesDemoSeeder extends Seeder
     private function bulkGradesForStudents(array $students, AcademicYear $yearModel): void
     {
         $start = Carbon::parse($yearModel->start_date);
+        $now = Carbon::now();
 
-        $semesterDates = [
-            1 => [
-                'devoir1' => $start->copy()->addWeeks(4)->format('Y-m-d'),
-                'interrogation' => $start->copy()->addWeeks(9)->format('Y-m-d'),
-                'devoir2' => $start->copy()->addWeeks(13)->format('Y-m-d'),
-                'composition' => $start->copy()->addMonths(4)->format('Y-m-d'),
-                'examen' => $start->copy()->addMonths(4)->addWeeks(1)->format('Y-m-d'),
-            ],
-            2 => [
-                'devoir1' => $start->copy()->addMonths(5)->addWeeks(1)->format('Y-m-d'),
-                'interrogation' => $start->copy()->addMonths(6)->addWeeks(2)->format('Y-m-d'),
-                'devoir2' => $start->copy()->addMonths(7)->addWeeks(1)->format('Y-m-d'),
-                'composition' => $start->copy()->addMonths(8)->format('Y-m-d'),
-                'examen' => $start->copy()->addMonths(8)->addWeeks(3)->format('Y-m-d'),
-            ],
+        // Une évaluation par mois (oct. → mai) pour des courbes mensuelles visibles (ex. 17, 14, 18, 10…)
+        $evaluationSchedule = [
+            ['sem' => 1, 'type' => 'devoir1', 'month_offset' => 0],
+            ['sem' => 1, 'type' => 'interrogation', 'month_offset' => 1],
+            ['sem' => 1, 'type' => 'devoir2', 'month_offset' => 2],
+            ['sem' => 1, 'type' => 'composition', 'month_offset' => 3],
+            ['sem' => 1, 'type' => 'examen', 'month_offset' => 4],
+            ['sem' => 2, 'type' => 'devoir1', 'month_offset' => 5],
+            ['sem' => 2, 'type' => 'interrogation', 'month_offset' => 6],
+            ['sem' => 2, 'type' => 'devoir2', 'month_offset' => 7],
+            ['sem' => 2, 'type' => 'composition', 'month_offset' => 8],
+            ['sem' => 2, 'type' => 'examen', 'month_offset' => 9],
         ];
 
-        $types = ['devoir1', 'interrogation', 'devoir2', 'composition', 'examen'];
         $rows = [];
 
         foreach ($students as $student) {
             /** @var User $student */
             $tier = $student->getAttribute('performance_tier') ?: 'medium';
-            $base = ['strong' => 15.5, 'medium' => 11.8, 'weak' => 7.5][$tier];
+            $affinities = $student->getAttribute('subject_affinities') ?? [];
 
             $class = SchoolClass::with('level.subjects')->find($student->class_id);
             if (! $class) {
                 continue;
             }
 
+            $levelOrder = $this->classOrderById[$class->id] ?? 4;
+            $profile = $this->classProfilesByOrder[$levelOrder] ?? $this->classProfilesByOrder[4];
+
+            $tierDelta = ['strong' => 4.8, 'medium' => 0.0, 'weak' => -5.2];
+            $studentBase = $profile['base'] + ($tierDelta[$tier] ?? 0);
+            $volatility = (float) $profile['volatility'];
+
+            $monthlyCurve = $profile['monthly_curve'] ?? [];
+
             foreach ($class->level->subjects as $subject) {
                 $coef = (int) $subject->pivot->coefficient;
-                $subjectVariation = random_int(-6, 6) / 10;
+                $subjectAffinity = (float) ($affinities[$subject->id] ?? 0);
+                $subjectVariation = random_int(-15, 15) / 10;
 
-                foreach ([1, 2] as $sem) {
-                    foreach ($types as $type) {
-                        $g = $base + $subjectVariation + random_int(-12, 12) / 10;
-                        if ($type === 'composition' || $type === 'examen') {
-                            $g -= random_int(0, 15) / 10;
-                        }
-                        if ($tier === 'strong' && $type === 'examen') {
-                            $g += random_int(0, 10) / 10;
-                        }
-                        $g = max(4, min(20, round($g, 2)));
+                foreach ($evaluationSchedule as $eval) {
+                    $sem = $eval['sem'];
+                    $type = $eval['type'];
+                    $monthOffset = $eval['month_offset'];
 
-                        $rows[] = [
-                            'user_id' => $student->id,
-                            'subject_id' => $subject->id,
-                            'grade' => $g,
-                            'comments' => $this->gradeCommentFr($type, $g),
-                            'appreciation' => $this->appreciation($g),
-                            'date' => $semesterDates[$sem][$type] ?? ($semesterDates[$sem]['devoir2']),
-                            'type' => $type === 'interrogation' ? 'interrogation' : $type,
-                            'coefficient' => $coef,
-                            'semester' => $sem,
-                            'academic_year_id' => $yearModel->id,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
+                    $monthTarget = $monthlyCurve[$monthOffset] ?? $profile['base'];
+                    $monthBoost = $monthTarget - $profile['base'];
+
+                    $g = $studentBase + $subjectAffinity + $subjectVariation + $monthBoost;
+                    $g += random_int((int) (-$volatility * 10), (int) ($volatility * 10)) / 10;
+
+                    if ($type === 'composition' || $type === 'examen') {
+                        if ($tier === 'weak') {
+                            $g -= random_int(8, 35) / 10;
+                        } elseif ($tier === 'strong') {
+                            $g += random_int(0, 20) / 10;
+                        } else {
+                            $g -= random_int(0, 12) / 10;
+                        }
                     }
+
+                    if ($type === 'interrogation' && random_int(1, 100) <= 12) {
+                        $g += random_int(-30, 30) / 10;
+                    }
+
+                    $g = max(3, min(20, round($g, 2)));
+
+                    $evalDate = $start->copy()->addMonths($monthOffset)->day(random_int(8, 22));
+                    if ($evalDate->gt($now)) {
+                        continue;
+                    }
+
+                    $rows[] = [
+                        'user_id' => $student->id,
+                        'subject_id' => $subject->id,
+                        'grade' => $g,
+                        'comments' => $this->gradeCommentFr($type, $g),
+                        'appreciation' => $this->appreciation($g),
+                        'date' => $evalDate->format('Y-m-d'),
+                        'type' => $type === 'interrogation' ? 'interrogation' : $type,
+                        'coefficient' => $coef,
+                        'semester' => $sem,
+                        'academic_year_id' => $yearModel->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
                 }
             }
         }
@@ -476,8 +517,16 @@ class SenegalSevenClassesDemoSeeder extends Seeder
         $seenKeys = [];
 
         foreach ($students as $student) {
+            $levelOrder = $this->classOrderById[$student->class_id] ?? 4;
+            $profile = $this->classProfilesByOrder[$levelOrder] ?? $this->classProfilesByOrder[4];
+            $absenceBias = match (true) {
+                $profile['base'] < 9 => 5,
+                $profile['base'] >= 14 => 8,
+                default => 6,
+            };
+
             for ($w = 0; $w < 18; $w++) {
-                if (random_int(1, 10) > 6) {
+                if (random_int(1, 10) > $absenceBias) {
                     continue;
                 }
                 $dt = date('Y-m-d', strtotime($start.' + '.$w.' week '.random_int(0, 4).' day'));
@@ -581,17 +630,187 @@ class SenegalSevenClassesDemoSeeder extends Seeder
         }
     }
 
-    private function randomPerformanceTier(): string
+    /**
+     * Profils volontairement contrastés entre les 7 classes (démo déséquilibrée).
+     *
+     * @return array<int, array{name: string, base: float, tier_strong: int, tier_weak: int, tier_medium: int, volatility: float, monthly_curve: array<int, float>}>
+     */
+    private function defineClassPerformanceProfiles(): array
     {
+        return [
+            1 => [
+                'name' => '6e — classe en grande difficulté',
+                'base' => 7.4,
+                'tier_strong' => 4,
+                'tier_weak' => 55,
+                'tier_medium' => 41,
+                'volatility' => 2.4,
+                'monthly_curve' => [5.5, 8.0, 6.2, 9.5, 7.0, 8.8, 6.5, 10.0, 7.8, 8.2],
+            ],
+            2 => [
+                'name' => '5e — niveau fragile',
+                'base' => 9.1,
+                'tier_strong' => 8,
+                'tier_weak' => 42,
+                'tier_medium' => 50,
+                'volatility' => 2.0,
+                'monthly_curve' => [11.0, 7.5, 10.2, 8.0, 9.8, 7.2, 10.5, 8.5, 9.0, 8.0],
+            ],
+            3 => [
+                'name' => '4e — très hétérogène',
+                'base' => 10.8,
+                'tier_strong' => 28,
+                'tier_weak' => 32,
+                'tier_medium' => 40,
+                'volatility' => 3.2,
+                'monthly_curve' => [14.0, 9.0, 15.5, 8.5, 13.0, 10.0, 16.0, 9.5, 12.0, 11.0],
+            ],
+            4 => [
+                'name' => '3e — moyenne correcte',
+                'base' => 11.6,
+                'tier_strong' => 18,
+                'tier_weak' => 22,
+                'tier_medium' => 60,
+                'volatility' => 1.6,
+                'monthly_curve' => [17.0, 14.0, 18.0, 10.0, 13.0, 15.0, 12.0, 11.0, 14.5, 12.5],
+            ],
+            5 => [
+                'name' => 'Seconde — bon niveau',
+                'base' => 13.4,
+                'tier_strong' => 32,
+                'tier_weak' => 12,
+                'tier_medium' => 56,
+                'volatility' => 1.5,
+                'monthly_curve' => [15.5, 12.0, 16.5, 11.0, 14.0, 17.0, 13.0, 12.5, 15.0, 14.0],
+            ],
+            6 => [
+                'name' => 'Première — classe d\'excellence',
+                'base' => 15.6,
+                'tier_strong' => 48,
+                'tier_weak' => 6,
+                'tier_medium' => 46,
+                'volatility' => 1.1,
+                'monthly_curve' => [18.5, 16.0, 19.0, 14.5, 17.0, 18.0, 15.5, 16.5, 17.5, 16.0],
+            ],
+            7 => [
+                'name' => 'Terminale — polarisée (forts / en échec)',
+                'base' => 11.2,
+                'tier_strong' => 38,
+                'tier_weak' => 38,
+                'tier_medium' => 24,
+                'volatility' => 3.6,
+                'monthly_curve' => [16.0, 8.0, 17.5, 7.5, 14.0, 9.0, 18.0, 8.5, 15.0, 10.0],
+            ],
+        ];
+    }
+
+    private function randomPerformanceTierForClass(int $levelOrder): string
+    {
+        $profile = $this->classProfilesByOrder[$levelOrder] ?? $this->classProfilesByOrder[4];
         $r = random_int(1, 100);
-        if ($r <= 18) {
+
+        if ($r <= $profile['tier_strong']) {
             return 'strong';
         }
-        if ($r <= 88) {
-            return 'medium';
+        if ($r <= $profile['tier_strong'] + $profile['tier_weak']) {
+            return 'weak';
         }
 
-        return 'weak';
+        return 'medium';
+    }
+
+    /**
+     * Points forts / faiblesses par matière (ex. fort en maths, faible en français).
+     *
+     * @return array<int, float> subject_id => offset
+     */
+    private function generateSubjectAffinities(Level $level): array
+    {
+        $affinities = [];
+        $level->loadMissing('subjects');
+
+        foreach ($level->subjects as $subject) {
+            $roll = random_int(1, 100);
+
+            if ($roll <= 15) {
+                $offset = random_int(25, 45) / 10;
+            } elseif ($roll <= 30) {
+                $offset = random_int(-45, -25) / 10;
+            } elseif ($roll <= 55) {
+                $offset = random_int(-12, 12) / 10;
+            } else {
+                $offset = random_int(-22, 22) / 10;
+            }
+
+            $affinities[$subject->id] = $offset;
+        }
+
+        return $affinities;
+    }
+
+    /**
+     * Affiche un récapitulatif des moyennes par classe après insertion des notes.
+     *
+     * @param  \Illuminate\Support\Collection<int, SchoolClass>  $classes
+     */
+    private function logClassAverageSummary($classes): void
+    {
+        $this->command->newLine();
+        $this->command->info('Moyennes générales par classe (après seed) :');
+
+        foreach ($classes as $class) {
+            $order = $this->classOrderById[$class->id] ?? 0;
+            $profileName = $this->classProfilesByOrder[$order]['name'] ?? '—';
+
+            $studentIds = User::query()
+                ->where('class_id', $class->id)
+                ->whereIn('role', [User::ROLE_STUDENT, 'eleve'])
+                ->pluck('id');
+
+            if ($studentIds->isEmpty()) {
+                continue;
+            }
+
+            $averages = [];
+            foreach ($studentIds as $studentId) {
+                $grades = Grade::query()
+                    ->where('user_id', $studentId)
+                    ->with('subject')
+                    ->get();
+
+                if ($grades->isEmpty()) {
+                    continue;
+                }
+
+                $weightedSum = 0;
+                $totalCoef = 0;
+                foreach ($grades->groupBy('subject_id') as $subjectGrades) {
+                    $avg = $subjectGrades->avg('grade');
+                    if ($avg === null) {
+                        continue;
+                    }
+                    $coef = $subjectGrades->first()->subject->coefficient ?? 1;
+                    $weightedSum += $avg * $coef;
+                    $totalCoef += $coef;
+                }
+
+                if ($totalCoef > 0) {
+                    $averages[] = $weightedSum / $totalCoef;
+                }
+            }
+
+            if ($averages === []) {
+                $this->command->line("  • {$class->name} : (aucune note)");
+
+                continue;
+            }
+
+            $classAvg = round(array_sum($averages) / count($averages), 2);
+            $min = round(min($averages), 2);
+            $max = round(max($averages), 2);
+
+            $this->command->line("  • {$class->name} : {$classAvg}/20 (min élève {$min}, max {$max}) — {$profileName}");
+        }
     }
 
     private function conductForTier(string $tier): string

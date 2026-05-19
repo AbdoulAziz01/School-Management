@@ -272,59 +272,22 @@
     <div class="row mt-4">
         <div class="col-12">
             <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-chart-line me-2"></i>Évolution des notes & Prédiction
+                        <i class="fas fa-chart-line me-2"></i>Évolution des performances
                     </h6>
-                    <div>
-                        <span class="badge bg-info me-2">
-                            <i class="fas fa-robot me-1"></i>Prédiction IA
-                        </span>
-                        <span class="badge bg-success">
-                            <i class="fas fa-arrow-trend-up me-1"></i>Tendance
-                        </span>
-                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-lg-9">
-                            <div style="height: 300px;">
-                                <canvas id="gradesEvolutionChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="col-lg-3">
-                            <div class="p-3 bg-light rounded h-100">
-                                <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Légende</h6>
-                                <div class="mb-3">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="me-2" style="width: 16px; height: 16px; background: #f59e0b; border-radius: 50%;"></span>
-                                        <span><strong>Notes réelles</strong></span>
-                                    </div>
-                                    <small class="text-muted">Vos moyennes mensuelles réelles</small>
-                                </div>
-                                <div class="mb-3">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="me-2" style="width: 16px; height: 16px; background: #f6c23e; border-radius: 50%;"></span>
-                                        <span><strong>Prédiction</strong></span>
-                                    </div>
-                                    <small class="text-muted">Estimation des prochains mois basée sur votre tendance</small>
-                                </div>
-                                <div class="mb-3">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="me-2" style="width: 24px; border-top: 3px dashed #1cc88a;"></span>
-                                        <span><strong>Tendance</strong></span>
-                                    </div>
-                                    <small class="text-muted">Ligne de tendance générale</small>
-                                </div>
-                                <hr>
-                                <div class="text-center">
-                                    <small class="text-muted">
-                                        <i class="fas fa-lightbulb me-1 text-warning"></i>
-                                        Continuez vos efforts pour maintenir cette progression !
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Moyenne mensuelle pondérée du début à la fin de l'année scolaire.
+                    </p>
+                    <div style="position: relative; height: 300px;" id="gradesEvolutionChartWrap">
+                        <canvas id="gradesEvolutionChart"></canvas>
+                    </div>
+                    <div id="gradesEvolutionChartEmpty" class="d-none py-4 text-center text-muted">
+                        <i class="fas fa-chart-line fa-3x mb-3 opacity-50"></i>
+                        <p class="mb-0">Pas encore de notes pour afficher l'évolution.</p>
                     </div>
                 </div>
             </div>
@@ -349,111 +312,59 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    var canvas = document.getElementById('gradesEvolutionChart');
+    var chartWrap = document.getElementById('gradesEvolutionChartWrap');
+    var emptyState = document.getElementById('gradesEvolutionChartEmpty');
+    if (!canvas) {
+        return;
+    }
+
     var gradesData = @json($gradesEvolution ?? []);
-    
-    // Si pas de données, créer des données de démonstration
-    if (!gradesData || gradesData.length === 0) {
-        gradesData = [
-            {month: 'Sept', grade: 12.5},
-            {month: 'Oct', grade: 13.2},
-            {month: 'Nov', grade: 12.8},
-            {month: 'Déc', grade: 14.1},
-            {month: 'Jan', grade: 13.5},
-            {month: 'Fév', grade: 14.8}
-        ];
-    }
-    
-    var labels = gradesData.map(item => item.month);
-    var grades = gradesData.map(item => item.grade);
-    var n = grades.length;
-    
-    // Calcul de la régression linéaire pour la tendance
-    var sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-    for (var i = 0; i < n; i++) {
-        sumX += i;
-        sumY += grades[i];
-        sumXY += i * grades[i];
-        sumXX += i * i;
-    }
-    var slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    var intercept = (sumY - slope * sumX) / n;
-    
-    // Données de tendance
-    var trendData = [];
-    for (var i = 0; i < n; i++) {
-        trendData.push(Math.round((intercept + slope * i) * 10) / 10);
-    }
-    
-    // Prédictions pour les 2 prochains mois
-    var predictedLabels = ['Mar', 'Avr'];
-    var predictedGrades = [];
-    predictedLabels.forEach(function(month, index) {
-        labels.push(month);
-        var pred = Math.max(0, Math.min(20, intercept + slope * (n + index)));
-        predictedGrades.push(Math.round(pred * 10) / 10);
-        trendData.push(Math.round((intercept + slope * (n + index)) * 10) / 10);
+    var labels = gradesData.map(function(item) { return item.month; });
+    var grades = gradesData.map(function(item) { return item.grade; });
+    var counts = gradesData.map(function(item) { return item.count || 0; });
+    var hasAnyGrade = grades.some(function(value) {
+        return value !== null && value !== undefined;
     });
-    
-    // Préparer les datasets
-    var realGrades = grades.slice();
-    predictedGrades.forEach(function() {
-        realGrades.push(null);
-    });
-    
-    var predictionData = [];
-    for (var i = 0; i < n - 1; i++) {
-        predictionData.push(null);
+
+    if (!hasAnyGrade) {
+        chartWrap.classList.add('d-none');
+        emptyState.classList.remove('d-none');
+        return;
     }
-    predictionData.push(grades[n-1]); // Point de connexion
-    predictedGrades.forEach(function(g) {
-        predictionData.push(g);
-    });
-    
-    var ctx = document.getElementById('gradesEvolutionChart').getContext('2d');
+
+    var ctx = canvas.getContext('2d');
+    var gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(245, 158, 11, 0.8)');
+    gradient.addColorStop(1, 'rgba(245, 158, 11, 0.1)');
+    var passingLine = labels.map(function() { return 10; });
+
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [
-                {   
-                    label: 'Notes réelles',
-                    data: realGrades,
+                {
+                    label: 'Ma moyenne mensuelle',
+                    data: grades,
                     borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                    backgroundColor: gradient,
                     borderWidth: 3,
                     fill: true,
-                    tension: 0.3,
+                    tension: 0.35,
                     pointBackgroundColor: '#f59e0b',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
-                    pointRadius: 5,
+                    pointRadius: grades.map(function(v) { return (v === null ? 0 : 5); }),
                     pointHoverRadius: 7
                 },
                 {
-                    label: 'Prédiction',
-                    data: predictionData,
-                    borderColor: '#f6c23e',
-                    backgroundColor: 'rgba(246, 194, 62, 0.1)',
-                    borderWidth: 3,
-                    borderDash: [8, 4],
-                    fill: true,
-                    tension: 0.3,
-                    pointBackgroundColor: '#f6c23e',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: function(context) {
-                        return context.dataIndex >= n ? 6 : 0;
-                    },
-                    pointHoverRadius: 8
-                },
-                {
-                    label: 'Tendance',
-                    data: trendData,
+                    label: 'Seuil de réussite (10/20)',
+                    data: passingLine,
                     borderColor: '#1cc88a',
                     borderWidth: 2,
-                    borderDash: [4, 4],
+                    borderDash: [6, 4],
                     fill: false,
-                    tension: 0,
                     pointRadius: 0,
                     pointHoverRadius: 0
                 }
@@ -468,46 +379,54 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top'
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleFont: { size: 13 },
-                    bodyFont: { size: 12 },
-                    padding: 12,
                     callbacks: {
                         label: function(context) {
-                            var label = context.dataset.label || '';
-                            if (context.parsed.y !== null) {
-                                label += ': ' + context.parsed.y + '/20';
+                            var value = context.parsed.y;
+                            if (value === null || value === undefined) {
+                                return context.dataset.label + ' : —';
                             }
-                            return label;
+                            return context.dataset.label + ' : ' + value + '/20';
+                        },
+                        afterLabel: function(context) {
+                            if (context.datasetIndex === 0 && counts[context.dataIndex]) {
+                                return 'Notes saisies : ' + counts[context.dataIndex];
+                            }
+                            if (context.datasetIndex === 0 && (grades[context.dataIndex] === null || grades[context.dataIndex] === undefined)) {
+                                return 'Aucune note ce mois-ci';
+                            }
+                            return '';
                         }
                     }
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: false,
-                    min: 8,
+                    beginAtZero: true,
                     max: 20,
                     ticks: {
                         stepSize: 2,
                         callback: function(value) {
                             return value + '/20';
-                        },
-                        font: { size: 10 }
+                        }
                     },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
+                    title: {
+                        display: true,
+                        text: 'Moyenne'
                     }
                 },
                 x: {
-                    grid: {
-                        display: false
-                    },
                     ticks: {
-                        font: { size: 10 }
+                        maxRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 12
+                    },
+                    title: {
+                        display: true,
+                        text: 'Période'
                     }
                 }
             }

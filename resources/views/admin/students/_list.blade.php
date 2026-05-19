@@ -1,15 +1,27 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Liste des élèves</h5>
-        <span class="badge" style="background-color: #fd7e14;">{{ $students->total() }} élève(s)</span>
+        <span class="badge" style="background-color: #fd7e14;">
+            @if(!empty($search))
+                {{ $students->total() }} résultat(s)
+            @else
+                {{ $students->total() }} élève(s)
+            @endif
+        </span>
     </div>
     
     <div class="card-body">
         @if($students->isEmpty())
-            <div class="mb-0 alert alert-info">
+            <div class="mb-0 alert alert-{{ !empty($search) ? 'warning' : 'info' }}">
                 <div class="d-flex align-items-center">
-                    <i class="fas fa-info-circle me-2 fs-4"></i>
-                    <span>Aucun élève n'a été enregistré pour le moment.</span>
+                    <i class="fas fa-{{ !empty($search) ? 'search' : 'info-circle' }} me-2 fs-4"></i>
+                    <span>
+                        @if(!empty($search))
+                            Aucun élève trouvé pour « {{ $search }} ». Vérifiez l'orthographe ou essayez une partie du nom.
+                        @else
+                            Aucun élève n'a été enregistré pour le moment.
+                        @endif
+                    </span>
                 </div>
             </div>
         @else

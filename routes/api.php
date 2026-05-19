@@ -10,6 +10,7 @@ Route::prefix('bot/school')
         Route::get('/stats/repeaters', [SchoolBotController::class, 'repeaters']);
         Route::get('/stats/outcomes', [SchoolBotController::class, 'outcomes']);
         Route::get('/students/search', [SchoolBotController::class, 'searchStudents']);
+        Route::get('/users/search', [SchoolBotController::class, 'searchUsers']);
         Route::get('/students/{id}', [SchoolBotController::class, 'showStudent'])
             ->whereNumber('id');
     });

@@ -208,12 +208,12 @@ class StudentGradesController extends Controller
     }
 
     /**
-     * Obtenir l'évolution des notes de l'étudiant par mois
+     * Évolution mensuelle des moyennes de l'élève sur toute l'année scolaire.
      */
-    private function getGradesEvolution($user)
+    private function getGradesEvolution($user): array
     {
-        // Récupérer les notes triées par date
         $grades = $user->grades()
+            ->with('subject')
             ->orderBy('date')
             ->orderBy('created_at')
             ->get();
@@ -222,27 +222,131 @@ class StudentGradesController extends Controller
             return [];
         }
 
-        // Grouper par mois
-        $monthNames = [
-            1 => 'Jan', 2 => 'Fév', 3 => 'Mar', 4 => 'Avr',
-            5 => 'Mai', 6 => 'Juin', 7 => 'Juil', 8 => 'Août',
-            9 => 'Sept', 10 => 'Oct', 11 => 'Nov', 12 => 'Déc'
-        ];
-
-        $grouped = $grades->groupBy(function($grade) {
-            $date = $grade->date ?? $grade->created_at;
-            return $date ? $date->format('Y-m') : null;
-        })->filter();
+        $academicYear = $user->schoolClass?->academicYear;
+        [$periodStart, $periodEnd] = $this->getAcademicYearMonthRange($academicYear);
 
         $evolution = [];
-        foreach ($grouped as $yearMonth => $monthGrades) {
-            $month = (int) substr($yearMonth, 5, 2);
+        $currentMonth = $periodStart->copy();
+
+        while ($currentMonth <= $periodEnd) {
+            $monthEnd = $currentMonth->copy()->endOfMonth();
+
+            $gradesUpToMonth = $grades->filter(function ($grade) use ($monthEnd) {
+                $date = $grade->date ?? $grade->created_at;
+
+                return $date && $date->lte($monthEnd);
+            });
+
+            $monthAverage = null;
+            if ($gradesUpToMonth->isNotEmpty()) {
+                $weightedSum = 0;
+                $totalCoef = 0;
+
+                foreach ($gradesUpToMonth->groupBy('subject_id') as $subjectGrades) {
+                    $subjectAvg = $subjectGrades->avg('grade');
+                    if ($subjectAvg === null) {
+                        continue;
+                    }
+                    $coefficient = $subjectGrades->first()->subject->coefficient ?? 1;
+                    $weightedSum += $subjectAvg * $coefficient;
+                    $totalCoef += $coefficient;
+                }
+
+                if ($totalCoef > 0) {
+                    $monthAverage = round($weightedSum / $totalCoef, 2);
+                }
+            }
+
             $evolution[] = [
-                'month' => $monthNames[$month] ?? $yearMonth,
-                'grade' => round($monthGrades->avg('grade'), 1)
+                'month' => $currentMonth->translatedFormat('M Y'),
+                'grade' => $monthAverage,
+                'count' => $gradesUpToMonth->count(),
             ];
+
+            $currentMonth->addMonth();
+        }
+
+        $hasChartData = collect($evolution)->contains(fn ($row) => $row['grade'] !== null);
+
+        if (! $hasChartData && $grades->isNotEmpty()) {
+            $gradeStart = Carbon::parse($grades->min('date'))->startOfMonth();
+            $gradeEnd = Carbon::parse($grades->max('date'))->endOfMonth();
+            if ($gradeEnd->gt(now())) {
+                $gradeEnd = now()->copy()->endOfMonth();
+            }
+
+            $evolution = [];
+            $currentMonth = $gradeStart->copy();
+
+            while ($currentMonth <= $gradeEnd) {
+                $monthEnd = $currentMonth->copy()->endOfMonth();
+                $gradesUpToMonth = $grades->filter(function ($grade) use ($monthEnd) {
+                    $date = $grade->date ?? $grade->created_at;
+
+                    return $date && $date->lte($monthEnd);
+                });
+
+                $monthAverage = null;
+                if ($gradesUpToMonth->isNotEmpty()) {
+                    $weightedSum = 0;
+                    $totalCoef = 0;
+                    foreach ($gradesUpToMonth->groupBy('subject_id') as $subjectGrades) {
+                        $subjectAvg = $subjectGrades->avg('grade');
+                        if ($subjectAvg === null) {
+                            continue;
+                        }
+                        $coefficient = $subjectGrades->first()->subject->coefficient ?? 1;
+                        $weightedSum += $subjectAvg * $coefficient;
+                        $totalCoef += $coefficient;
+                    }
+                    if ($totalCoef > 0) {
+                        $monthAverage = round($weightedSum / $totalCoef, 2);
+                    }
+                }
+
+                $evolution[] = [
+                    'month' => $currentMonth->translatedFormat('M Y'),
+                    'grade' => $monthAverage,
+                    'count' => $gradesUpToMonth->count(),
+                ];
+                $currentMonth->addMonth();
+            }
         }
 
         return $evolution;
+    }
+
+    /**
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     */
+    private function getAcademicYearMonthRange($academicYear): array
+    {
+        $now = Carbon::now();
+
+        if ($academicYear?->start_date && $academicYear?->end_date) {
+            $start = Carbon::parse($academicYear->start_date)->startOfMonth();
+            $end = Carbon::parse($academicYear->end_date)->endOfMonth();
+
+            if ($now->lt($start)) {
+                $start->subYear();
+                $end->subYear();
+            }
+        } else {
+            $start = $now->copy()->month(9)->day(1)->startOfMonth();
+            if ($now->month < 9) {
+                $start->subYear();
+            }
+            $end = $start->copy()->addMonths(9)->endOfMonth();
+        }
+
+        if ($end->gt($now)) {
+            $end = $now->copy()->endOfMonth();
+        }
+
+        if ($start->gt($end)) {
+            $start = $end->copy()->startOfMonth();
+        }
+
+        return [$start, $end];
     }
 }

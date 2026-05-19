@@ -54,6 +54,65 @@
             -webkit-overflow-scrolling: touch;
         }
     }
+
+    .stat-cards-row > [class*="col"] {
+        display: flex;
+    }
+
+    .stat-card-btn,
+    .stat-card-box,
+    .bucket-card-btn {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card-btn {
+        min-height: 10.5rem;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem !important;
+    }
+
+    .stat-card-score {
+        line-height: 1.1;
+        margin-bottom: 0.35rem;
+    }
+
+    .stat-card-title {
+        line-height: 1.3;
+    }
+
+    .stat-card-meta {
+        display: block;
+        min-height: 1.35rem;
+        line-height: 1.35rem;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .stat-card-action {
+        display: block;
+        min-height: 1.25rem;
+        line-height: 1.25rem;
+        margin-top: 0.25rem;
+    }
+
+    .stat-card-box {
+        min-height: 10.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stat-card-btn:hover,
+    .bucket-card-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
 </style>
 @endpush
 
@@ -123,30 +182,56 @@
         </div>
         <div class="card-body">
             <!-- Cartes de statistiques principales -->
-            <div class="mb-4 row g-3">
+            <div class="mb-4 row g-3 stat-cards-row align-items-stretch">
                 <div class="col-6 col-md-3">
-                    <div class="p-3 text-center border rounded bg-light">
-                        <div class="mb-2 display-6 fw-bold" style="color: #fd7e14;">{{ $classStats['average'] }}/20</div>
-                        <small class="text-muted"><i class="fas fa-chart-line me-1"></i>Moyenne Générale</small>
-                    </div>
+                    <button type="button" class="w-100 btn text-center border rounded bg-light stat-card-btn"
+                            data-bs-toggle="modal" data-bs-target="#classRankingModal">
+                        <div class="stat-card-score display-6 fw-bold" style="color: #fd7e14;">{{ $classStats['average'] }}/20</div>
+                        <small class="text-muted stat-card-title"><i class="fas fa-chart-line me-1"></i>Moyenne Générale</small>
+                        <small class="stat-card-meta text-muted">{{ $classStats['students_with_grades'] ?? 0 }} élève(s) noté(s)</small>
+                        <small class="stat-card-action text-primary">Voir le classement</small>
+                    </button>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 text-center border rounded bg-light">
-                        <div class="mb-2 display-6 fw-bold text-success">{{ $classStats['best_average'] }}/20</div>
-                        <small class="text-muted"><i class="fas fa-arrow-up me-1"></i>Meilleure Moyenne</small>
-                    </div>
+                    @if(!empty($classStats['best_student']))
+                        <button type="button" class="w-100 btn text-center border rounded bg-light stat-card-btn"
+                                data-bs-toggle="modal" data-bs-target="#bestStudentModal">
+                            <div class="stat-card-score display-6 fw-bold text-success">{{ $classStats['best_average'] }}/20</div>
+                            <small class="text-muted stat-card-title"><i class="fas fa-arrow-up me-1"></i>Meilleure Moyenne</small>
+                            <small class="stat-card-meta text-success fw-semibold">{{ $classStats['best_student']['name'] }}</small>
+                            <small class="stat-card-action text-primary">Voir l'élève</small>
+                        </button>
+                    @else
+                        <div class="p-3 text-center border rounded bg-light">
+                            <div class="mb-2 display-6 fw-bold text-success">—</div>
+                            <small class="text-muted">Meilleure Moyenne</small>
+                        </div>
+                    @endif
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 text-center border rounded bg-light">
-                        <div class="mb-2 display-6 fw-bold text-danger">{{ $classStats['lowest_average'] }}/20</div>
-                        <small class="text-muted"><i class="fas fa-arrow-down me-1"></i>Plus Basse Moyenne</small>
-                    </div>
+                    @if(!empty($classStats['lowest_student']))
+                        <button type="button" class="w-100 btn text-center border rounded bg-light stat-card-btn"
+                                data-bs-toggle="modal" data-bs-target="#lowestStudentModal">
+                            <div class="stat-card-score display-6 fw-bold text-danger">{{ $classStats['lowest_average'] }}/20</div>
+                            <small class="text-muted stat-card-title"><i class="fas fa-arrow-down me-1"></i>Plus Basse Moyenne</small>
+                            <small class="stat-card-meta text-danger fw-semibold">{{ $classStats['lowest_student']['name'] }}</small>
+                            <small class="stat-card-action text-primary">Voir l'élève</small>
+                        </button>
+                    @else
+                        <div class="p-3 text-center border rounded bg-light">
+                            <div class="mb-2 display-6 fw-bold text-danger">—</div>
+                            <small class="text-muted">Plus Basse Moyenne</small>
+                        </div>
+                    @endif
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 text-center border rounded bg-light">
-                        <div class="mb-2 display-6 fw-bold text-primary">{{ $classStats['pass_rate'] }}%</div>
-                        <small class="text-muted"><i class="fas fa-check-circle me-1"></i>Taux de Réussite</small>
-                    </div>
+                    <button type="button" class="w-100 btn text-center border rounded bg-light stat-card-btn"
+                            data-bs-toggle="modal" data-bs-target="#classPassFailModal">
+                        <div class="stat-card-score display-6 fw-bold text-primary">{{ $classStats['pass_rate'] }}%</div>
+                        <small class="text-muted stat-card-title"><i class="fas fa-check-circle me-1"></i>Taux de Réussite</small>
+                        <small class="stat-card-meta text-muted">{{ $classStats['pass_count'] }} admis · {{ $classStats['fail_count'] }} en difficulté</small>
+                        <small class="stat-card-action text-primary">Voir les élèves</small>
+                    </button>
                 </div>
             </div>
             
@@ -156,14 +241,16 @@
                 <div class="col-md-4">
                     <div class="p-3 border rounded">
                         <h6 class="mb-3"><i class="fas fa-users me-2"></i>Répartition des Résultats</h6>
-                        <div class="mb-2 d-flex justify-content-between">
+                        <button type="button" class="mb-2 w-100 btn btn-sm btn-outline-success d-flex justify-content-between align-items-center"
+                                data-bs-toggle="modal" data-bs-target="#classPassFailModal">
                             <span><i class="fas fa-check text-success me-2"></i>Élèves >= 10/20</span>
                             <span class="badge bg-success">{{ $classStats['pass_count'] }}</span>
-                        </div>
-                        <div class="mb-2 d-flex justify-content-between">
-                            <span><i class="fas fa-times text-danger me-2"></i>Élèves < 10/20</span>
+                        </button>
+                        <button type="button" class="mb-2 w-100 btn btn-sm btn-outline-danger d-flex justify-content-between align-items-center"
+                                data-bs-toggle="modal" data-bs-target="#classPassFailModal">
+                            <span><i class="fas fa-times text-danger me-2"></i>Élèves &lt; 10/20</span>
                             <span class="badge bg-danger">{{ $classStats['fail_count'] }}</span>
-                        </div>
+                        </button>
                         <div class="d-flex justify-content-between">
                             <span><i class="fas fa-clipboard text-secondary me-2"></i>Total Notes</span>
                             <span class="badge bg-secondary">{{ $classStats['total_grades'] }}</span>
@@ -175,36 +262,46 @@
                 <div class="col-md-8">
                     <div class="p-3 border rounded">
                         <h6 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Distribution des Moyennes</h6>
-                        <div class="text-center row">
+                        <div class="text-center row g-2" id="grade-distribution-buckets">
                             <div class="col">
-                                <div class="p-2 rounded" style="background-color: #28a745; color: white;">
+                                <button type="button" class="w-100 btn bucket-card-btn p-2 rounded border-0"
+                                        style="background-color: #28a745; color: white;"
+                                        data-bs-toggle="modal" data-bs-target="#bucketModalexcellent">
                                     <div class="fs-4 fw-bold">{{ $classStats['grade_distribution']['excellent'] }}</div>
                                     <small>Excellent<br>(≥16)</small>
-                                </div>
+                                </button>
                             </div>
                             <div class="col">
-                                <div class="p-2 rounded" style="background-color: #17a2b8; color: white;">
+                                <button type="button" class="w-100 btn bucket-card-btn p-2 rounded border-0"
+                                        style="background-color: #17a2b8; color: white;"
+                                        data-bs-target="#bucketModalgood" data-bs-toggle="modal">
                                     <div class="fs-4 fw-bold">{{ $classStats['grade_distribution']['good'] }}</div>
                                     <small>Bien<br>(14-15)</small>
-                                </div>
+                                </button>
                             </div>
                             <div class="col">
-                                <div class="p-2 rounded" style="background-color: #ffc107; color: #212529;">
+                                <button type="button" class="w-100 btn bucket-card-btn p-2 rounded border-0"
+                                        style="background-color: #ffc107; color: #212529;"
+                                        data-bs-target="#bucketModalaverage" data-bs-toggle="modal">
                                     <div class="fs-4 fw-bold">{{ $classStats['grade_distribution']['average'] }}</div>
                                     <small>Assez Bien<br>(12-13)</small>
-                                </div>
+                                </button>
                             </div>
                             <div class="col">
-                                <div class="p-2 rounded" style="background-color: #fd7e14; color: white;">
+                                <button type="button" class="w-100 btn bucket-card-btn p-2 rounded border-0"
+                                        style="background-color: #fd7e14; color: white;"
+                                        data-bs-target="#bucketModalpassing" data-bs-toggle="modal">
                                     <div class="fs-4 fw-bold">{{ $classStats['grade_distribution']['passing'] }}</div>
                                     <small>Passable<br>(10-11)</small>
-                                </div>
+                                </button>
                             </div>
                             <div class="col">
-                                <div class="p-2 rounded" style="background-color: #dc3545; color: white;">
+                                <button type="button" class="w-100 btn bucket-card-btn p-2 rounded border-0"
+                                        style="background-color: #dc3545; color: white;"
+                                        data-bs-target="#bucketModalfailing" data-bs-toggle="modal">
                                     <div class="fs-4 fw-bold">{{ $classStats['grade_distribution']['failing'] }}</div>
-                                    <small>Insuffisant<br>(<10)</small>
-                                </div>
+                                    <small>Insuffisant<br>(&lt;10)</small>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -212,6 +309,173 @@
             </div>
         </div>
     </div>
+
+    @if(!empty($classStats['best_student']))
+    <div class="modal fade" id="bestStudentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-trophy me-2"></i>Meilleure moyenne — {{ $class->name }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-1 text-muted">Élève en tête de la classe</p>
+                    <h4 class="mb-3">{{ $classStats['best_student']['name'] }}</h4>
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>Moyenne :</strong> {{ $classStats['best_average'] }}/20</li>
+                        <li><strong>Identifiant :</strong> {{ $classStats['best_student']['identifier'] ?? '—' }}</li>
+                        <li><strong>Email :</strong> {{ $classStats['best_student']['email'] ?? '—' }}</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <a href="{{ $classStats['best_student']['url'] }}" class="btn btn-success">Voir la fiche complète</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if(!empty($classStats['lowest_student']))
+    <div class="modal fade" id="lowestStudentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Plus basse moyenne — {{ $class->name }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-1 text-muted">Élève à accompagner en priorité</p>
+                    <h4 class="mb-3">{{ $classStats['lowest_student']['name'] }}</h4>
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>Moyenne :</strong> {{ $classStats['lowest_average'] }}/20</li>
+                        <li><strong>Identifiant :</strong> {{ $classStats['lowest_student']['identifier'] ?? '—' }}</li>
+                        <li><strong>Email :</strong> {{ $classStats['lowest_student']['email'] ?? '—' }}</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <a href="{{ $classStats['lowest_student']['url'] }}" class="btn btn-danger">Voir la fiche complète</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modales : classement, réussite/échec, tranches de moyennes --}}
+    <div class="modal fade" id="classRankingModal" tabindex="-1" aria-labelledby="classRankingModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="classRankingModalLabel">Classement de la classe {{ $class->name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Élève</th>
+                                <th>Identifiant</th>
+                                <th class="text-end">Moyenne</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($classStats['ranking'] ?? [] as $index => $student)
+                                <tr>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $student['name'] }}</td>
+                                    <td><small>{{ $student['identifier'] ?? '—' }}</small></td>
+                                    <td class="text-end fw-bold">{{ $student['average'] }}/20</td>
+                                    <td class="text-end">
+                                        <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-primary">Voir la fiche</a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="text-center text-muted py-4">Aucun élève avec des notes.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="classPassFailModal" tabindex="-1" aria-labelledby="classPassFailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="classPassFailModalLabel">Réussite et échec — {{ $class->name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-success"><i class="fas fa-check me-1"></i> Élèves admis (≥ 10/20)</h6>
+                            <ul class="list-group list-group-flush">
+                                @forelse($classStats['passing_students'] ?? [] as $student)
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/20)</small></span>
+                                        <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-success">Fiche</a>
+                                    </li>
+                                @empty
+                                    <li class="list-group-item text-muted">Aucun</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-danger"><i class="fas fa-times me-1"></i> Élèves en difficulté (&lt; 10/20)</h6>
+                            <ul class="list-group list-group-flush">
+                                @forelse($classStats['failing_students'] ?? [] as $student)
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/20)</small></span>
+                                        <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-danger">Fiche</a>
+                                    </li>
+                                @empty
+                                    <li class="list-group-item text-muted">Aucun</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @php
+        $bucketTitles = [
+            'excellent' => 'Élèves — Excellent (≥16)',
+            'good' => 'Élèves — Bien (14-15)',
+            'average' => 'Élèves — Assez bien (12-13)',
+            'passing' => 'Élèves — Passable (10-11)',
+            'failing' => 'Élèves — Insuffisant (<10)',
+        ];
+    @endphp
+    @foreach($bucketTitles as $bucketKey => $bucketTitle)
+        <div class="modal fade" id="bucketModal{{ $bucketKey }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ $bucketTitle }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul class="list-group list-group-flush">
+                            @forelse($classStats['students_by_bucket'][$bucketKey] ?? [] as $student)
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/20)</small></span>
+                                    <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-primary">Fiche</a>
+                                </li>
+                            @empty
+                                <li class="list-group-item text-muted">Aucun élève dans cette tranche.</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endforeach
     
     <!-- Graphique d'évolution -->
     <div class="mb-4 shadow-sm card">
@@ -221,12 +485,27 @@
             </h5>
         </div>
         <div class="card-body">
-            <canvas id="evolutionChart" height="100"></canvas>
+            @if(!empty($classStats['evolution_period']))
+                <p class="text-muted small mb-2">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    Période : <strong>{{ $classStats['evolution_period'] }}</strong>
+                    @if($class->academicYear)
+                        ({{ $class->academicYear->name }})
+                    @endif
+                </p>
+            @endif
+            <div style="position: relative; height: 320px;" id="evolutionChartWrap">
+                <canvas id="evolutionChart"></canvas>
+            </div>
+            <div id="evolutionChartEmpty" class="d-none py-5 text-center text-muted">
+                <i class="fas fa-chart-line fa-3x mb-3 opacity-50"></i>
+                <p class="mb-0">Aucune note enregistrée sur cette période.</p>
+            </div>
             <div class="mt-3 text-center">
                 <small class="text-muted">
                     <i class="fas fa-info-circle me-1"></i>
-                    Ce graphique montre l'évolution de la moyenne de la classe au cours des 6 derniers mois.
-                    Dans une future version, des prédictions ML seront ajoutées pour anticiper les tendances.
+                    Moyenne mensuelle de la classe (notes du mois) — courbe avec variations d'un mois à l'autre.
+                    La ligne verte pointillée indique le seuil de réussite (10/20).
                 </small>
             </div>
         </div>
@@ -416,20 +695,32 @@ $(document).ready(function() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('evolutionChart').getContext('2d');
-    
-    // Données du serveur
+    const canvas = document.getElementById('evolutionChart');
+    const chartWrap = document.getElementById('evolutionChartWrap');
+    const emptyState = document.getElementById('evolutionChartEmpty');
+    if (!canvas) {
+        return;
+    }
+
     const monthlyData = @json($classStats['monthly_averages']);
-    
     const labels = monthlyData.map(item => item.month);
     const averages = monthlyData.map(item => item.average);
     const counts = monthlyData.map(item => item.count);
-    
-    // Gradient pour la ligne
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    const hasAnyGrade = averages.some(value => value !== null && value !== undefined);
+
+    if (!hasAnyGrade) {
+        chartWrap.classList.add('d-none');
+        emptyState.classList.remove('d-none');
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
     gradient.addColorStop(0, 'rgba(253, 126, 20, 0.8)');
     gradient.addColorStop(1, 'rgba(253, 126, 20, 0.1)');
-    
+
+    const passingLine = labels.map(() => 10);
+
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -442,27 +733,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: gradient,
                     borderWidth: 3,
                     fill: true,
-                    tension: 0.4,
+                    tension: 0.35,
+                    spanGaps: true,
                     pointBackgroundColor: '#fd7e14',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 8
+                    pointRadius: averages.map(v => (v === null ? 0 : 5)),
+                    pointHoverRadius: 7
                 },
                 {
                     label: 'Ligne de passage (10/20)',
-                    data: [10, 10, 10, 10, 10, 10],
+                    data: passingLine,
                     borderColor: '#28a745',
                     borderWidth: 2,
-                    borderDash: [5, 5],
+                    borderDash: [6, 4],
                     fill: false,
-                    pointRadius: 0
+                    pointRadius: 0,
+                    pointHoverRadius: 0
                 }
             ]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: true,
@@ -470,10 +763,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 tooltip: {
                     callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            if (value === null || value === undefined) {
+                                return context.dataset.label + ' : —';
+                            }
+                            return context.dataset.label + ' : ' + value + '/20';
+                        },
                         afterLabel: function(context) {
                             const index = context.dataIndex;
                             if (context.datasetIndex === 0 && counts[index]) {
-                                return 'Nombre de notes : ' + counts[index];
+                                return 'Notes prises en compte : ' + counts[index];
+                            }
+                            if (context.datasetIndex === 0 && (averages[index] === null || averages[index] === undefined)) {
+                                return 'Pas encore de notes à cette date';
                             }
                             return '';
                         }
@@ -496,6 +799,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 },
                 x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 12
+                    },
                     title: {
                         display: true,
                         text: 'Période'

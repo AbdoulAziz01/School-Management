@@ -7,6 +7,7 @@ use App\Models\SchoolClass;
 use App\Models\AcademicYear;
 use App\Models\Level;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -218,47 +219,50 @@ class ClassController extends Controller
                 $classAverage = array_sum($studentAverages) / count($studentAverages);
             }
             
-            // Évolution mensuelle des notes (6 derniers mois)
-            for ($i = 5; $i >= 0; $i--) {
-                $month = now()->subMonths($i);
-                $monthStart = $month->copy()->startOfMonth();
-                $monthEnd = $month->copy()->endOfMonth();
+            $monthlyAverages = $this->buildMonthlyPeriodAverages(
+                $studentIds,
+                $allGrades,
+                $calculateWeightedAverage,
+                $academicYear
+            );
 
-                $monthGradesQuery = \App\Models\Grade::whereIn('user_id', $studentIds)
-                    ->whereHas('subject')
-                    ->with('subject')
-                    ->whereBetween('date', [$monthStart, $monthEnd]);
-                $monthGradesQuery = $applyAcademicYearFilter($monthGradesQuery);
-                $monthGrades = $monthGradesQuery->get();
+            $hasChartData = collect($monthlyAverages)->contains(
+                fn ($row) => $row['average'] !== null
+            );
 
-                $monthlyStudentAverages = $monthGrades
-                    ->groupBy('user_id')
-                    ->map(function ($grades) use ($calculateWeightedAverage) {
-                        return $calculateWeightedAverage($grades);
-                    })
-                    ->filter(function ($average) {
-                        return $average !== null;
-                    });
+            if (! $hasChartData && $allGrades->isNotEmpty()) {
+                $gradeStart = Carbon::parse($allGrades->min('date'))->startOfMonth();
+                $gradeEnd = Carbon::parse($allGrades->max('date'))->endOfMonth();
+                if ($gradeEnd->gt(now())) {
+                    $gradeEnd = now()->copy()->endOfMonth();
+                }
 
-                $monthAverage = $monthlyStudentAverages->count() > 0
-                    ? $monthlyStudentAverages->avg()
-                    : null;
-
-                $monthlyAverages[] = [
-                    'month' => $month->translatedFormat('M Y'),
-                    'average' => $monthAverage !== null ? round($monthAverage, 2) : null,
-                    'count' => $monthGrades->count()
-                ];
+                $monthlyAverages = $this->buildMonthlyPeriodAverages(
+                    $studentIds,
+                    $allGrades,
+                    $calculateWeightedAverage,
+                    $academicYear,
+                    $gradeStart,
+                    $gradeEnd
+                );
             }
 
             $totalGrades = $allGrades->count();
         }
-        
-        // Meilleure et plus basse moyenne
-        $bestAverage = count($studentAverages) > 0 ? max($studentAverages) : 0;
-        $lowestAverage = count($studentAverages) > 0 ? min($studentAverages) : 0;
+
+        $evolutionPeriod = null;
+        if (count($monthlyAverages) > 0) {
+            $firstLabel = $monthlyAverages[0]['month'];
+            $lastLabel = $monthlyAverages[count($monthlyAverages) - 1]['month'];
+            $evolutionPeriod = $firstLabel . ' — ' . $lastLabel;
+        }
+
         $studentsWithGrades = count($studentAverages);
-        
+        $bestAverage = $studentsWithGrades > 0 ? max($studentAverages) : 0;
+        $lowestAverage = $studentsWithGrades > 0 ? min($studentAverages) : 0;
+
+        $studentInsights = $this->buildClassStudentInsights($studentAverages);
+
         // Statistiques compilées
         $classStats = [
             'average' => round($classAverage, 2),
@@ -271,10 +275,210 @@ class ClassController extends Controller
             'fail_count' => $failCount,
             'pass_rate' => $studentsWithGrades > 0 ? round(($passCount / $studentsWithGrades) * 100, 1) : 0,
             'grade_distribution' => $gradeDistribution,
-            'monthly_averages' => $monthlyAverages
+            'monthly_averages' => $monthlyAverages,
+            'evolution_period' => $evolutionPeriod,
+            'best_student' => $studentInsights['best_student'],
+            'lowest_student' => $studentInsights['lowest_student'],
+            'ranking' => $studentInsights['ranking'],
+            'passing_students' => $studentInsights['passing_students'],
+            'failing_students' => $studentInsights['failing_students'],
+            'students_by_bucket' => $studentInsights['students_by_bucket'],
         ];
         
         return view('admin.classes.show', compact('class', 'availableTeachers', 'subjects', 'assignedStudents', 'classStats'));
+    }
+
+    /**
+     * Période mensuelle de l'année scolaire (début → fin, plafonnée à aujourd'hui).
+     *
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     */
+    private function getAcademicYearMonthRange(?AcademicYear $academicYear): array
+    {
+        $now = Carbon::now();
+
+        if ($academicYear?->start_date && $academicYear?->end_date) {
+            $start = Carbon::parse($academicYear->start_date)->startOfMonth();
+            $end = Carbon::parse($academicYear->end_date)->endOfMonth();
+
+            // Ex. : nous sommes en mai 2026 mais l'année en BDD commence en oct. 2026
+            if ($now->lt($start)) {
+                $start->subYear();
+                $end->subYear();
+            }
+        } else {
+            $start = $now->copy()->month(9)->day(1)->startOfMonth();
+            if ($now->month < 9) {
+                $start->subYear();
+            }
+            $end = $start->copy()->addMonths(9)->endOfMonth();
+        }
+
+        if ($end->gt($now)) {
+            $end = $now->copy()->endOfMonth();
+        }
+
+        if ($start->gt($end)) {
+            $start = $end->copy()->startOfMonth();
+        }
+
+        return [$start, $end];
+    }
+
+    /**
+     * Moyenne de classe par mois (notes saisies uniquement dans le mois concerné).
+     */
+    private function buildMonthlyPeriodAverages(
+        array $studentIds,
+        $allGrades,
+        callable $calculateWeightedAverage,
+        ?AcademicYear $academicYear,
+        ?Carbon $periodStartOverride = null,
+        ?Carbon $periodEndOverride = null
+    ): array {
+        if ($allGrades->isEmpty() || count($studentIds) === 0) {
+            return [];
+        }
+
+        if ($periodStartOverride && $periodEndOverride) {
+            $periodStart = $periodStartOverride->copy()->startOfMonth();
+            $periodEnd = $periodEndOverride->copy()->endOfMonth();
+        } else {
+            [$periodStart, $periodEnd] = $this->getAcademicYearMonthRange($academicYear);
+        }
+
+        $monthlyAverages = [];
+        $currentMonth = $periodStart->copy();
+
+        while ($currentMonth <= $periodEnd) {
+            $monthStart = $currentMonth->copy()->startOfMonth();
+            $monthEnd = $currentMonth->copy()->endOfMonth();
+
+            $monthGrades = $allGrades->filter(function ($grade) use ($monthStart, $monthEnd) {
+                $date = $grade->date;
+
+                return $date && $date->between($monthStart, $monthEnd);
+            });
+
+            $monthlyStudentAverages = collect($studentIds)
+                ->map(function ($studentId) use ($monthGrades, $calculateWeightedAverage) {
+                    return $calculateWeightedAverage(
+                        $monthGrades->where('user_id', $studentId)
+                    );
+                })
+                ->filter(fn ($average) => $average !== null);
+
+            $monthAverage = $monthlyStudentAverages->count() > 0
+                ? $monthlyStudentAverages->avg()
+                : null;
+
+            $monthlyAverages[] = [
+                'month' => $currentMonth->translatedFormat('M Y'),
+                'average' => $monthAverage !== null ? round($monthAverage, 2) : null,
+                'count' => $monthGrades->count(),
+            ];
+
+            $currentMonth->addMonth();
+        }
+
+        return $monthlyAverages;
+    }
+
+    /**
+     * @param  array<int, float>  $studentAverages
+     * @return array<string, mixed>
+     */
+    private function buildClassStudentInsights(array $studentAverages): array
+    {
+        if ($studentAverages === []) {
+            return [
+                'best_student' => null,
+                'lowest_student' => null,
+                'ranking' => [],
+                'passing_students' => [],
+                'failing_students' => [],
+                'students_by_bucket' => [
+                    'excellent' => [],
+                    'good' => [],
+                    'average' => [],
+                    'passing' => [],
+                    'failing' => [],
+                ],
+            ];
+        }
+
+        $users = User::query()
+            ->whereIn('id', array_keys($studentAverages))
+            ->get(['id', 'name', 'identifier', 'email'])
+            ->keyBy('id');
+
+        $ranking = [];
+        $passing = [];
+        $failing = [];
+        $buckets = [
+            'excellent' => [],
+            'good' => [],
+            'average' => [],
+            'passing' => [],
+            'failing' => [],
+        ];
+
+        foreach ($studentAverages as $studentId => $average) {
+            $user = $users->get($studentId);
+            if (! $user) {
+                continue;
+            }
+
+            $rounded = round($average, 2);
+            $entry = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'identifier' => $user->identifier,
+                'email' => $user->email,
+                'average' => $rounded,
+                'url' => route('admin.students.show', $user),
+            ];
+
+            $ranking[] = $entry;
+
+            if ($rounded >= 10) {
+                $passing[] = $entry;
+            } else {
+                $failing[] = $entry;
+            }
+
+            if ($rounded >= 16) {
+                $buckets['excellent'][] = $entry;
+            } elseif ($rounded >= 14) {
+                $buckets['good'][] = $entry;
+            } elseif ($rounded >= 12) {
+                $buckets['average'][] = $entry;
+            } elseif ($rounded >= 10) {
+                $buckets['passing'][] = $entry;
+            } else {
+                $buckets['failing'][] = $entry;
+            }
+        }
+
+        usort($ranking, fn ($a, $b) => $b['average'] <=> $a['average']);
+        usort($passing, fn ($a, $b) => $b['average'] <=> $a['average']);
+        usort($failing, fn ($a, $b) => $b['average'] <=> $a['average']);
+
+        foreach ($buckets as $key => $list) {
+            usort($buckets[$key], fn ($a, $b) => $b['average'] <=> $a['average']);
+        }
+
+        $best = $ranking[0] ?? null;
+        $lowest = $ranking[count($ranking) - 1] ?? null;
+
+        return [
+            'best_student' => $best,
+            'lowest_student' => $lowest,
+            'ranking' => $ranking,
+            'passing_students' => $passing,
+            'failing_students' => $failing,
+            'students_by_bucket' => $buckets,
+        ];
     }
 
     /**

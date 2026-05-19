@@ -41,11 +41,8 @@ class StudentAttendanceController extends Controller
 
         // Données du calendrier (vide si pas de données réelles)
         $calendarEvents = $this->getCalendarEvents($user);
-        
-        // Données d'évolution des notes (simulées pour le graphique de prédiction)
-        $gradesEvolution = $this->getSimulatedGradesEvolution();
 
-        return view('student.attendance', compact('attendances', 'stats', 'calendarEvents', 'gradesEvolution'));
+        return view('student.attendance', compact('attendances', 'stats', 'calendarEvents'));
     }
     
     /**
@@ -80,27 +77,4 @@ class StudentAttendanceController extends Controller
         return $events;
     }
     
-    /**
-     * Générer des données simulées d'évolution des notes
-     */
-    private function getSimulatedGradesEvolution()
-    {
-        $months = ['Sept', 'Oct', 'Nov', 'Déc', 'Jan', 'Fév'];
-        $data = [];
-        
-        // Note de départ entre 10 et 14
-        $currentGrade = rand(100, 140) / 10;
-        
-        foreach ($months as $month) {
-            // Variation légère (-1 à +1.5)
-            $variation = (rand(-10, 15)) / 10;
-            $currentGrade = max(8, min(20, $currentGrade + $variation));
-            $data[] = [
-                'month' => $month,
-                'grade' => round($currentGrade, 1)
-            ];
-        }
-        
-        return $data;
-    }
 }

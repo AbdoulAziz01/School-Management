@@ -242,4 +242,26 @@ class SchoolBotStatsService
             ->orderBy('name')
             ->with(['class:id,name']);
     }
+
+    /**
+     * Élèves et enseignants : recherche par identifiant ou nom (pour Botpress / outils avec Bearer).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<User>
+     */
+    public function userSearchQuery(string $q)
+    {
+        $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $q).'%';
+        $roles = array_merge(User::ROLE_STUDENT_ALIASES, User::ROLE_TEACHER_ALIASES);
+
+        return User::query()
+            ->whereIn('role', $roles)
+            ->where(function ($query) use ($term, $q) {
+                $query->where('identifier', $q)
+                    ->orWhere('identifier', 'like', $term)
+                    ->orWhere('name', 'like', $term);
+            })
+            ->orderByRaw('CASE WHEN identifier = ? THEN 0 ELSE 1 END', [$q])
+            ->orderBy('name')
+            ->with(['class:id,name']);
+    }
 }

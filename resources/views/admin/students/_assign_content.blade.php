@@ -161,6 +161,8 @@
 @push('scripts')
 <script>
     // Activer les tooltips
+    // Script pour trier les options du menu déroulant des classes
+    // Script pour trier les options du menu déroulant des classes
     document.addEventListener('DOMContentLoaded', function() {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

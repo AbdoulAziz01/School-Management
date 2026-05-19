@@ -23,14 +23,25 @@ class StudentController extends Controller
     /**
      * Affiche la liste de tous les étudiants (tous statuts confondus)
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
+            $search = trim((string) $request->input('search', ''));
+
             // Récupérer TOUS les étudiants (tous statuts)
-            $students = User::with(['class', 'class.academicYear', 'class.level'])
-                ->whereIn('role', ['student', 'eleve'])
-                ->orderBy('name')
-                ->paginate(20);
+            $studentsQuery = User::with(['class', 'class.academicYear', 'class.level'])
+                ->whereIn('role', ['student', 'eleve']);
+
+            if ($search !== '') {
+                $term = '%' . addcslashes($search, '%_\\') . '%';
+                $studentsQuery->where(function ($query) use ($term) {
+                    $query->where('name', 'like', $term)
+                        ->orWhere('identifier', 'like', $term)
+                        ->orWhere('email', 'like', $term);
+                });
+            }
+
+            $students = $studentsQuery->orderBy('name')->paginate(20)->withQueryString();
                 
             // Récupérer les étudiants non affectés pour l'onglet d'affectation (tous statuts)
             $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
@@ -60,7 +71,8 @@ class StudentController extends Controller
                 return [
                     'html' => view($view, [
                         'students' => $view === 'admin.students._assign' ? $unassignedStudents : $students,
-                        'classes' => $classes
+                        'classes' => $classes,
+                        'search' => $search,
                     ])->render(),
                     'pagination' => $students->links()->toHtml()
                 ];
@@ -75,12 +87,18 @@ class StudentController extends Controller
             ]);
 
             // Retourner la vue complète avec les onglets
+            $activeTab = request('tab', 'list');
+            if ($search !== '') {
+                $activeTab = 'list';
+            }
+
             return view('admin.students.index', [
                 'students' => $students,
                 'unassignedStudents' => $unassignedStudents,
                 'classes' => $classes,
                 'studentsByClass' => $studentsByClass,
-                'active_tab' => request('tab', 'list')
+                'active_tab' => $activeTab,
+                'search' => $search,
             ]);
 
         } catch (\Exception $e) {

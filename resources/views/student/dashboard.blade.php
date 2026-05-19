@@ -79,7 +79,7 @@
 <div class="welcome-banner">
     <div class="row align-items-center">
         <div class="col-md-8">
-            <h2 class="mb-2">Bonjour, {{ $user->name }} ! 👋</h2>
+            <h2 class="mb-2">Bonjour, {{ $user->name }} ! <i class="fas fa-smile"></i></h2>
             <p class="mb-0">Bienvenue sur votre espace élève. Consultez vos notes, votre emploi du temps et bien plus encore.</p>
         </div>
         <div class="col-md-4 text-end d-none d-md-block">
@@ -127,7 +127,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="stat-label">Cours aujourd'hui</h6>
+                        <h6 class="stat-label">Cours prévus</h6>
                         <h2 class="stat-value">{{ $upcomingCourses->count() ?? 0 }}</h2>
                     </div>
                     <div class="p-3 bg-info bg-opacity-10 rounded-circle">
@@ -158,7 +158,7 @@
 <!-- Accès rapides -->
 <div class="mb-4 row g-4">
     <div class="col-12">
-        <h5 class="mb-3"><i class="fas fa-bolt me-2 text-warning"></i>Accès rapides</h5>
+        <h5 class="mb-3">Accès rapides</h5>
     </div>
     <div class="col-6 col-md-3">
         <a href="{{ route('student.grades') }}" class="text-decoration-none">
@@ -207,7 +207,7 @@
     <div class="col-12 col-lg-6">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-star me-2 text-warning"></i>Dernières notes</h5>
+                <h5 class="mb-0">Dernières notes</h5>
                 <a href="{{ route('student.grades') }}" class="btn btn-sm btn-outline-primary">Voir tout</a>
             </div>
             <div class="card-body">

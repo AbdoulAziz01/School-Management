@@ -100,11 +100,48 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <h2 class="h4 mb-0">Gestion des élèves</h2>
         <a href="{{ route('admin.students.create') }}" class="btn btn-primary">
             <i class="fas fa-plus me-2"></i> Nouvel élève
         </a>
+    </div>
+
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body py-3">
+            <form action="{{ route('admin.students.index') }}" method="GET" class="row g-2 align-items-end" id="student-search-form">
+                <div class="col-md-8 col-lg-9">
+                    <label for="student-search-input" class="form-label mb-1 fw-semibold">
+                        <i class="fas fa-search me-1 text-warning"></i> Rechercher un élève
+                    </label>
+                    <input
+                        type="search"
+                        name="search"
+                        id="student-search-input"
+                        class="form-control"
+                        placeholder="Nom, prénom, identifiant ou email…"
+                        value="{{ $search ?? '' }}"
+                        autocomplete="off"
+                    >
+                </div>
+                <div class="col-md-4 col-lg-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-warning flex-grow-1 text-dark fw-semibold">
+                        <i class="fas fa-search me-1"></i> Rechercher
+                    </button>
+                    @if(!empty($search))
+                        <a href="{{ route('admin.students.index', request()->only('tab')) }}" class="btn btn-outline-secondary" title="Effacer la recherche">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    @endif
+                </div>
+            </form>
+            @if(!empty($search))
+                <p class="text-muted small mb-0 mt-2">
+                    Résultats pour « <strong>{{ $search }}</strong> » — cliquez sur
+                    <i class="fas fa-eye text-warning"></i> pour voir toutes les informations de l'élève.
+                </p>
+            @endif
+        </div>
     </div>
 
     @if(session('success'))
@@ -162,7 +199,7 @@
              role="tabpanel" 
              aria-labelledby="list-tab" 
              tabindex="0">
-            @include('admin.students._list', ['students' => $students])
+            @include('admin.students._list', ['students' => $students, 'search' => $search ?? ''])
         </div>
         
         <!-- Onglet Par classe -->
@@ -226,6 +263,13 @@
             });
         });
         
+        // Focus sur le champ de recherche si une recherche est active
+        const searchInput = document.getElementById('student-search-input');
+        if (searchInput && searchInput.value.trim() !== '') {
+            searchInput.focus();
+            searchInput.select();
+        }
+
         // Gérer le changement d'onglet avec mise à jour de l'URL
         const tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
         tabElms.forEach(tabEl => {

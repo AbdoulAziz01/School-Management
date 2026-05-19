@@ -185,7 +185,8 @@ Accès lecture seule protégé par **Bearer token** (`SCHOOL_BOT_SECRET` sur le 
 - `GET …/stats` — effectifs (élèves, profs, classes, années courante, estimation redoublants).
 - `GET …/stats/repeaters` — liste courte redoublants (heuristique multi-années de notes).
 - `GET …/stats/outcomes` — agrégats pass / fail selon la **même logique de moyenne** que le bulletin semestriel.
-- `GET …/students/search?q=…` — recherche par nom ou identifiant.
+- `GET …/students/search?q=…` — recherche **élèves uniquement** par nom ou identifiant (`E…`).
+- `GET …/users/search?q=…` — recherche **élèves et enseignants** par nom ou identifiant (`E…`, `P…`, etc.). À utiliser dans Botpress pour les codes prof comme **`P2026001`** (la table Botpress seule suffit rarement sans colonne **`identifier`** synchronisée depuis Laravel).
 - `GET …/students/{id}` — fiche élève restreinte (sans email ni données sensibles inutiles).
 
 Headers : `Authorization: Bearer <secret>`, `Accept: application/json`. Secret absent côté serveur → erreur HTTP 503 ; token invalide → 401.
