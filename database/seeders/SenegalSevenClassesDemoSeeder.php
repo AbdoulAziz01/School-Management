@@ -6,6 +6,7 @@ use App\Models\AcademicYear;
 use App\Models\Attendance;
 use App\Models\Grade;
 use App\Models\Level;
+use App\Models\School;
 use App\Models\Schedule;
 use App\Models\SchoolClass;
 use App\Models\Subject;
@@ -102,6 +103,8 @@ class SenegalSevenClassesDemoSeeder extends Seeder
     /** @var array<int, int> class_id => level order */
     private array $classOrderById = [];
 
+    private ?int $schoolId = null;
+
     public function run(): void
     {
         // Année scolaire en cours (ex. en mai 2026 → 2025-2026, pas 2026-2027)
@@ -109,13 +112,16 @@ class SenegalSevenClassesDemoSeeder extends Seeder
         $this->command->info('Nettoyage des données existantes (ordre compatible PostgreSQL / MySQL)…');
         $this->purgeAcademicData();
 
+        $this->ensureDemoSchool();
+        $this->command->info("Établissement démo : ID {$this->schoolId}");
+
         $this->command->info('Création année scolaire 2025-2026 & ressources…');
-        $academicYear = AcademicYear::create([
+        $academicYear = AcademicYear::create($this->withSchool([
             'name' => '2025-2026',
             'start_date' => "{$year}-10-01",
             'end_date' => ($year + 1).'-06-30',
             'is_current' => true,
-        ]);
+        ]));
 
         $this->classProfilesByOrder = $this->defineClassPerformanceProfiles();
 
@@ -129,12 +135,12 @@ class SenegalSevenClassesDemoSeeder extends Seeder
 
         foreach (collect($this->levels)->sortKeys() as $level) {
             $label = $this->classLabels[$level->order - 1] ?? $level->name;
-            $class = SchoolClass::create([
+            $class = SchoolClass::create($this->withSchool([
                 'name' => $label,
                 'academic_year_id' => $academicYear->id,
                 'level_id' => $level->id,
                 'capacity' => 55,
-            ]);
+            ]));
             $classesByLevel[$level->name] = $class;
             $this->classOrderById[$class->id] = $level->order;
         }
@@ -162,7 +168,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                 $subjectAffinities = $this->generateSubjectAffinities($level);
                 $photo = 'https://ui-avatars.com/api/?background=f59e0b&color=fff&name='.urlencode($fn.' '.$ln);
 
-                $student = User::create([
+                $student = User::create($this->withSchool([
                     'name' => $fn.' '.$ln,
                     'email' => strtolower($identifier).'@demo.ecole.sn',
                     'password' => Hash::make('password'),
@@ -180,7 +186,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                     'guardian_phone' => '+221 77 '.random_int(100, 999).' '.random_int(10, 99).' '.random_int(10, 99),
                     'conduct_evaluation' => $conduct,
                     'profile_photo_path' => $photo,
-                ]);
+                ]));
 
                 $student->setAttribute('performance_tier', $tier);
                 $student->setAttribute('subject_affinities', $subjectAffinities);
@@ -214,6 +220,29 @@ class SenegalSevenClassesDemoSeeder extends Seeder
         $this->command->newLine();
         $this->command->info('Terminé. Admin : '.self::ADMIN_EMAIL.' / password');
         $this->command->info('Exemple élève / prof : même mot de passe `password`.');
+    }
+
+    private function ensureDemoSchool(): void
+    {
+        $school = School::query()->firstOrCreate(
+            ['slug' => 'demo-ecole-sn'],
+            [
+                'name' => 'École Démonstration Sénégal',
+                'code' => School::generateUniqueCode(),
+                'is_active' => true,
+                'email' => 'contact@demo.ecole.sn',
+                'city' => 'Dakar',
+                'address' => 'Dakar Plateau',
+            ]
+        );
+
+        $this->schoolId = $school->id;
+    }
+
+    /** @param  array<string, mixed>  $attributes */
+    private function withSchool(array $attributes): array
+    {
+        return array_merge($attributes, ['school_id' => $this->schoolId]);
     }
 
     private function purgeAcademicData(): void
@@ -267,7 +296,9 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                 DB::table('sessions')->delete();
             }
 
-            User::query()->delete();
+            User::withoutGlobalScopes()
+                ->where('role', '!=', User::ROLE_SUPER_ADMIN)
+                ->delete();
             if (Schema::hasTable('classes')) {
                 SchoolClass::query()->delete();
             }
@@ -288,7 +319,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
     private function createSubjects(): void
     {
         foreach ($this->subjectBlueprint as $name => $meta) {
-            $this->subjectByName[$name] = Subject::create([
+            $this->subjectByName[$name] = Subject::create($this->withSchool([
                 'name' => $name,
                 'code' => $meta[0],
                 'coefficient' => 1,
@@ -297,7 +328,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                 'is_active' => true,
                 'hours_per_week' => in_array($name, ['EPS', 'ICE'], true) ? 2 : random_int(2, 5),
                 'is_core_subject' => true,
-            ]);
+            ]));
         }
     }
 
@@ -317,12 +348,12 @@ class SenegalSevenClassesDemoSeeder extends Seeder
         $coefLycee = $this->coefLycee;
 
         foreach ($defs as $d) {
-            $level = Level::create([
+            $level = Level::create($this->withSchool([
                 'name' => $d['name'],
                 'order' => $d['order'],
                 'cycle' => $d['cycle'],
                 'serie' => $d['serie'] ?? null,
-            ]);
+            ]));
             $this->levels[$d['order']] = $level;
 
             $coefs = $d['cycle'] === 'college' ? $coefCollege : $coefLycee;
@@ -337,7 +368,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
 
     private function createAdmin(): void
     {
-        User::create([
+        User::create($this->withSchool([
             'name' => 'Administrateur Démonstration SN',
             'email' => self::ADMIN_EMAIL,
             'password' => Hash::make('password'),
@@ -346,7 +377,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
             'status' => User::STATUS_APPROVED,
             'phone' => '+221 33 839 94 74',
             'address' => 'Direction, Dakar Plateau',
-        ]);
+        ]));
     }
 
     private function createTeachers(int $year): void
@@ -360,7 +391,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
             $email = 'prof.'.$slug.'.'.$i.'@demo.ecole.sn';
             $i++;
 
-            $teacher = User::create([
+            $teacher = User::create($this->withSchool([
                 'name' => 'Professeur '.$fn.' '.$ln,
                 'email' => $email,
                 'password' => Hash::make('password'),
@@ -370,7 +401,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                 'phone' => '+221 76 '.random_int(200, 999).' '.random_int(10, 99).' '.random_int(10, 99),
                 'address' => 'Enseignant — '.$subject->department,
                 'date_of_birth' => now()->subYears(random_int(28, 55)),
-            ]);
+            ]));
 
             $teacher->subjects()->attach($subject->id);
             $this->teacherBySubjectName[$name] = $teacher;
@@ -490,6 +521,7 @@ class SenegalSevenClassesDemoSeeder extends Seeder
                     $rows[] = [
                         'user_id' => $student->id,
                         'subject_id' => $subject->id,
+                        'school_id' => $this->schoolId,
                         'grade' => $g,
                         'comments' => $this->gradeCommentFr($type, $g),
                         'appreciation' => $this->appreciation($g),
