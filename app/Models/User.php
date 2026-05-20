@@ -6,13 +6,16 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Concerns\BelongsToSchool;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\SchoolClass;
 use App\Models\Grade;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles;
+    use BelongsToSchool, HasFactory, Notifiable, HasRoles;
+
+    public const ROLE_SUPER_ADMIN = 'super_admin';
 
     // Constantes pour les rôles (alignées avec l'enum DB après migration 2026_01_12)
     public const ROLE_ADMIN   = 'admin';
@@ -54,11 +57,17 @@ class User extends Authenticatable
         'guardian_phone',
         'conduct_evaluation',
         'assiduity_comment',
+        'school_id',
     ];
     
     /**
      * Get the class that the user belongs to.
      */
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
+
     public function class()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
@@ -158,6 +167,11 @@ class User extends Authenticatable
     }
 
     // Méthodes utilitaires (tolérantes aux alias historiques)
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === self::ROLE_SUPER_ADMIN;
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,14 +10,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class SchoolClass extends Model
 {
-    protected $table = 'classes'; // Ajout de cette ligne pour spécifier le nom de la table
-    
+    use BelongsToSchool;
+
+    protected $table = 'classes';
+
     protected $fillable = [
         'name',
         'academic_year_id',
         'level_id',
         'capacity',
-        'description'
+        'description',
+        'school_id',
     ];
 
     public function academicYear(): BelongsTo

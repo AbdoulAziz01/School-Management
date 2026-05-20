@@ -20,8 +20,17 @@ class StudentMiddleware
             return redirect()->route('login');
         }
 
-        if (Auth::user()->role !== 'eleve') {
+        $user = Auth::user();
+
+        if (! in_array($user->role, ['eleve', 'student'], true)) {
             return redirect()->route('login')->with('error', 'Accès non autorisé.');
+        }
+
+        $school = $user->school()->withoutGlobalScopes()->first();
+        if ($school && ! $school->is_active) {
+            Auth::logout();
+
+            return redirect()->route('login')->with('error', 'L\'accès à votre établissement est suspendu.');
         }
 
         return $next($request);

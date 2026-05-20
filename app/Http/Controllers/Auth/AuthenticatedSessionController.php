@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
+use App\Support\TenantSchool;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,20 +33,44 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         try {
+            TenantSchool::clear();
             $request->authenticate();
             $request->session()->regenerate();
-            
+
             $user = $request->user();
+            TenantSchool::applyForUser($user);
             
             // Vérifier le statut de l'utilisateur
             if ($user->status === 'pending') {
                 Auth::logout();
+                TenantSchool::clear();
+
                 return back()->with('error', 'Votre compte est en attente de validation par un administrateur.');
             }
-            
+
             if ($user->status === 'rejected') {
                 Auth::logout();
+                TenantSchool::clear();
+
                 return back()->with('error', 'Votre compte a été rejeté. Veuillez contacter l\'administrateur.');
+            }
+
+            if (! $user->isSuperAdmin()) {
+                if (! $user->school_id) {
+                    Auth::logout();
+                    TenantSchool::clear();
+
+                    return back()->with('error', 'Votre compte n\'est rattaché à aucun établissement.');
+                }
+
+                $school = $user->school()->withoutGlobalScopes()->first();
+
+                if (! $school || ! $school->is_active) {
+                    Auth::logout();
+                    TenantSchool::clear();
+
+                    return back()->with('error', 'L\'accès à votre établissement est suspendu. Contactez l\'administrateur de la plateforme.');
+                }
             }
             
             // Rediriger vers le tableau de bord approprié
@@ -72,7 +97,9 @@ class AuthenticatedSessionController extends Controller
     {
         $role = $user->role;
 
-        if ($role === User::ROLE_ADMIN) {
+        if ($role === User::ROLE_SUPER_ADMIN) {
+            $route = 'platform.dashboard';
+        } elseif ($role === User::ROLE_ADMIN) {
             $route = 'admin.dashboard';
         } elseif (in_array($role, User::ROLE_TEACHER_ALIASES, true)) {
             $route = 'teacher.dashboard';
@@ -90,6 +117,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        TenantSchool::clear();
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

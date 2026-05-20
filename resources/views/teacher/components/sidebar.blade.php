@@ -206,8 +206,8 @@
                 <i class="fas fa-chalkboard-teacher"></i>
             </div>
             <div class="logo-text">
-                <h5>EduManager</h5>
-                <small>Espace Enseignant</small>
+                <h5 class="text-truncate" title="{{ $schoolDisplayName ?? 'Mon établissement' }}">{{ $schoolDisplayName ?? 'Mon établissement' }}</h5>
+                <small>via EduManager · Enseignant</small>
             </div>
         </div>
     </div>

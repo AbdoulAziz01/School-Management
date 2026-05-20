@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Assignment extends Model
 {
+    use BelongsToSchool;
+
     protected $fillable = [
         'title',
         'description',
@@ -16,7 +19,8 @@ class Assignment extends Model
         'teacher_id',
         'file_path',
         'points',
-        'status'
+        'status',
+        'school_id',
     ];
 
     protected $casts = [

@@ -50,6 +50,23 @@
                     <form method="POST" action="{{ route('register') }}">
                         @csrf
 
+                        <div class="mb-3">
+                            <label for="school_code" class="form-label">Code établissement *</label>
+                            <input type="text"
+                                   class="form-control form-control-lg @error('school_code') is-invalid @enderror"
+                                   id="school_code"
+                                   name="school_code"
+                                   value="{{ old('school_code') }}"
+                                   placeholder="Ex : ABCD-EFGH"
+                                   required
+                                   style="text-transform: uppercase;">
+                            <small class="text-muted">Fourni par l'administration de votre école.</small>
+                            @error('school_code')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div id="school-name-hint" class="small text-success mt-1" style="display:none;"></div>
+                        </div>
+
                         <!-- Nom complet -->
                         <div class="mb-3">
                             <label for="name" class="form-label">Nom complet *</label>
@@ -134,23 +151,8 @@
                         <!-- Champ matières pour professeur -->
                         <div class="mb-3" id="subjects-field" style="display: {{ old('role') == 'teacher' ? 'block' : 'none' }};">
                             <label class="form-label">Matières enseignées *</label>
-                            <small class="mb-2 text-muted d-block">Sélectionnez les matières que vous enseignez</small>
-                            @php
-                                $oldSubjects = old('subjects', []);
-                            @endphp
-                            @foreach($subjects as $subject)
-                                <div class="form-check">
-                                    <input class="form-check-input @error('subjects') is-invalid @enderror" 
-                                           type="checkbox" 
-                                           name="subjects[]" 
-                                           value="{{ $subject->id }}" 
-                                           id="subject_{{ $subject->id }}"
-                                           {{ in_array($subject->id, $oldSubjects) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="subject_{{ $subject->id }}">
-                                        {{ $subject->name }}
-                                    </label>
-                                </div>
-                            @endforeach
+                            <small class="mb-2 text-muted d-block">Saisissez le code établissement pour charger les matières.</small>
+                            <div id="subjects-list"></div>
                             @error('subjects')
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
@@ -230,9 +232,50 @@
         });
     }
 
-    // Initialiser les champs au chargement de la page
     document.addEventListener('DOMContentLoaded', function() {
         toggleRoleFields();
+        const schoolCodeInput = document.getElementById('school_code');
+        const subjectsList = document.getElementById('subjects-list');
+        const schoolHint = document.getElementById('school-name-hint');
+        const oldSubjects = @json(old('subjects', []));
+
+        async function loadSchoolSubjects() {
+            const code = schoolCodeInput.value.trim();
+            if (!code) {
+                subjectsList.innerHTML = '';
+                schoolHint.style.display = 'none';
+                return;
+            }
+            try {
+                const res = await fetch(`{{ url('/register/school-subjects') }}/${encodeURIComponent(code)}`);
+                if (!res.ok) {
+                    subjectsList.innerHTML = '<p class="text-danger small">Code invalide ou école inactive.</p>';
+                    schoolHint.style.display = 'none';
+                    return;
+                }
+                const data = await res.json();
+                schoolHint.textContent = 'Établissement : ' + data.school.name;
+                schoolHint.style.display = 'block';
+                if (!data.subjects.length) {
+                    subjectsList.innerHTML = '<p class="text-muted small">Aucune matière configurée pour cet établissement.</p>';
+                    return;
+                }
+                subjectsList.innerHTML = data.subjects.map(s => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="subjects[]" value="${s.id}" id="subject_${s.id}"
+                            ${oldSubjects.includes(String(s.id)) || oldSubjects.includes(s.id) ? 'checked' : ''}>
+                        <label class="form-check-label" for="subject_${s.id}">${s.name}</label>
+                    </div>
+                `).join('');
+            } catch (e) {
+                subjectsList.innerHTML = '<p class="text-danger small">Erreur de chargement des matières.</p>';
+            }
+        }
+
+        schoolCodeInput.addEventListener('blur', loadSchoolSubjects);
+        if (schoolCodeInput.value) {
+            loadSchoolSubjects();
+        }
     });
     </script>
     @include('partials.botpress-webchat')

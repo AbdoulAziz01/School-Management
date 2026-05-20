@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Level;
+use App\Models\School;
 use App\Models\Subject;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,6 +16,13 @@ class LevelsAndSubjectsSeeder extends Seeder
      */
     public function run(): void
     {
+        $schoolId = School::query()->value('id');
+        if (! $schoolId) {
+            $this->command?->error('Aucun établissement trouvé. Exécutez d\'abord les migrations multi-écoles.');
+
+            return;
+        }
+
         // Niveaux du collège
         $collegeLevels = [
             ['name' => '6ème', 'order' => 1, 'cycle' => 'college'],
@@ -94,7 +102,7 @@ class LevelsAndSubjectsSeeder extends Seeder
 
         // Insérer les niveaux
         foreach (array_merge($collegeLevels, $lyceeLevels) as $level) {
-            Level::create($level);
+            Level::create(array_merge($level, ['school_id' => $schoolId]));
         }
 
         // Insérer les matières
@@ -111,7 +119,8 @@ class LevelsAndSubjectsSeeder extends Seeder
                 'name' => $subject['name'],
                 'code' => $subject['code'],
                 'coefficient' => 1,
-                'description' => $subject['name']
+                'description' => $subject['name'],
+                'school_id' => $schoolId,
             ]);
         }
     }

@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\School;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
@@ -17,14 +17,13 @@ class RegisteredUserController extends Controller
 {
     public function create(): View
     {
-        // Passer les matières à la vue pour le formulaire
-        $subjects = Subject::orderBy('name')->get();
-        return view('auth.register', compact('subjects'));
+        return view('auth.register');
     }
 
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
+            'school_code' => ['required', 'string', 'max:32'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
@@ -33,59 +32,80 @@ class RegisteredUserController extends Controller
             'subjects' => ['required_if:role,teacher', 'array'],
             'subjects.*' => ['exists:subjects,id'],
         ], [
+            'school_code.required' => 'Le code établissement est obligatoire.',
             'desired_class.required_if' => 'La classe est obligatoire pour les élèves.',
             'subjects.required_if' => 'Veuillez sélectionner au moins une matière enseignée.',
         ]);
 
-        // Génération de l'identifiant selon le rôle
+        $school = School::where('code', strtoupper(trim($request->school_code)))
+            ->where('is_active', true)
+            ->first();
+
+        if (! $school) {
+            return back()
+                ->withInput()
+                ->withErrors(['school_code' => 'Code établissement invalide ou école inactive.']);
+        }
+
+        if ($request->role === 'teacher' && $request->has('subjects')) {
+            $validCount = Subject::withoutGlobalScopes()
+                ->where('school_id', $school->id)
+                ->whereIn('id', $request->subjects)
+                ->count();
+
+            if ($validCount !== count($request->subjects)) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['subjects' => 'Une ou plusieurs matières n\'appartiennent pas à cet établissement.']);
+            }
+        }
+
         $role = $request->role;
-        $prefix = match($role) {
+        $prefix = match ($role) {
             'teacher' => 'P',
             'eleve' => 'E',
             default => 'U',
         };
-        
+
         $year = date('Y');
-        
-        // Trouver le dernier utilisateur avec ce préfixe et cette année
-        $lastUser = User::where('identifier', 'like', $prefix . $year . '%')
-                        ->orderBy('identifier', 'desc')
-                        ->first();
-        
+
+        $lastUser = User::withoutGlobalScopes()
+            ->where('school_id', $school->id)
+            ->where('identifier', 'like', $prefix.$year.'%')
+            ->orderByDesc('identifier')
+            ->first();
+
         if ($lastUser) {
-            $lastNumber = intval(substr($lastUser->identifier, -3));
+            $lastNumber = (int) substr($lastUser->identifier, -3);
             $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
         } else {
             $newNumber = '001';
         }
-        
-        $identifier = $prefix . $year . $newNumber;
 
-        // Créer l'utilisateur
-        $user = User::create([
+        $identifier = $prefix.$year.$newNumber;
+
+        $user = User::withoutGlobalScopes()->create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'identifier' => $identifier,
+            'user_id' => $identifier,
             'role' => $request->role,
             'status' => 'pending',
             'desired_class' => $request->desired_class,
+            'school_id' => $school->id,
+            'email_verified_at' => now(),
         ]);
 
-        // Marquer l'email comme vérifié immédiatement
-        $user->email_verified_at = now();
-        $user->save();
-
-        // Enregistrer les matières pour les professeurs
         if ($request->role === 'teacher' && $request->has('subjects')) {
             $user->subjects()->attach($request->subjects);
         }
 
         event(new Registered($user));
 
-        // NE PAS connecter automatiquement, rediriger vers login
-        // Auth::login($user);
-
-        return redirect()->route('login')->with('status', 'Votre compte a été créé. Il sera activé après validation par un administrateur.');
+        return redirect()->route('login')->with(
+            'status',
+            "Compte créé pour « {$school->name} ». Il sera activé après validation par l'administration de l'établissement."
+        );
     }
 }

@@ -152,21 +152,178 @@
         color: white;
     }
     
+    .bulletin-print-footer {
+        display: none;
+    }
+
     @media print {
-        .no-print {
+        @page {
+            size: A4 portrait;
+            margin: 6mm 8mm 10mm;
+        }
+
+        body {
+            background: #fff !important;
+            font-size: 9pt;
+        }
+
+        .sidebar,
+        .sidebar-overlay,
+        .top-navbar,
+        .no-print,
+        .print-hide {
             display: none !important;
         }
-        
+
+        .wrapper,
+        .main-content {
+            display: block !important;
+            margin: 0 !important;
+            width: 100% !important;
+            min-height: auto !important;
+        }
+
+        .container-fluid {
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+
         .bulletin-card {
             border: 1px solid #000;
             box-shadow: none;
+            border-radius: 0;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin: 0 !important;
+            padding-bottom: 14mm;
         }
-        
+
+        .bulletin-header {
+            padding: 0.35rem 0.5rem !important;
+            border-radius: 0 !important;
+        }
+
+        .bulletin-header .school-name {
+            font-size: 10pt !important;
+            margin-bottom: 0.1rem !important;
+        }
+
+        .bulletin-header .subtitle {
+            font-size: 7.5pt !important;
+        }
+
+        .bulletin-header hr {
+            margin: 0.2rem 0 !important;
+        }
+
+        .bulletin-header .col-md-2 {
+            display: none !important;
+        }
+
+        .bulletin-header .col-md-8 {
+            width: 100% !important;
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
+
+        .student-info {
+            padding: 0.35rem 0.5rem !important;
+        }
+
+        .student-info .info-item {
+            margin-bottom: 0.15rem !important;
+            font-size: 8pt;
+        }
+
+        .student-info .row > [class*="col-"] {
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+        }
+
+        .grades-table {
+            font-size: 7pt;
+        }
+
+        .grades-table th,
+        .grades-table td {
+            padding: 0.15rem 0.2rem !important;
+            font-size: 7pt !important;
+            line-height: 1.15;
+        }
+
         .grades-table th {
             background-color: #333 !important;
+            color: #fff !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
+
+        .appreciation-cell {
+            font-size: 6pt !important;
+        }
+
+        .bulletin-bottom-screen {
+            display: none !important;
+        }
+
+        .bulletin-bottom-print {
+            display: flex !important;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.35rem;
+            padding: 0.35rem 0.5rem;
+            border-top: 1px solid #ccc;
+            font-size: 8pt;
+        }
+
+        .bulletin-bottom-print .print-average {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #1a5f2a;
+        }
+
+        .signatures-print {
+            display: flex !important;
+            justify-content: space-between;
+            padding: 0.25rem 0.5rem 0;
+            font-size: 7pt;
+            gap: 0.5rem;
+        }
+
+        .signatures-print > div {
+            flex: 1;
+            text-align: center;
+        }
+
+        .signatures-print .sig-line {
+            border-top: 1px solid #333;
+            margin-top: 1.2rem;
+            padding-top: 0.15rem;
+        }
+
+        .bulletin-print-footer {
+            display: block !important;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 8pt;
+            color: #333;
+            border-top: 1px solid #1a5f2a;
+            padding: 2mm 8mm;
+            background: #fff;
+        }
+
+        .bulletin-print-footer strong {
+            color: #1a5f2a;
+        }
+    }
+
+    .bulletin-bottom-print,
+    .signatures-print {
+        display: none;
     }
 </style>
 @endpush
@@ -193,18 +350,18 @@
         <!-- En-tête du bulletin -->
         <div class="bulletin-header text-center">
             <div class="row align-items-center">
-                <div class="col-md-2 text-center">
+                <div class="col-md-2 text-center print-hide">
                     <img src="/images/senegal-flag.png" alt="Drapeau" class="img-fluid" style="max-height: 60px;" onerror="this.style.display='none'">
                 </div>
                 <div class="col-md-8">
                     <div class="school-name">RÉPUBLIQUE DU SÉNÉGAL</div>
                     <div class="subtitle">Un Peuple - Un But - Une Foi</div>
                     <hr style="border-color: rgba(255,255,255,0.3); margin: 0.5rem 0;">
-                    <div class="school-name">ÉTABLISSEMENT SCOLAIRE</div>
+                    <div class="school-name">{{ $schoolName ?? config('app.school_name', 'Établissement scolaire') }}</div>
                     <div class="subtitle">Bulletin de Notes - Semestre {{ $semester }}</div>
                     <div class="subtitle">Année Scolaire {{ $academicYear->name }}</div>
                 </div>
-                <div class="col-md-2 text-center">
+                <div class="col-md-2 text-center print-hide">
                     <i class="fas fa-graduation-cap fa-3x" style="opacity: 0.8;"></i>
                 </div>
             </div>
@@ -313,8 +470,26 @@
             </table>
         </div>
 
-        <!-- Résumé -->
-        <div class="row">
+        @php
+            $mentionLabel = match (true) {
+                $generalAverage >= 16 => 'Mention Très Bien',
+                $generalAverage >= 14 => 'Mention Bien',
+                $generalAverage >= 12 => 'Mention Assez Bien',
+                $generalAverage >= 10 => 'Passable',
+                default => 'Insuffisant',
+            };
+            $observationText = match (true) {
+                $generalAverage >= 14 => 'Excellent travail. Continuez ainsi.',
+                $generalAverage >= 12 => 'Bon travail. Maintenez vos efforts.',
+                $generalAverage >= 10 => 'Résultats convenables. Progrès attendus.',
+                $generalAverage >= 8 => 'Résultats insuffisants. Effort indispensable.',
+                default => 'Résultats très insuffisants. Travail régulier requis.',
+            };
+            $schoolDisplayName = $schoolName ?? config('app.school_name', 'Établissement scolaire');
+        @endphp
+
+        <!-- Résumé (écran) -->
+        <div class="row bulletin-bottom-screen">
             <div class="col-md-6">
                 <div class="summary-box text-center">
                     <h5 class="mb-3">Résultats du Semestre {{ $semester }}</h5>
@@ -380,8 +555,8 @@
             </div>
         </div>
 
-        <!-- Signatures -->
-        <div class="row p-4 border-top">
+        <!-- Signatures (écran) -->
+        <div class="row p-4 border-top bulletin-bottom-screen">
             <div class="col-md-4 text-center">
                 <p class="mb-4">Le Chef d'Établissement</p>
                 <div style="height: 60px;"></div>
@@ -398,7 +573,39 @@
                 <p class="border-top pt-2 mx-4">(Signature)</p>
             </div>
         </div>
+
+        <!-- Résumé compact (impression) -->
+        <div class="bulletin-bottom-print">
+            <div>
+                <strong>Semestre {{ $semester }}</strong> —
+                <span class="print-average">{{ number_format($generalAverage, 2) }}/20</span>
+                · {{ $mentionLabel }}
+                @if(!empty($rankData['rank']))
+                    · {{ $rankData['rank'] }}{{ $rankData['rank'] == 1 ? 'er' : 'ème' }}/{{ $rankData['total'] }}
+                @endif
+            </div>
+            <div class="text-muted">{{ $observationText }}</div>
+        </div>
+
+        <div class="signatures-print">
+            <div>
+                <div>Chef d'établissement</div>
+                <div class="sig-line">Signature</div>
+            </div>
+            <div>
+                <div>Professeur principal</div>
+                <div class="sig-line">Signature</div>
+            </div>
+            <div>
+                <div>Parent / tuteur</div>
+                <div class="sig-line">Signature</div>
+            </div>
+        </div>
     </div>
+
+    <footer class="bulletin-print-footer">
+        <strong>EduManager</strong> — {{ $schoolDisplayName }}
+    </footer>
 
     <!-- Boutons d'action -->
     <div class="text-center no-print">

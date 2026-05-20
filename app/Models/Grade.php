@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Grade extends Model
 {
+    use BelongsToSchool;
+
     /**
      * Les attributs qui sont assignables en masse.
      *
@@ -23,6 +26,7 @@ class Grade extends Model
         'coefficient',
         'semester',
         'academic_year_id',
+        'school_id',
     ];
 
     /**

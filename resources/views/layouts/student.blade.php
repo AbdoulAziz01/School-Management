@@ -541,8 +541,8 @@
                     <i class="fas fa-graduation-cap"></i>
                 </div>
                 <div class="logo-text">
-                    <h3>EduManager</h3>
-                    <small>Espace Élève</small>
+                    <h3 class="text-truncate" title="{{ $schoolDisplayName ?? 'Mon établissement' }}">{{ $schoolDisplayName ?? 'Mon établissement' }}</h3>
+                    <small>via EduManager · Élève</small>
                 </div>
             </div>
             

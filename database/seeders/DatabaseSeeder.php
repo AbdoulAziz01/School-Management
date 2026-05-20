@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -36,36 +37,40 @@ class DatabaseSeeder extends Seeder
      */
     protected function createTestUsers(): void
     {
-        // Vérifier si les utilisateurs existent déjà
-        if (User::where('email', 'admin@example.com')->doesntExist()) {
-            User::factory()->create([
+        $schoolId = School::query()->value('id');
+
+        if (User::withoutGlobalScopes()->where('email', 'admin@example.com')->doesntExist()) {
+            User::withoutGlobalScopes()->create([
                 'name' => 'Admin User',
                 'email' => 'admin@example.com',
                 'identifier' => 'A' . str_pad(1, 5, '0', STR_PAD_LEFT),
                 'role' => 'admin',
                 'status' => 'approved',
+                'school_id' => $schoolId,
                 'password' => bcrypt('password'),
             ]);
         }
 
-        if (User::where('email', 'enseignant@example.com')->doesntExist()) {
-            User::factory()->create([
+        if (User::withoutGlobalScopes()->where('email', 'enseignant@example.com')->doesntExist()) {
+            User::withoutGlobalScopes()->create([
                 'name' => 'Enseignant Test',
                 'email' => 'enseignant@example.com',
                 'identifier' => 'T' . str_pad(1, 5, '0', STR_PAD_LEFT),
                 'role' => 'teacher',
                 'status' => 'approved',
+                'school_id' => $schoolId,
                 'password' => bcrypt('password'),
             ]);
         }
 
-        if (User::where('email', 'eleve@example.com')->doesntExist()) {
-            User::factory()->create([
+        if (User::withoutGlobalScopes()->where('email', 'eleve@example.com')->doesntExist()) {
+            User::withoutGlobalScopes()->create([
                 'name' => 'Élève Test',
                 'email' => 'eleve@example.com',
                 'identifier' => 'E' . str_pad(1, 5, '0', STR_PAD_LEFT),
                 'role' => 'eleve',
                 'status' => 'approved',
+                'school_id' => $schoolId,
                 'password' => bcrypt('password'),
             ]);
         }
@@ -91,8 +96,8 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($testUsers as $userData) {
-            if (User::where('email', $userData['email'])->doesntExist()) {
-                User::factory()->create($userData);
+            if (User::withoutGlobalScopes()->where('email', $userData['email'])->doesntExist()) {
+                User::withoutGlobalScopes()->create(array_merge($userData, ['school_id' => $schoolId]));
             }
         }
     }

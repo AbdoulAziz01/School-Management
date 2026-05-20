@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AcademicYear extends Model
 {
-    use HasFactory;
+    use BelongsToSchool, HasFactory;
 
-    protected $fillable = ['name', 'start_date', 'end_date', 'is_current'];
+    protected $fillable = ['name', 'start_date', 'end_date', 'is_current', 'school_id'];
 
     protected $casts = [
         'start_date' => 'date',

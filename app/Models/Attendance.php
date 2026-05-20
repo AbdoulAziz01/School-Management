@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
+    use BelongsToSchool;
+
     /**
      * Les attributs qui sont assignables en masse.
      *
@@ -18,6 +21,7 @@ class Attendance extends Model
         'status', // present, absent, late, excused
         'reason',
         'justified',
+        'school_id',
     ];
 
     /**

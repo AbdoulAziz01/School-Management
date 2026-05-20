@@ -20,8 +20,17 @@ class TeacherMiddleware
             return redirect()->route('login');
         }
 
-        if (!in_array(Auth::user()->role, ['professeur', 'teacher'])) {
+        $user = Auth::user();
+
+        if (! in_array($user->role, ['professeur', 'teacher'], true)) {
             return redirect()->route('login')->with('error', 'Accès non autorisé. Vous devez être enseignant.');
+        }
+
+        $school = $user->school()->withoutGlobalScopes()->first();
+        if ($school && ! $school->is_active) {
+            Auth::logout();
+
+            return redirect()->route('login')->with('error', 'L\'accès à votre établissement est suspendu.');
         }
 
         return $next($request);

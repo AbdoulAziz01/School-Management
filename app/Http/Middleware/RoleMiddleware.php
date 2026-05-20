@@ -19,8 +19,9 @@ class RoleMiddleware
 
         // Vérifier si l'utilisateur a le rôle requis
         if ($user->role !== $role) {
-            // Rediriger vers le tableau de bord approprié selon le rôle
             switch ($user->role) {
+                case 'super_admin':
+                    return redirect()->route('platform.dashboard');
                 case 'admin':
                     return redirect()->route('admin.dashboard');
                 case 'eleve':

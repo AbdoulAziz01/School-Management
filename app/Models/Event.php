@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Event extends Model
 {
+    use BelongsToSchool;
+
     /**
      * Les attributs qui sont assignables en masse.
      *
@@ -21,6 +24,7 @@ class Event extends Model
         'type', // exam, holiday, meeting, other
         'class_id',
         'is_all_day',
+        'school_id',
     ];
 
     /**

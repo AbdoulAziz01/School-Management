@@ -311,8 +311,8 @@
                 <i class="fas fa-graduation-cap"></i>
             </div>
             <div class="logo-text">
-                <h5>EduManager</h5>
-                <small>Gestion Scolaire</small>
+                <h5 class="text-truncate" title="{{ $schoolDisplayName ?? 'Mon établissement' }}">{{ $schoolDisplayName ?? 'Mon établissement' }}</h5>
+                <small>via EduManager</small>
             </div>
         </div>
     </div>
@@ -390,6 +390,14 @@
             <a href="{{ route('admin.academic-years.index') }}" class="nav-link {{ request()->routeIs('admin.academic-years.*') ? 'active' : '' }}">
                 <i class="fas fa-calendar-check"></i>
                 <span>Années scolaires</span>
+            </a>
+        </li>
+
+        <!-- Informations de l'établissement -->
+        <li class="nav-item">
+            <a href="{{ route('admin.school.settings.edit') }}" class="nav-link {{ request()->routeIs('admin.school.settings.*') ? 'active' : '' }}">
+                <i class="fas fa-school"></i>
+                <span>Mon établissement</span>
             </a>
         </li>
     </ul>

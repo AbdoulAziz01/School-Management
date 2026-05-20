@@ -41,7 +41,9 @@ Route::middleware('auth')->group(function () {
 
     // Redirection vers le tableau de bord approprié selon le rôle
     Route::get('/dashboard', function () {
-        if (auth()->user()->role === 'admin') {
+        if (auth()->user()->role === 'super_admin') {
+            return redirect()->route('platform.dashboard');
+        } elseif (auth()->user()->role === 'admin') {
             return redirect()->route('admin.dashboard');
         } elseif (auth()->user()->role === 'eleve') {
             return redirect()->route('student.dashboard');
@@ -52,8 +54,18 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
 });
 
+// Plateforme super administrateur
+Route::prefix('platform')->middleware(['auth', 'super_admin'])->name('platform.')->group(function () {
+    Route::get('/', fn () => redirect()->route('platform.dashboard'));
+    Route::get('/dashboard', [\App\Http\Controllers\Platform\DashboardController::class, 'index'])->name('dashboard');
+    Route::resource('schools', \App\Http\Controllers\Platform\SchoolController::class);
+    Route::patch('schools/{school}/toggle-active', [\App\Http\Controllers\Platform\SchoolController::class, 'toggleActive'])->name('schools.toggle-active');
+    Route::patch('schools/{school}/regenerate-code', [\App\Http\Controllers\Platform\SchoolController::class, 'regenerateCode'])->name('schools.regenerate-code');
+    Route::post('schools/{school}/admins', [\App\Http\Controllers\Platform\SchoolController::class, 'storeAdmin'])->name('schools.admins.store');
+});
+
 // Groupe de routes pour les étudiants
-Route::middleware(['auth', \App\Http\Middleware\StudentMiddleware::class])->prefix('student')->name('student.')->group(function () {
+Route::middleware(['auth', 'school.active', \App\Http\Middleware\StudentMiddleware::class])->prefix('student')->name('student.')->group(function () {
     // Tableau de bord
     Route::get('/dashboard', [StudentDashboardController::class, 'dashboard'])->name('dashboard');
     
@@ -93,7 +105,7 @@ Route::middleware(['auth', \App\Http\Middleware\StudentMiddleware::class])->pref
 });
 
 // Routes pour les enseignants
-Route::middleware(['auth', \App\Http\Middleware\TeacherMiddleware::class])->prefix('teacher')->name('teacher.')->group(function () {
+Route::middleware(['auth', 'school.active', \App\Http\Middleware\TeacherMiddleware::class])->prefix('teacher')->name('teacher.')->group(function () {
     // Tableau de bord
     Route::get('/dashboard', [TeacherDashboardController::class, 'index'])->name('dashboard');
     
@@ -133,7 +145,7 @@ Route::middleware(['auth', \App\Http\Middleware\TeacherMiddleware::class])->pref
 });
 
 // Routes administrateur
-Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
+Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->group(function () {
     // Redirection de /admin vers /admin/dashboard
     Route::get('/', function () {
         return redirect()->route('admin.dashboard');
@@ -148,6 +160,12 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     // Tableau de bord administrateur
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('admin.dashboard');
+
+    // Profil / informations de l'établissement (nom affiché dans l'ERP, distinct d'EduManager)
+    Route::get('/school-settings', [\App\Http\Controllers\Admin\SchoolSettingsController::class, 'edit'])
+        ->name('admin.school.settings.edit');
+    Route::put('/school-settings', [\App\Http\Controllers\Admin\SchoolSettingsController::class, 'update'])
+        ->name('admin.school.settings.update');
 
     // Gestion des inscriptions en attente
     Route::get('/pending', [PendingRegistrationController::class, 'pending'])

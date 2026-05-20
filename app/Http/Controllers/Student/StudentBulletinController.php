@@ -74,6 +74,8 @@ class StudentBulletinController extends Controller
         // Statistiques de classe
         $classStats = $this->calculateClassStats($class, $semester, $academicYear);
 
+        $schoolName = config('app.school_name', 'Établissement scolaire');
+
         return view('student.bulletin-senegal', compact(
             'bulletinData',
             'generalAverage',
@@ -81,7 +83,8 @@ class StudentBulletinController extends Controller
             'rankData',
             'classStats',
             'semester',
-            'academicYear'
+            'academicYear',
+            'schoolName'
         ));
     }
 

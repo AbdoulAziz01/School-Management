@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Schedule extends Model
 {
+    use BelongsToSchool;
+
     /**
      * Les attributs qui sont assignables en masse.
      *
@@ -20,6 +23,7 @@ class Schedule extends Model
         'start_time',
         'end_time',
         'room',
+        'school_id',
     ];
 
     /**

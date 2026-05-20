@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Timetable extends Model
 {
+    use BelongsToSchool;
+
     protected $fillable = [
         'day_of_week',
         'start_time',
@@ -15,6 +18,7 @@ class Timetable extends Model
         'class_id',
         'teacher_id',
         'room',
+        'school_id',
     ];
 
     protected $casts = [

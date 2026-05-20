@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Http\View\Composers\SchoolBrandingComposer;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,7 +22,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Use Bootstrap 5 pagination
         Paginator::useBootstrapFive();
+
+        View::composer([
+            'admin.layouts.app',
+            'admin.components.sidebar',
+            'layouts.student',
+            'teacher.components.sidebar',
+            'student.*',
+        ], SchoolBrandingComposer::class);
     }
 }

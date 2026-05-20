@@ -15,9 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'school.bot' => \App\Http\Middleware\EnsureSchoolBotSecret::class,
+            'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
+            'school.admin' => \App\Http\Middleware\EnsureSchoolAdmin::class,
+            'school.active' => \App\Http\Middleware\EnsureSchoolIsActive::class,
         ]);
         
         $middleware->append(\App\Http\Middleware\TrustProxies::class);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\SyncTenantSchoolSession::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

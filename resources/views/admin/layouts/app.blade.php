@@ -456,7 +456,7 @@
         <button class="menu-toggle" id="sidebarToggle">
             <i class="fas fa-bars"></i>
         </button>
-        <h5><i class="fas fa-graduation-cap me-2"></i>EduManager</h5>
+        <h5><i class="fas fa-graduation-cap me-2"></i>{{ $schoolDisplayName ?? 'Mon établissement' }}</h5>
         <div style="width: 24px;"></div>
     </div>
     

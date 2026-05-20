@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ClassGroup extends Model
 {
+    use BelongsToSchool;
+
     /**
      * Les attributs qui sont assignables en masse.
      *
@@ -22,7 +25,8 @@ class ClassGroup extends Model
         'is_active',
         'max_students',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'school_id',
     ];
 
     /**
