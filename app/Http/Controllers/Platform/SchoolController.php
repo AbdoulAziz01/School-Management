@@ -7,7 +7,6 @@ use App\Models\School;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
@@ -51,14 +50,18 @@ class SchoolController extends Controller
             'phone' => $validated['phone'] ?? null,
             'address' => $validated['address'] ?? null,
             'city' => $validated['city'] ?? null,
-            'is_active' => $request->boolean('is_active'),
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
-        $this->createSchoolAdmin($school, $validated);
+        $admin = $this->createSchoolAdmin($school, $validated);
 
         return redirect()
             ->route('platform.schools.show', $school)
-            ->with('success', "École « {$school->name} » créée. Code d'inscription : {$school->code}");
+            ->with('success', "École « {$school->name} » créée. Code d'inscription : {$school->code}")
+            ->with('new_admin_login', [
+                'email' => $admin->email,
+                'identifier' => $admin->identifier,
+            ]);
     }
 
     public function show(School $school): View
@@ -139,6 +142,22 @@ class SchoolController extends Controller
         return back()->with('success', 'Administrateur d\'établissement créé.');
     }
 
+    public function resetAdminPassword(Request $request, School $school, User $user): RedirectResponse
+    {
+        if ($user->school_id !== $school->id || ! $user->isAdmin()) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'admin_password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $user->password = $validated['admin_password'];
+        $user->save();
+
+        return back()->with('success', "Mot de passe réinitialisé pour {$user->email}.");
+    }
+
     public function destroy(School $school): RedirectResponse
     {
         if ($school->users()->count() > 0) {
@@ -159,7 +178,7 @@ class SchoolController extends Controller
         return User::withoutGlobalScopes()->create([
             'name' => $data['admin_name'],
             'email' => $data['admin_email'],
-            'password' => Hash::make($data['admin_password']),
+            'password' => $data['admin_password'],
             'identifier' => $identifier,
             'user_id' => $identifier,
             'role' => User::ROLE_ADMIN,

@@ -81,9 +81,26 @@
             </div>
             <ul class="list-group list-group-flush">
                 @forelse($admins as $admin)
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{{ $admin->name }}<br><small class="text-muted">{{ $admin->email }}</small></span>
-                        <code>{{ $admin->identifier }}</code>
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                            <span>{{ $admin->name }}<br><small class="text-muted">{{ $admin->email }}</small></span>
+                            <code>{{ $admin->identifier }}</code>
+                        </div>
+                        <form method="POST" action="{{ route('platform.schools.admins.reset-password', [$school, $admin]) }}" class="row g-2 align-items-end">
+                            @csrf
+                            @method('PATCH')
+                            <div class="col-md-5">
+                                <label class="form-label small mb-0">Nouveau mot de passe</label>
+                                <input type="password" name="admin_password" class="form-control form-control-sm" required minlength="8">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small mb-0">Confirmer</label>
+                                <input type="password" name="admin_password_confirmation" class="form-control form-control-sm" required minlength="8">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">Réinitialiser</button>
+                            </div>
+                        </form>
                     </li>
                 @empty
                     <li class="list-group-item text-muted">Aucun administrateur.</li>
@@ -123,7 +140,22 @@
 </div>
 
 <div class="alert alert-info mt-4">
-    <strong>Accès école :</strong> l'administrateur se connecte sur la page de connexion habituelle avec son email.
-    Il accède à <code>/admin/dashboard</code> et voit uniquement les données de « {{ $school->name }} ».
+    <strong>Accès administrateur école :</strong>
+    <ol class="mb-0 ps-3">
+        <li>Se <strong>déconnecter</strong> du compte super admin si besoin.</li>
+        <li>Aller sur <a href="{{ route('login') }}" target="_blank">{{ url('/login') }}</a>.</li>
+        <li>Se connecter avec l'<strong>email</strong> ou l'<strong>identifiant</strong> admin + mot de passe défini à la création.</li>
+        <li>Accès : <code>/admin/dashboard</code> — données limitées à « {{ $school->name }} ».</li>
+    </ol>
+    @if(session('new_admin_login'))
+        <hr>
+        <p class="mb-0"><strong>Compte admin créé :</strong>
+            {{ session('new_admin_login.email') }} · identifiant <code>{{ session('new_admin_login.identifier') }}</code>
+        </p>
+    @endif
+    @if(!$school->is_active)
+        <hr>
+        <p class="mb-0 text-danger"><strong>Attention :</strong> cet établissement est inactif — l'admin ne pourra pas se connecter tant qu'il n'est pas activé.</p>
+    @endif
 </div>
 @endsection

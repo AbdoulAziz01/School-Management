@@ -54,6 +54,22 @@
                         <p class="text-muted">Accédez à votre espace personnel</p>
                     </div>
 
+                    @if(session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
+
+                    @if(!empty($loggedInUser))
+                        <div class="alert alert-warning">
+                            <strong>Vous êtes déjà connecté</strong> en tant que
+                            {{ $loggedInUser->name }} ({{ $loggedInUser->role }}).
+                            <br>Déconnectez-vous pour vous connecter avec un autre compte (ex. admin d'école).
+                            <form method="POST" action="{{ route('logout') }}" class="mt-2">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-outline-dark">Se déconnecter</button>
+                            </form>
+                        </div>
+                    @endif
+
                     @if($errors->any())
                         <div class="alert alert-danger">
                             <ul class="mb-0">
@@ -85,7 +101,7 @@
                                    class="form-control @error('identifier') is-invalid @enderror" 
                                    id="identifier" 
                                    name="identifier" 
-                                   placeholder="Votre identifiant (ex: A00001, E2026002)"
+                                   placeholder="Email ou identifiant (ex: admin@ecole.sn, ADM2001)"
                                    value="{{ old('identifier') }}" 
                                    required 
                                    autofocus>

@@ -62,6 +62,7 @@ Route::prefix('platform')->middleware(['auth', 'super_admin'])->name('platform.'
     Route::patch('schools/{school}/toggle-active', [\App\Http\Controllers\Platform\SchoolController::class, 'toggleActive'])->name('schools.toggle-active');
     Route::patch('schools/{school}/regenerate-code', [\App\Http\Controllers\Platform\SchoolController::class, 'regenerateCode'])->name('schools.regenerate-code');
     Route::post('schools/{school}/admins', [\App\Http\Controllers\Platform\SchoolController::class, 'storeAdmin'])->name('schools.admins.store');
+    Route::patch('schools/{school}/admins/{user}/password', [\App\Http\Controllers\Platform\SchoolController::class, 'resetAdminPassword'])->name('schools.admins.reset-password');
 });
 
 // Groupe de routes pour les étudiants

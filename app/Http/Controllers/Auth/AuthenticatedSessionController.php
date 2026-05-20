@@ -19,11 +19,12 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): View
     {
-        // Rediriger l'utilisateur déjà connecté vers son tableau de bord
         if (Auth::check()) {
-            return $this->redirectToDashboard(Auth::user());
+            return view('auth.login', [
+                'loggedInUser' => Auth::user(),
+            ]);
         }
-        
+
         return view('auth.login');
     }
 
