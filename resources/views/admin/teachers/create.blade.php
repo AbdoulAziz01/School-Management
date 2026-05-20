@@ -38,15 +38,6 @@
                                 </div>
 
                                 <div class="col-md-6 mb-3">
-                                    <label for="identifier" class="form-label">Identifiant *</label>
-                                    <input type="text" class="form-control @error('identifier') is-invalid @enderror" 
-                                           id="identifier" name="identifier" value="{{ old('identifier') }}" required>
-                                    @error('identifier')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-6 mb-3">
                                     <label for="email" class="form-label">Email *</label>
                                     <input type="email" class="form-control @error('email') is-invalid @enderror" 
                                            id="email" name="email" value="{{ old('email') }}" required>
@@ -84,25 +75,11 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <h5 class="mb-3">Informations de connexion</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="password" class="form-label">Mot de passe *</label>
-                                    <input type="password" class="form-control @error('password') is-invalid @enderror" 
-                                           id="password" name="password" required autocomplete="new-password">
-                                    @error('password')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label for="password_confirmation" class="form-label">Confirmer le mot de passe *</label>
-                                    <input type="password" class="form-control" 
-                                           id="password_confirmation" name="password_confirmation" required>
-                                </div>
-                            </div>
-                        </div>
+                        @include('admin.teachers._teaching-fields', [
+                            'requireTeaching' => true,
+                            'selectedSubjectIds' => array_map('intval', old('subjects', [])),
+                            'selectedClassIds' => array_map('intval', old('classes', [])),
+                        ])
 
                         <div class="d-flex justify-content-between align-items-center mt-4">
                             <a href="{{ route('admin.teachers.index') }}" class="btn btn-outline-secondary">

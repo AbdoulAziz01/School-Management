@@ -71,9 +71,9 @@
                                 @enderror
                             </div>
                             <div class="col-md-6">
-                                <label for="email" class="form-label">Adresse email</label>
+                                <label for="email" class="form-label">Adresse email <span class="text-muted">(optionnel)</span></label>
                                 <input type="email" class="form-control @error('email') is-invalid @enderror" 
-                                       id="email" name="email" value="{{ old('email', $user->email) }}" required>
+                                       id="email" name="email" value="{{ old('email', $user->email) }}">
                                 @error('email')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

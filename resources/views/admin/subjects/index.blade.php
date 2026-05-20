@@ -30,6 +30,10 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Le catalogue standard (Français, Maths, SVT, etc.) est installé automatiquement pour votre établissement.
+                        Ajustez le coefficient et les niveaux sur chaque matière ; utilisez « Ajouter » seulement pour une matière optionnelle.
+                    </p>
                     @if(session('success'))
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             {{ session('success') }}

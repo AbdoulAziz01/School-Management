@@ -133,4 +133,10 @@ class Attendance extends Model
     {
         return $this->status === self::STATUS_EXCUSED;
     }
+
+    /** Alias utilisé dans les formulaires (colonne DB : reason). */
+    public function getNotesAttribute(): ?string
+    {
+        return $this->reason;
+    }
 }

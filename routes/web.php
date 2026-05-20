@@ -192,6 +192,7 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::post('/students/assign/bulk', [StudentController::class, 'assignToClassBulk'])->name('admin.students.assign.bulk');
     Route::post('/students/{student}/assign', [StudentController::class, 'assignToClass'])->name('admin.students.assign-to-class');
     Route::delete('/students/{student}/unassign', [StudentController::class, 'unassign'])->name('admin.students.unassign');
+    Route::get('/students/search-suggestions', [StudentController::class, 'searchSuggestions'])->name('admin.students.search-suggestions');
     
     // Ressource pour les étudiants (cette ligne DOIT venir après les routes personnalisées)
     Route::resource('students', StudentController::class)->names('admin.students');
@@ -201,7 +202,9 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         
     // Gestion des enseignants
     Route::resource('teachers', TeacherController::class)->names('admin.teachers');
-    
+    Route::post('teachers/{teacher}/send-invitation', [TeacherController::class, 'sendInvitation'])
+        ->name('admin.teachers.send-invitation');
+
     // Gestion des affectations de classes aux enseignants
     Route::prefix('teachers/{teacher}')->name('admin.teachers.')->group(function() {
         Route::get('/classes', [TeacherClassController::class, 'edit'])->name('classes.edit');
@@ -224,6 +227,16 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     
     // Gestion des matières
     Route::resource('subjects', 'App\Http\Controllers\Admin\SubjectController')->names('admin.subjects');
+
+    // Emplois du temps par classe
+    Route::get('/schedules', [\App\Http\Controllers\Admin\ScheduleController::class, 'index'])
+        ->name('admin.schedules.index');
+    Route::get('/schedules/class/{class}/edit', [\App\Http\Controllers\Admin\ScheduleController::class, 'edit'])
+        ->name('admin.schedules.edit');
+    Route::post('/schedules/class/{class}', [\App\Http\Controllers\Admin\ScheduleController::class, 'store'])
+        ->name('admin.schedules.store');
+    Route::delete('/schedules/{schedule}', [\App\Http\Controllers\Admin\ScheduleController::class, 'destroy'])
+        ->name('admin.schedules.destroy');
 });
 
 // Routes du Chatbot IA - Protégées par authentification

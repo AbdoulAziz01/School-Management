@@ -52,6 +52,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'email_verified_at',
+        'invitation_email_sent_at',
         'desired_class', // ← AJOUTÉ pour la classe souhaitée
         'profile_photo_path', // ← AJOUTÉ pour la photo de profil
         'city',
@@ -110,6 +111,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'invitation_email_sent_at' => 'datetime',
         'password' => 'hashed',
         'date_of_birth' => 'date',
     ];

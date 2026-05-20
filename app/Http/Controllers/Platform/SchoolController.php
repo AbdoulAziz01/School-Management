@@ -7,6 +7,7 @@ use App\Models\School;
 use App\Models\User;
 use App\Support\PlatformMetrics;
 use App\Support\SchoolLogoStorage;
+use App\Support\SchoolSubjectProvisioner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -81,6 +82,8 @@ class SchoolController extends Controller
         }
 
         $admin = $this->createSchoolStaff($school, $validated, User::ROLE_ADMIN);
+
+        SchoolSubjectProvisioner::ensureForSchool($school->id);
 
         return redirect()
             ->route('platform.schools.show', $school)

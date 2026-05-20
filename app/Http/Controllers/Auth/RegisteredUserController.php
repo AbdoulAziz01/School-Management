@@ -10,6 +10,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -25,7 +26,15 @@ class RegisteredUserController extends Controller
         $request->validate([
             'school_code' => ['required', 'string', 'max:32'],
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => [
+                Rule::requiredIf(fn () => $request->role === 'teacher'),
+                'nullable',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                'unique:'.User::class,
+            ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => ['required', 'in:eleve,teacher'],
             'desired_class' => ['required_if:role,eleve', 'string', 'nullable'],
@@ -86,7 +95,7 @@ class RegisteredUserController extends Controller
 
         $user = User::withoutGlobalScopes()->create([
             'name' => $request->name,
-            'email' => $request->email,
+            'email' => $request->filled('email') ? $request->email : null,
             'password' => Hash::make($request->password),
             'identifier' => $identifier,
             'user_id' => $identifier,

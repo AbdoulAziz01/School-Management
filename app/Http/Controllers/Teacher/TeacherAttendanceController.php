@@ -7,8 +7,10 @@ use App\Models\User;
 use App\Models\Attendance;
 use App\Models\TeacherAssignment;
 use App\Models\AcademicYear;
+use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class TeacherAttendanceController extends Controller
@@ -45,18 +47,21 @@ class TeacherAttendanceController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            $attendances = Attendance::where('date', $selectedDate)
-                ->whereIn('user_id', $students->pluck('id'))
-                ->get()
-                ->keyBy('user_id');
+            $attendances = $this->attendancesForClassDate(
+                $students->pluck('id'),
+                $selectedDate
+            );
         }
+
+        $attendanceLocked = $students->isNotEmpty() && $attendances->isNotEmpty();
 
         return view('teacher.attendance.index', compact(
             'classes',
             'students',
             'attendances',
             'selectedClassId',
-            'selectedDate'
+            'selectedDate',
+            'attendanceLocked'
         ));
     }
 
@@ -96,23 +101,61 @@ class TeacherAttendanceController extends Controller
             return back()->with('error', 'Certains élèves ne font pas partie de cette classe.');
         }
 
-        foreach ($request->attendances as $attendanceData) {
-            Attendance::updateOrCreate(
-                [
-                    'user_id' => (int) $attendanceData['user_id'],
-                    'date'    => $request->date,
-                ],
-                [
-                    'status' => $attendanceData['status'],
-                    'reason' => $attendanceData['notes'] ?? null,
-                ]
-            );
+        $schoolId = $teacher->school_id ?? TenantSchool::id();
+        $date     = Carbon::parse($request->date)->toDateString();
+
+        $alreadySaved = Attendance::withoutGlobalScopes()
+            ->whereDate('date', $date)
+            ->whereIn('user_id', $validStudentIds)
+            ->exists();
+
+        if ($alreadySaved) {
+            return redirect()->route('teacher.attendance.index', [
+                'class_id' => $request->class_id,
+                'date'     => $date,
+            ])->with('error', 'L\'appel de cette date est déjà enregistré et ne peut plus être modifié.');
         }
+
+        DB::transaction(function () use ($request, $schoolId, $date) {
+            foreach ($request->attendances as $attendanceData) {
+                Attendance::withoutGlobalScopes()->create([
+                    'user_id'   => (int) $attendanceData['user_id'],
+                    'date'      => $date,
+                    'status'    => $attendanceData['status'],
+                    'reason'    => $attendanceData['notes'] ?? null,
+                    'school_id' => $schoolId,
+                ]);
+            }
+        });
 
         return redirect()->route('teacher.attendance.index', [
             'class_id' => $request->class_id,
-            'date'     => $request->date,
-        ])->with('success', 'Présences enregistrées avec succès.');
+            'date'     => $date,
+        ])->with('success', 'Appel enregistré. Les présences de cette date sont définitives.');
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, int>|array<int, int>  $studentIds
+     */
+    private function attendancesForClassDate($studentIds, string $date): \Illuminate\Support\Collection
+    {
+        if ($studentIds instanceof \Illuminate\Support\Collection) {
+            $studentIds = $studentIds->all();
+        }
+
+        if ($studentIds === []) {
+            return collect();
+        }
+
+        $date = Carbon::parse($date)->toDateString();
+
+        return Attendance::withoutGlobalScopes()
+            ->whereDate('date', $date)
+            ->whereIn('user_id', $studentIds)
+            ->orderByDesc('updated_at')
+            ->get()
+            ->unique('user_id')
+            ->keyBy(fn (Attendance $row) => (int) $row->user_id);
     }
 
     /**

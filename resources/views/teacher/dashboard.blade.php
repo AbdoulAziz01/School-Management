@@ -174,23 +174,57 @@
         <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Performance Moyenne par Classe</h5>
     </div>
     <div class="card-body">
-        <p class="text-muted small">Moyennes générales de vos matières par classe.</p>
-        
-        <div class="d-flex align-items-end justify-content-around flex-wrap" style="min-height: 200px; gap: 20px;">
-            @foreach($classAverages as $item)
-                @php
-                    $heightPercent = ($item['average'] / 20) * 100;
-                    $colorClass = $item['average'] >= 14 ? 'bg-success' : ($item['average'] >= 10 ? 'bg-warning' : 'bg-danger');
-                @endphp
-                <div class="text-center" style="min-width: 80px;">
-                    <div class="mx-auto rounded {{ $colorClass }}" style="width: 60px; height: {{ $heightPercent }}%;"></div>
-                    <small class="mt-2 d-block fw-bold">{{ $item['class']->name ?? 'N/A' }}</small>
-                    <strong class="{{ $item['average'] >= 10 ? 'text-success' : 'text-danger' }}">{{ $item['average'] }}/20</strong>
+        <div class="row g-4">
+            {{-- Liste des classes --}}
+            <div class="col-lg-4">
+                <p class="text-muted small mb-3">Sélectionnez une classe pour voir l'évolution des notes (D1, D2, Compo par semestre).</p>
+                <div class="list-group class-performance-list">
+                    @foreach($classAverages as $index => $item)
+                        <button type="button"
+                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center class-performance-item {{ $index === 0 ? 'active' : '' }}"
+                                data-class-index="{{ $index }}">
+                            <span class="fw-medium">
+                                <i class="fas fa-users me-2 text-muted"></i>
+                                {{ $item['class']->name ?? 'N/A' }}
+                            </span>
+                            <span class="badge {{ $item['average'] >= 10 ? 'bg-success' : 'bg-danger' }} rounded-pill">
+                                {{ number_format($item['average'], 2) }}/20
+                            </span>
+                        </button>
+                    @endforeach
                 </div>
-            @endforeach
+            </div>
+
+            {{-- Évolution par évaluation --}}
+            <div class="col-lg-8">
+                <div class="border rounded p-3 h-100 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            <span id="chart-class-title">{{ $classAverages[0]['class']->name ?? 'Classe' }}</span>
+                        </h6>
+                        <span class="small text-muted">
+                            Moyenne : <strong id="chart-class-average" class="{{ ($classAverages[0]['average'] ?? 0) >= 10 ? 'text-success' : 'text-danger' }}">{{ number_format($classAverages[0]['average'] ?? 0, 2) }}/20</strong>
+                        </span>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <label for="chart-subject-select" class="small text-muted mb-0">Matière :</label>
+                        <select id="chart-subject-select" class="form-select form-select-sm" style="max-width: 280px;"></select>
+                    </div>
+                    <p class="text-muted small mb-3">Évolution S1 · D1 → D2 → Compo puis S2 · D1 → D2 → Compo — seuil : 10/20</p>
+                    <div id="chart-wrapper" class="subject-chart-wrapper">
+                        <canvas id="subjectPerformanceChart"></canvas>
+                    </div>
+                    <p id="chart-empty-msg" class="text-muted text-center py-5 mb-0 d-none">
+                        Aucune note saisie pour cette classe et cette matière.
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<script type="application/json" id="class-performance-data">@json($classPerformanceJson)</script>
 @else
 <div class="card">
     <div class="card-header">
@@ -204,4 +238,204 @@
 </div>
 @endif
 @endsection
+
+@push('styles')
+<style>
+    .class-performance-list .list-group-item {
+        cursor: pointer;
+        border-left: 3px solid transparent;
+    }
+    .class-performance-list .list-group-item.active {
+        border-left-color: var(--bs-primary);
+        font-weight: 500;
+    }
+    .subject-chart-wrapper {
+        position: relative;
+        height: 320px;
+        width: 100%;
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dataEl = document.getElementById('class-performance-data');
+        const canvas = document.getElementById('subjectPerformanceChart');
+        if (!dataEl || !canvas) return;
+
+        const classData = JSON.parse(dataEl.textContent);
+        const titleEl = document.getElementById('chart-class-title');
+        const avgEl = document.getElementById('chart-class-average');
+        const emptyEl = document.getElementById('chart-empty-msg');
+        const wrapperEl = document.getElementById('chart-wrapper');
+        const subjectSelect = document.getElementById('chart-subject-select');
+        let chart = null;
+        let currentClassIndex = 0;
+
+        function pointColor(avg) {
+            if (avg === null) return '#adb5bd';
+            if (avg >= 14) return '#198754';
+            if (avg >= 10) return '#f59e0b';
+            return '#dc3545';
+        }
+
+        function populateSubjectSelect(subjects, selectedIndex) {
+            subjectSelect.innerHTML = '';
+            subjects.forEach(function (s, i) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = s.name + (s.average !== null ? ' (' + s.average.toFixed(2) + '/20)' : '');
+                subjectSelect.appendChild(opt);
+            });
+            subjectSelect.value = String(selectedIndex);
+            subjectSelect.classList.toggle('d-none', subjects.length <= 1);
+            subjectSelect.previousElementSibling?.classList.toggle('d-none', subjects.length <= 1);
+        }
+
+        function renderEvolutionChart(classIndex, subjectIndex) {
+            const item = classData[classIndex];
+            if (!item) return;
+
+            const subjects = item.subjects || [];
+            const subject = subjects[subjectIndex];
+            if (!subject) return;
+
+            const evaluations = subject.evaluations || [];
+            const withGrades = evaluations.filter(function (e) { return e.average !== null; });
+
+            if (withGrades.length === 0) {
+                wrapperEl.classList.add('d-none');
+                emptyEl.classList.remove('d-none');
+                if (chart) { chart.destroy(); chart = null; }
+                return;
+            }
+
+            wrapperEl.classList.remove('d-none');
+            emptyEl.classList.add('d-none');
+
+            const labels = evaluations.map(function (e) { return e.label; });
+            const values = evaluations.map(function (e) { return e.average; });
+            const pointColors = evaluations.map(function (e) { return pointColor(e.average); });
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: subject.name,
+                        data: values,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: pointColors,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        borderWidth: 2,
+                        fill: true,
+                        spanGaps: false,
+                        tension: 0.15,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const ev = evaluations[ctx.dataIndex];
+                                    if (!ev || ev.average === null) return 'Non saisi';
+                                    return ev.average.toFixed(2) + '/20 — ' + ev.count + ' note(s)';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 20,
+                            ticks: { stepSize: 2 },
+                            title: { display: true, text: 'Moyenne / 20' },
+                            grid: { color: '#e9ecef' }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 0,
+                                minRotation: 0,
+                                font: { size: 11 }
+                            },
+                            grid: { display: false }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'passLine',
+                    afterDraw: function (c) {
+                        const yScale = c.scales.y;
+                        const ctx = c.ctx;
+                        const y = yScale.getPixelForValue(10);
+                        ctx.save();
+                        ctx.strokeStyle = '#6c757d';
+                        ctx.setLineDash([6, 4]);
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(c.chartArea.left, y);
+                        ctx.lineTo(c.chartArea.right, y);
+                        ctx.stroke();
+                        ctx.fillStyle = '#6c757d';
+                        ctx.font = '10px sans-serif';
+                        ctx.fillText('10', c.chartArea.left - 18, y + 3);
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+
+        function renderClass(classIndex, subjectIndex) {
+            const item = classData[classIndex];
+            if (!item) return;
+
+            currentClassIndex = classIndex;
+
+            document.querySelectorAll('.class-performance-item').forEach(function (btn) {
+                btn.classList.toggle('active', parseInt(btn.dataset.classIndex, 10) === classIndex);
+            });
+
+            titleEl.textContent = item.class;
+            avgEl.textContent = Number(item.average).toFixed(2) + '/20';
+            avgEl.className = item.average >= 10 ? 'text-success' : 'text-danger';
+
+            const subjects = item.subjects || [];
+            if (subjects.length === 0) {
+                subjectSelect.innerHTML = '';
+                wrapperEl.classList.add('d-none');
+                emptyEl.classList.remove('d-none');
+                if (chart) { chart.destroy(); chart = null; }
+                return;
+            }
+
+            const idx = typeof subjectIndex === 'number' ? subjectIndex : 0;
+            populateSubjectSelect(subjects, idx);
+            renderEvolutionChart(classIndex, idx);
+        }
+
+        document.querySelectorAll('.class-performance-item').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                renderClass(parseInt(this.dataset.classIndex, 10), 0);
+            });
+        });
+
+        subjectSelect.addEventListener('change', function () {
+            renderEvolutionChart(currentClassIndex, parseInt(this.value, 10));
+        });
+
+        renderClass(0, 0);
+    });
+</script>
+@endpush
  

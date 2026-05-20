@@ -30,12 +30,9 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="identifier" class="form-label">Identifiant <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('identifier') is-invalid @enderror" 
-                                           id="identifier" name="identifier" value="{{ old('identifier', $teacher->identifier) }}" required>
-                                    @error('identifier')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                    <label class="form-label">Identifiant de connexion</label>
+                                    <input type="text" class="form-control bg-light" value="{{ $teacher->identifier }}" readonly disabled>
+                                    <div class="form-text">Généré automatiquement à la création (connexion avec cet identifiant ou l'email).</div>
                                 </div>
 
                                 <div class="mb-3">
@@ -91,26 +88,33 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <h5 class="mb-3">Changer le mot de passe</h5>
-                                    <p class="text-muted small mb-2">Laissez ces champs vides pour conserver le mot de passe actuel.</p>
-                                    
-                                    <div class="mb-3">
-                                        <label for="password" class="form-label">Nouveau mot de passe</label>
-                                        <input type="password" class="form-control @error('password') is-invalid @enderror" 
-                                               id="password" name="password" autocomplete="new-password">
-                                        @error('password')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                    <label class="form-label">Connexion</label>
+                                    @if($teacher->invitation_email_sent_at)
+                                        <p class="text-muted small mb-2">
+                                            <i class="fas fa-check-circle text-success me-1"></i>
+                                            Dernier envoi des identifiants le {{ $teacher->invitation_email_sent_at->format('d/m/Y à H:i') }}.
+                                        </p>
+                                    @endif
+                                    <p class="text-muted small mb-2">
+                                        Un email contient l'<strong>identifiant</strong> ({{ $teacher->identifier }}) et un <strong>mot de passe temporaire</strong> — seul le professeur les reçoit.
+                                    </p>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="send_invitation_email" value="1"
+                                               id="send_invitation_email" {{ old('send_invitation_email', true) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="send_invitation_email">
+                                            <strong>Envoyer identifiant + mot de passe par email</strong> lors de l'enregistrement
+                                        </label>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label for="password_confirmation" class="form-label">Confirmer le mot de passe</label>
-                                        <input type="password" class="form-control" 
-                                               id="password_confirmation" name="password_confirmation" autocomplete="new-password">
-                                    </div>
+                                    <button type="submit" form="teacher-invite-form" class="btn btn-outline-primary btn-sm"
+                                            onclick="return confirm('Générer un nouveau mot de passe et l\'envoyer par email ? L\'ancien ne fonctionnera plus.');">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        Renvoyer identifiants par email
+                                    </button>
                                 </div>
                             </div>
                         </div>
+
+                        @include('admin.teachers._teaching-fields')
 
                         <div class="d-flex justify-content-between align-items-center mt-4">
                             <button type="button" onclick="if(confirm('Êtes-vous sûr de vouloir supprimer cet enseignant ?')) { document.getElementById('delete-form').submit(); }" class="btn btn-danger">
@@ -122,10 +126,14 @@
                                     <i class="fas fa-times me-1"></i> Annuler
                                 </a>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-1"></i> Enregistrer les modifications
+                                    <i class="fas fa-save me-1"></i> Enregistrer
                                 </button>
                             </div>
                         </div>
+                    </form>
+
+                    <form id="teacher-invite-form" action="{{ route('admin.teachers.send-invitation', $teacher) }}" method="POST" class="d-none">
+                        @csrf
                     </form>
 
                     <form id="delete-form" action="{{ route('admin.teachers.destroy', $teacher) }}" method="POST" class="d-none">

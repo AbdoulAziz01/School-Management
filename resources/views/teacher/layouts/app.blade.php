@@ -357,6 +357,14 @@
     <div class="wrapper d-flex">
         <!-- Sidebar -->
         @include('teacher.components.sidebar')
+        <script>
+            (function () {
+                var saved = sessionStorage.getItem('teacherSidebarScrollTop');
+                var sidebar = document.getElementById('sidebar');
+                if (!sidebar || saved === null) return;
+                sidebar.scrollTop = parseInt(saved, 10) || 0;
+            })();
+        </script>
 
         <!-- Main content -->
         <main class="main-content">
@@ -410,6 +418,33 @@
                 }
             });
         });
+
+        // Conserver la position de scroll du sidebar entre les pages
+        (function () {
+            var storageKey = 'teacherSidebarScrollTop';
+            var sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+
+            function saveScroll() {
+                sessionStorage.setItem(storageKey, String(sidebar.scrollTop));
+            }
+
+            sidebar.addEventListener('scroll', saveScroll, { passive: true });
+
+            sidebar.querySelectorAll('.nav-link[href]').forEach(function (link) {
+                link.addEventListener('click', saveScroll);
+            });
+
+            window.addEventListener('beforeunload', saveScroll);
+
+            if (sessionStorage.getItem(storageKey) === null) {
+                var activeLink = sidebar.querySelector('.nav-link.active');
+                if (activeLink) {
+                    activeLink.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                    saveScroll();
+                }
+            }
+        })();
     </script>
     
     @include('partials.botpress-webchat')

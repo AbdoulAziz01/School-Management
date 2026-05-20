@@ -45,17 +45,9 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <label for="type" class="form-label">Type <span class="text-danger">*</span></label>
-                            <select name="type" id="type" class="form-select @error('type') is-invalid @enderror" required>
-                                @foreach($gradeTypes as $value => $label)
-                                    <option value="{{ $value }}" {{ old('type', $grade->type) == $value ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('type')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <label class="form-label">Évaluation</label>
+                            <input type="text" class="form-control bg-light" readonly
+                                   value="{{ \App\Support\SenegalGradeSequence::LABELS[$grade->type] ?? $grade->type }} — Semestre {{ $grade->semester }}">
                         </div>
                         
                         <div class="col-md-4">

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
+use App\Support\SchoolSubjectProvisioner;
+use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -31,12 +33,7 @@ class AcademicYearController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'is_current' => 'sometimes|boolean'
-        ]);
+        $validated = $this->validateAcademicYear($request);
 
         try {
             DB::beginTransaction();
@@ -46,7 +43,9 @@ class AcademicYearController extends Controller
                 AcademicYear::where('is_current', true)->update(['is_current' => false]);
             }
 
-            AcademicYear::create($validated);
+            $year = AcademicYear::create($validated);
+
+            SchoolSubjectProvisioner::ensureForSchool($year->school_id ?? TenantSchool::id());
             
             DB::commit();
             
@@ -120,12 +119,7 @@ class AcademicYearController extends Controller
      */
     public function update(Request $request, AcademicYear $academicYear)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'is_current' => 'sometimes|boolean'
-        ]);
+        $validated = $this->validateAcademicYear($request);
 
         try {
             DB::beginTransaction();
@@ -208,5 +202,22 @@ class AcademicYearController extends Controller
             return back()
                 ->with('error', 'Une erreur est survenue lors du changement d\'année en cours.');
         }
+    }
+
+    /** @return array<string, mixed> */
+    private function validateAcademicYear(Request $request): array
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after:start_date',
+            'is_current' => 'sometimes|boolean',
+        ]);
+
+        if (empty($validated['end_date'])) {
+            $validated['end_date'] = null;
+        }
+
+        return $validated;
     }
 }

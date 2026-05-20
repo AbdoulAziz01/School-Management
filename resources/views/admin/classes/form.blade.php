@@ -21,7 +21,7 @@
                             <a href="{{ route('admin.classes.show', $class) }}">{{ $class->name }}</a>
                         </li>
                         <li class="breadcrumb-item active" aria-current="page">Modifier</li>
-                    @else
+                    @elseif($selectedAcademicYear ?? null)
                         <li class="breadcrumb-item">
                             <a href="{{ route('admin.academic-years.show', $selectedAcademicYear) }}">
                                 {{ $selectedAcademicYear->name }}
@@ -84,17 +84,23 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="level_id" class="form-label">Niveau *</label>
+                                @if($levels->isEmpty())
+                                    <div class="alert alert-warning py-2 small mb-2">
+                                        Aucun niveau disponible. Rechargez la page ou contactez l'administrateur plateforme.
+                                    </div>
+                                @endif
                                 <select class="form-select @error('level_id') is-invalid @enderror" 
                                         id="level_id" 
                                         name="level_id" 
-                                        required>
+                                        required
+                                        @if($levels->isEmpty()) disabled @endif>
                                     <option value="" disabled {{ !$class->exists && !old('level_id') ? 'selected' : '' }}>
                                         Sélectionner un niveau
                                     </option>
                                     @foreach($levels as $level)
                                         <option value="{{ $level->id }}" 
                                                 {{ (old('level_id', $class->level_id) == $level->id) ? 'selected' : '' }}>
-                                            {{ $level->name }}
+                                            {{ $level->name }}@if($level->cycle) ({{ $level->cycle === 'college' ? 'Collège' : 'Lycée' }})@endif
                                         </option>
                                     @endforeach
                                 </select>
@@ -117,7 +123,7 @@
                                         {{ $class->exists ? 'disabled' : '' }}>
                                     @foreach($academicYears as $year)
                                         <option value="{{ $year->id }}" 
-                                                {{ (old('academic_year_id', $class->academic_year_id ?? $selectedAcademicYear->id) == $year->id) ? 'selected' : '' }}>
+                                                {{ (old('academic_year_id', $class->academic_year_id ?? $selectedAcademicYear?->id) == $year->id) ? 'selected' : '' }}>
                                             {{ $year->name }}
                                         </option>
                                     @endforeach
@@ -156,7 +162,7 @@
                                        id="capacity" 
                                        name="capacity" 
                                        min="1" 
-                                       max="50"
+                                       max="100"
                                        value="{{ old('capacity', $class->capacity) }}">
                                 <div class="form-text">
                                     Laisser vide pour une capacité illimitée.

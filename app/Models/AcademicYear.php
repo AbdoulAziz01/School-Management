@@ -27,4 +27,22 @@ class AcademicYear extends Model
     {
         return $this->hasMany(TeacherAssignment::class, 'academic_year_id');
     }
+
+    /** Libellé de la date de fin (optionnelle — courant au Sénégal). */
+    public function endDateLabel(): string
+    {
+        return $this->end_date?->format('d/m/Y') ?? 'À définir';
+    }
+
+    /** Période affichée : début connu, fin éventuelle. */
+    public function periodLabel(): string
+    {
+        $start = $this->start_date?->format('d/m/Y') ?? '—';
+
+        if ($this->end_date) {
+            return "Du {$start} au {$this->end_date->format('d/m/Y')}";
+        }
+
+        return "Depuis le {$start} (fin non fixée)";
+    }
 }

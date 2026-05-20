@@ -100,7 +100,7 @@
                         <strong>Année scolaire courante :</strong>
                         @if($currentAcademicYear)
                             {{ $currentAcademicYear->name }}
-                            <span class="text-muted">({{ $currentAcademicYear->start_date?->format('d/m/Y') }} – {{ $currentAcademicYear->end_date?->format('d/m/Y') }})</span>
+                            <span class="text-muted">({{ $currentAcademicYear->periodLabel() }})</span>
                         @else
                             <span class="text-warning">Non configurée</span>
                         @endif

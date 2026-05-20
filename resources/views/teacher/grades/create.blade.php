@@ -57,18 +57,6 @@
                 </div>
                 
                 <div class="col-md-2">
-                    <label for="type" class="form-label">Type <span class="text-danger">*</span></label>
-                    <select name="type" id="type" class="form-select @error('type') is-invalid @enderror" required>
-                        @foreach($gradeTypes as $value => $label)
-                            <option value="{{ $value }}" {{ old('type') == $value ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('type')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-                
-                <div class="col-md-2">
                     <label for="date" class="form-label">Date <span class="text-danger">*</span></label>
                     <input type="date" name="date" id="date" class="form-control @error('date') is-invalid @enderror" 
                            value="{{ old('date', date('Y-m-d')) }}" required>
@@ -86,8 +74,26 @@
                     @enderror
                 </div>
             </div>
+
+            @if($selectedClassId && $selectedSubjectId)
+                <div class="mt-3">
+                    @if($nextAllowed)
+                        <input type="hidden" name="semester" value="{{ old('semester', $nextAllowed['semester']) }}">
+                        <input type="hidden" name="type" value="{{ old('type', $nextAllowed['type']) }}">
+                        <p class="small mb-0">
+                            <i class="fas fa-pen me-1 text-primary"></i>
+                            <strong>Saisie en cours :</strong> Semestre {{ $nextAllowed['semester'] }} — {{ $nextAllowed['label'] }}
+                        </p>
+                    @else
+                        <p class="small text-success mb-0">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Toutes les évaluations sont saisies pour cette classe et matière.
+                        </p>
+                    @endif
+                </div>
+            @endif
             
-            @if(!$selectedClassId)
+            @if(!$selectedClassId || !$selectedSubjectId)
                 <div class="mt-3">
                     <button type="button" id="loadStudents" class="btn btn-primary">
                         <i class="fas fa-users me-2"></i>Charger les élèves
@@ -98,7 +104,7 @@
     </div>
     
     {{-- Tableau de saisie des notes --}}
-    @if($students->count() > 0)
+    @if($students->count() > 0 && ($nextAllowed ?? null))
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Saisie des notes ({{ $students->count() }} élèves)</h5>
@@ -163,6 +169,14 @@
                 </div>
             </div>
         </div>
+    @elseif($selectedClassId && $selectedSubjectId && !($nextAllowed ?? null))
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-success mb-4"></i>
+                <h4 class="text-muted">Saisie terminée pour cette classe et matière</h4>
+                <p class="text-muted">Les 6 évaluations (3 par semestre) sont enregistrées.</p>
+            </div>
+        </div>
     @elseif($selectedClassId)
         <div class="card">
             <div class="card-body text-center py-5">
@@ -194,8 +208,12 @@
             alert('Veuillez sélectionner une classe');
             return;
         }
-        
-        window.location.href = '{{ route("teacher.grades.create") }}?class_id=' + classId + (subjectId ? '&subject_id=' + subjectId : '');
+        if (!subjectId) {
+            alert('Veuillez sélectionner une matière');
+            return;
+        }
+
+        window.location.href = '{{ route("teacher.grades.create") }}?class_id=' + classId + '&subject_id=' + subjectId;
     });
     
     // Marquer tous les élèves sans note comme absents (note: 0)

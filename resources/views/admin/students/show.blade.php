@@ -2,6 +2,32 @@
 
 @section('title', 'Détails de l\'élève')
 
+@push('styles')
+<style>
+    .student-grades-table .subject-col {
+        min-width: 130px;
+        white-space: nowrap;
+    }
+    .student-grades-table .coef-col {
+        width: 52px;
+    }
+    .student-grades-table .eval-col {
+        width: 72px;
+        font-size: 0.875rem;
+        white-space: nowrap;
+    }
+    .student-grades-table .avg-col {
+        min-width: 88px;
+        white-space: nowrap;
+    }
+    .student-grades-table thead th.eval-col {
+        font-size: 0.8rem;
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid">
     <!-- En-tête avec informations de base -->
@@ -98,6 +124,50 @@
         </div>
     </div>
 
+    @php
+        $hasEvolutionData = collect($gradeEvolutionJson['subjects'] ?? [])
+            ->flatMap(fn ($s) => $s['evaluations'] ?? [])
+            ->contains(fn ($e) => ($e['grade'] ?? null) !== null);
+    @endphp
+
+    <!-- Évolution des notes -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background-color: #0d6efd;">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Évolution des notes</h5>
+                </div>
+                <div class="card-body">
+                    @if(!$hasEvolutionData)
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Aucune note saisie pour afficher l'évolution (D1, D2, Compo par semestre).
+                        </div>
+                    @else
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                            <label for="student-evolution-subject" class="small text-muted mb-0 fw-semibold">Matière :</label>
+                            <select id="student-evolution-subject" class="form-select form-select-sm" style="max-width: 320px;">
+                                @foreach($gradeEvolutionJson['subjects'] as $index => $subject)
+                                    <option value="{{ $index }}" @selected($index === 0)>
+                                        {{ $subject['name'] }}
+                                        @if($subject['average'] !== null)
+                                            ({{ number_format($subject['average'], 2, ',', ' ') }}/20)
+                                        @endif
+                                    </option>
+                                @endforeach
+                                <option value="all">Toutes les matières</option>
+                            </select>
+                        </div>
+                        <p class="text-muted small mb-3">Notes réelles enregistrées — S1 · D1 → D2 → Compo puis S2 · D1 → D2 → Compo — seuil : 10/20</p>
+                        <div class="student-evolution-chart-wrapper">
+                            <canvas id="studentEvolutionChart"></canvas>
+                        </div>
+                        <script type="application/json" id="student-evolution-data">@json($gradeEvolutionJson)</script>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Notes par matière -->
     <div class="row mb-4">
         <div class="col-12">
@@ -112,35 +182,50 @@
                         </div>
                     @else
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover table-sm align-middle mb-0 student-grades-table">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Matière</th>
-                                        <th>Coef.</th>
-                                        <th>Notes</th>
-                                        <th>Moyenne</th>
-                                        <th>Appréciation</th>
+                                        <th class="subject-col">Matière</th>
+                                        <th class="text-center coef-col">Coef.</th>
+                                        @foreach($evaluationColumns as $column)
+                                            <th class="text-center eval-col">{{ $column['header'] }}</th>
+                                        @endforeach
+                                        <th class="text-center avg-col">Moyenne</th>
+                                        <th class="text-center">Appréciation</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($gradesBySubject as $subject => $data)
                                         <tr>
-                                            <td><strong>{{ $subject }}</strong></td>
-                                            <td><span class="badge bg-secondary">{{ $data['coefficient'] }}</span></td>
-                                            <td>
-                                                @foreach($data['grades'] as $grade)
-                                                    <span class="badge bg-{{ $grade->grade >= 10 ? 'success' : 'danger' }} me-1">
-                                                        {{ number_format($grade->grade, 1) }}
+                                            <td class="subject-col"><strong>{{ $subject }}</strong></td>
+                                            <td class="text-center coef-col">
+                                                <span class="badge bg-secondary">{{ $data['coefficient'] }}</span>
+                                            </td>
+                                            @foreach($evaluationColumns as $column)
+                                                @php $note = $data['slots'][$column['key']] ?? null; @endphp
+                                                <td class="text-center eval-col">
+                                                    @if($note !== null)
+                                                        <span class="fw-semibold {{ $note >= 10 ? 'text-success' : 'text-danger' }}">
+                                                            {{ number_format($note, 2, ',', ' ') }}
+                                                        </span>
+                                                    @else
+                                                        <span class="text-muted">—</span>
+                                                    @endif
+                                                </td>
+                                            @endforeach
+                                            <td class="text-center avg-col">
+                                                @if($data['average'] !== null)
+                                                    <span class="fw-bold {{ $data['average'] >= 10 ? 'text-success' : 'text-danger' }}">
+                                                        {{ number_format($data['average'], 2, ',', ' ') }}/20
                                                     </span>
-                                                @endforeach
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
                                             </td>
-                                            <td>
-                                                <span class="fw-bold {{ $data['average'] >= 10 ? 'text-success' : 'text-danger' }}">
-                                                    {{ $data['average'] }}/20
-                                                </span>
-                                            </td>
-                                            <td>
-                                                @if($data['average'] >= 16)
+                                            <td class="text-center">
+                                                @if($data['average'] === null)
+                                                    <span class="text-muted">—</span>
+                                                @elseif($data['average'] >= 16)
                                                     <span class="badge bg-success">Excellent</span>
                                                 @elseif($data['average'] >= 14)
                                                     <span class="badge" style="background-color: #fd7e14;">Très Bien</span>
@@ -157,10 +242,10 @@
                                 </tbody>
                                 <tfoot class="table-primary">
                                     <tr>
-                                        <th colspan="3">Moyenne Générale Pondérée</th>
-                                        <th colspan="2">
+                                        <th colspan="{{ 2 + count($evaluationColumns) }}">Moyenne Générale Pondérée</th>
+                                        <th colspan="2" class="text-center">
                                             <span class="fs-5 {{ $generalAverage >= 10 ? 'text-success' : 'text-danger' }}">
-                                                {{ $generalAverage }}/20
+                                                {{ number_format($generalAverage, 2, ',', ' ') }}/20
                                             </span>
                                             @if($generalAverage >= 16)
                                                 <span class="badge bg-success ms-2">Mention Très Bien</span>
@@ -275,3 +360,187 @@
     </div>
 </div>
 @endsection
+
+@if(!empty($hasEvolutionData) && $hasEvolutionData)
+@push('styles')
+<style>
+    .student-evolution-chart-wrapper {
+        position: relative;
+        height: 320px;
+        width: 100%;
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dataEl = document.getElementById('student-evolution-data');
+        const canvas = document.getElementById('studentEvolutionChart');
+        const subjectSelect = document.getElementById('student-evolution-subject');
+        if (!dataEl || !canvas || !subjectSelect) return;
+
+        const evolutionData = JSON.parse(dataEl.textContent);
+        const labels = evolutionData.labels || [];
+        const palette = ['#0d6efd', '#198754', '#fd7e14', '#dc3545', '#6f42c1', '#20c997', '#e83e8c', '#6610f2', '#17a2b8', '#ffc107', '#28a745'];
+        let chart = null;
+
+        function formatGrade(grade) {
+            if (grade === null || grade === undefined) return 'Non saisi';
+            return Number(grade).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/20';
+        }
+
+        function pointColor(grade) {
+            if (grade === null) return '#adb5bd';
+            if (grade >= 14) return '#198754';
+            if (grade >= 10) return '#f59e0b';
+            return '#dc3545';
+        }
+
+        function buildDatasets(mode) {
+            const subjects = evolutionData.subjects || [];
+
+            if (mode === 'all') {
+                return subjects.map(function (subject, index) {
+                    const color = palette[index % palette.length];
+                    const values = (subject.evaluations || []).map(function (e) { return e.grade; });
+
+                    return {
+                        label: subject.name,
+                        data: values,
+                        borderColor: color,
+                        backgroundColor: color,
+                        pointBackgroundColor: values.map(pointColor),
+                        pointBorderColor: values.map(pointColor),
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        borderWidth: 2,
+                        fill: false,
+                        spanGaps: false,
+                        tension: 0,
+                    };
+                });
+            }
+
+            const index = parseInt(mode, 10);
+            const subject = subjects[index];
+            if (!subject) return [];
+
+            const values = (subject.evaluations || []).map(function (e) { return e.grade; });
+
+            return [{
+                label: subject.name,
+                data: values,
+                borderColor: '#0d6efd',
+                backgroundColor: '#0d6efd',
+                pointBackgroundColor: values.map(pointColor),
+                pointBorderColor: values.map(pointColor),
+                pointRadius: 7,
+                pointHoverRadius: 9,
+                borderWidth: 2,
+                fill: false,
+                spanGaps: false,
+                tension: 0,
+            }];
+        }
+
+        function renderChart(mode) {
+            const datasets = buildDatasets(mode).filter(function (ds) {
+                return ds.data.some(function (v) { return v !== null; });
+            });
+
+            if (datasets.length === 0) {
+                if (chart) { chart.destroy(); chart = null; }
+                return;
+            }
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(canvas, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: mode === 'all' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    return ctx.dataset.label + ' : ' + formatGrade(ctx.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 20,
+                            ticks: { stepSize: 2 },
+                            title: { display: true, text: 'Note / 20' },
+                            grid: { color: '#e9ecef' }
+                        },
+                        x: {
+                            ticks: { font: { size: 11 } },
+                            grid: { display: false }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'passLine',
+                    afterDraw: function (c) {
+                        const yScale = c.scales.y;
+                        const ctx = c.ctx;
+                        const y = yScale.getPixelForValue(10);
+                        ctx.save();
+                        ctx.strokeStyle = '#6c757d';
+                        ctx.setLineDash([6, 4]);
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(c.chartArea.left, y);
+                        ctx.lineTo(c.chartArea.right, y);
+                        ctx.stroke();
+                        ctx.fillStyle = '#6c757d';
+                        ctx.font = '10px sans-serif';
+                        ctx.fillText('10', c.chartArea.left - 18, y + 3);
+                        ctx.restore();
+                    }
+                }, {
+                    id: 'gradeLabels',
+                    afterDatasetsDraw: function (c) {
+                        if (mode === 'all') return;
+
+                        const ctx = c.ctx;
+                        c.data.datasets.forEach(function (dataset, datasetIndex) {
+                            const meta = c.getDatasetMeta(datasetIndex);
+                            meta.data.forEach(function (point, index) {
+                                const value = dataset.data[index];
+                                if (value === null || value === undefined) return;
+
+                                ctx.save();
+                                ctx.fillStyle = '#212529';
+                                ctx.font = 'bold 11px sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(
+                                    Number(value).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                                    point.x,
+                                    point.y - 12
+                                );
+                                ctx.restore();
+                            });
+                        });
+                    }
+                }]
+            });
+        }
+
+        subjectSelect.addEventListener('change', function () {
+            renderChart(this.value);
+        });
+
+        renderChart(subjectSelect.value);
+    });
+</script>
+@endpush
+@endif

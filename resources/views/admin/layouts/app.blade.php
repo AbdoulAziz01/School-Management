@@ -466,12 +466,27 @@
     <div class="wrapper d-flex">
         <!-- Sidebar -->
         @include('admin.components.sidebar')
+        <script>
+            (function () {
+                var saved = sessionStorage.getItem('adminSidebarScrollTop');
+                var sidebar = document.getElementById('sidebar');
+                if (!sidebar || saved === null) return;
+                sidebar.scrollTop = parseInt(saved, 10) || 0;
+            })();
+        </script>
 
         <!-- Main content -->
         <main class="main-content">
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
+            @if(session('info'))
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-2"></i> {{ session('info') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
@@ -520,6 +535,33 @@
                 }
             });
         });
+
+        // Conserver la position de scroll du sidebar entre les pages
+        (function () {
+            var storageKey = 'adminSidebarScrollTop';
+            var sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+
+            function saveScroll() {
+                sessionStorage.setItem(storageKey, String(sidebar.scrollTop));
+            }
+
+            sidebar.addEventListener('scroll', saveScroll, { passive: true });
+
+            sidebar.querySelectorAll('.nav-link[href]').forEach(function (link) {
+                link.addEventListener('click', saveScroll);
+            });
+
+            window.addEventListener('beforeunload', saveScroll);
+
+            if (sessionStorage.getItem(storageKey) === null) {
+                var activeLink = sidebar.querySelector('.nav-link.active');
+                if (activeLink) {
+                    activeLink.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                    saveScroll();
+                }
+            }
+        })();
     </script>
     
     @include('partials.botpress-webchat')

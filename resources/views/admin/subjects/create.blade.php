@@ -33,9 +33,10 @@
                             
                             <div class="col-md-4 mb-3">
                                 <label for="code" class="form-label">Code <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('code') is-invalid @enderror" id="code" name="code" value="{{ old('code') }}" placeholder="Ex: MATH, FR, ENG" required>
+                                <input type="text" class="form-control @error('code') is-invalid @enderror" id="code" name="code" value="{{ old('code') }}" placeholder="Ex: MATH, FR, ENG" maxlength="20" required style="text-transform: uppercase;">
+                                <div class="form-text">Code unique dans votre établissement (2 à 20 caractères).</div>
                                 @error('code')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>

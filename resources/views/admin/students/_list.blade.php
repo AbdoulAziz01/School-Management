@@ -17,13 +17,32 @@
                     <i class="fas fa-{{ !empty($search) ? 'search' : 'info-circle' }} me-2 fs-4"></i>
                     <span>
                         @if(!empty($search))
-                            Aucun élève trouvé pour « {{ $search }} ». Vérifiez l'orthographe ou essayez une partie du nom.
+                            Aucun élève trouvé pour « {{ $search }} ». Vérifiez l'orthographe ou choisissez une suggestion ci-dessous.
                         @else
                             Aucun élève n'a été enregistré pour le moment.
                         @endif
                     </span>
                 </div>
             </div>
+
+            @if(!empty($search) && isset($searchSuggestions) && $searchSuggestions->isNotEmpty())
+                <div class="mt-3">
+                    <p class="mb-2 fw-semibold text-muted small">
+                        <i class="fas fa-lightbulb me-1 text-warning"></i> Peut-être cherchiez-vous :
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach($searchSuggestions as $suggestion)
+                            <a href="{{ route('admin.students.index', ['search' => $suggestion->name]) }}"
+                               class="btn btn-sm btn-outline-secondary student-suggestion-chip">
+                                {{ $suggestion->name }}
+                                @if($suggestion->class)
+                                    <span class="text-muted">· {{ $suggestion->class->name }}</span>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         @else
             <div class="table-responsive">
                 <table class="table mb-0 align-middle table-hover">

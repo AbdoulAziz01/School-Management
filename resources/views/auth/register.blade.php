@@ -84,13 +84,13 @@
 
                         <!-- Adresse email -->
                         <div class="mb-3">
-                            <label for="email" class="form-label">Adresse email *</label>
+                            <label for="email" class="form-label">Adresse email <span id="email-required-mark" class="text-danger">*</span></label>
                             <input type="email" 
                                    class="form-control form-control-lg @error('email') is-invalid @enderror" 
                                    id="email" 
                                    name="email" 
-                                   value="{{ old('email') }}" 
-                                   required>
+                                   value="{{ old('email') }}">
+                            <small id="email-hint-eleve" class="text-muted" style="display: none;">Optionnel pour les élèves — connexion avec l'identifiant fourni par l'école.</small>
                             @error('email')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -214,22 +214,40 @@
         const classField = document.getElementById('class-field');
         const subjectsField = document.getElementById('subjects-field');
         const classSelect = document.getElementById('desired_class');
+        const emailInput = document.getElementById('email');
+        const emailMark = document.getElementById('email-required-mark');
+        const emailHint = document.getElementById('email-hint-eleve');
 
-        roleSelect.addEventListener('change', function() {
-            if (this.value === 'eleve') {
+        function applyRole(role) {
+            if (role === 'eleve') {
                 classField.style.display = 'block';
                 classSelect.required = true;
                 subjectsField.style.display = 'none';
-            } else if (this.value === 'teacher') {
+                emailInput.required = false;
+                emailMark.style.display = 'none';
+                emailHint.style.display = 'block';
+            } else if (role === 'teacher') {
                 classField.style.display = 'none';
                 classSelect.required = false;
                 subjectsField.style.display = 'block';
+                emailInput.required = true;
+                emailMark.style.display = 'inline';
+                emailHint.style.display = 'none';
             } else {
                 classField.style.display = 'none';
                 subjectsField.style.display = 'none';
                 classSelect.required = false;
+                emailInput.required = false;
+                emailMark.style.display = 'inline';
+                emailHint.style.display = 'none';
             }
+        }
+
+        roleSelect.addEventListener('change', function() {
+            applyRole(this.value);
         });
+
+        applyRole(roleSelect.value);
     }
 
     document.addEventListener('DOMContentLoaded', function() {

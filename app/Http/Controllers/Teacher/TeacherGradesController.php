@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Support\SenegalGradeSequence;
 use App\Models\User;
 use App\Models\Grade;
 use App\Models\Subject;
@@ -66,13 +67,31 @@ class TeacherGradesController extends Controller
             }
         }
         
+        $evaluationColumns = [];
+        foreach ([1, 2] as $semester) {
+            foreach (SenegalGradeSequence::ORDER as $type) {
+                $evaluationColumns[] = [
+                    'semester' => $semester,
+                    'type' => $type,
+                    'header' => 'S'.$semester.' · '.match ($type) {
+                        'devoir1' => 'D1',
+                        'devoir2' => 'D2',
+                        'composition' => 'Compo',
+                        default => $type,
+                    },
+                    'label' => 'Semestre '.$semester.' — '.SenegalGradeSequence::LABELS[$type],
+                ];
+            }
+        }
+
         return view('teacher.grades.index', compact(
             'classes',
             'subjects',
             'grades',
             'students',
             'selectedClassId',
-            'selectedSubjectId'
+            'selectedSubjectId',
+            'evaluationColumns'
         ));
     }
 
@@ -108,14 +127,22 @@ class TeacherGradesController extends Controller
                 ->get();
         }
 
-        $gradeTypes = [
-            'devoir'   => 'Devoir',
-            'controle' => 'Contrôle',
-            'examen'   => 'Examen',
-            'oral'     => 'Oral',
-            'tp'       => 'Travaux Pratiques',
-            'projet'   => 'Projet',
-        ];
+        $gradeTypes = SenegalGradeSequence::evaluationTypes();
+        $nextAllowed = null;
+        $evaluationProgress = null;
+
+        if ($selectedClassId && $selectedSubjectId) {
+            $nextAllowed = SenegalGradeSequence::nextAllowed(
+                (int) $selectedClassId,
+                (int) $selectedSubjectId,
+                $currentYear?->id
+            );
+            $evaluationProgress = SenegalGradeSequence::progress(
+                (int) $selectedClassId,
+                (int) $selectedSubjectId,
+                $currentYear?->id
+            );
+        }
 
         return view('teacher.grades.create', compact(
             'classes',
@@ -123,7 +150,9 @@ class TeacherGradesController extends Controller
             'students',
             'selectedClassId',
             'selectedSubjectId',
-            'gradeTypes'
+            'gradeTypes',
+            'nextAllowed',
+            'evaluationProgress'
         ));
     }
 
@@ -135,10 +164,10 @@ class TeacherGradesController extends Controller
         $request->validate([
             'class_id'         => 'required|exists:classes,id',
             'subject_id'       => 'required|exists:subjects,id',
-            'type'             => 'required|string',
+            'type'             => 'required|in:devoir1,devoir2,composition',
             'date'             => 'required|date',
             'coefficient'      => 'required|numeric|min:0.5|max:5',
-            'semester'         => 'nullable|integer|in:1,2',
+            'semester'         => 'required|integer|in:1,2',
             'grades'           => 'required|array',
             'grades.*.user_id' => 'required|integer|exists:users,id',
             'grades.*.grade'   => 'nullable|numeric|min:0|max:20',
@@ -182,7 +211,19 @@ class TeacherGradesController extends Controller
             return back()->with('error', 'Certains élèves ne font pas partie de cette classe.');
         }
 
-        $semester = $request->input('semester', $this->guessCurrentSemester());
+        $semester = (int) $request->semester;
+
+        $sequenceError = SenegalGradeSequence::validateEntry(
+            (int) $request->class_id,
+            (int) $request->subject_id,
+            $semester,
+            $request->type,
+            $currentYear?->id
+        );
+
+        if ($sequenceError !== null) {
+            return back()->withInput()->with('error', $sequenceError);
+        }
 
         DB::beginTransaction();
         try {
@@ -251,15 +292,8 @@ class TeacherGradesController extends Controller
             return back()->with('error', 'Vous n\'avez pas accès à cette note.');
         }
         
-        $gradeTypes = [
-            'devoir' => 'Devoir',
-            'controle' => 'Contrôle',
-            'examen' => 'Examen',
-            'oral' => 'Oral',
-            'tp' => 'Travaux Pratiques',
-            'projet' => 'Projet'
-        ];
-        
+        $gradeTypes = SenegalGradeSequence::evaluationTypes();
+
         return view('teacher.grades.edit', compact('grade', 'gradeTypes'));
     }
 
@@ -270,14 +304,13 @@ class TeacherGradesController extends Controller
     {
         $request->validate([
             'grade' => 'required|numeric|min:0|max:20',
-            'type' => 'required|string',
             'date' => 'required|date',
             'coefficient' => 'required|numeric|min:0.5|max:5',
             'comments' => 'nullable|string|max:500',
-            'appreciation' => 'nullable|string|max:500'
+            'appreciation' => 'nullable|string|max:500',
         ]);
-        
-        $grade = Grade::findOrFail($id);
+
+        $grade = Grade::with('user')->findOrFail($id);
         
         // Vérifier l'accès
         $teacher = Auth::user();
@@ -292,7 +325,6 @@ class TeacherGradesController extends Controller
         
         $grade->update([
             'grade' => $request->grade,
-            'type' => $request->type,
             'date' => $request->date,
             'coefficient' => $request->coefficient,
             'comments' => $request->comments,
@@ -310,19 +342,23 @@ class TeacherGradesController extends Controller
      */
     public function destroy($id)
     {
-        $grade = Grade::findOrFail($id);
-        
-        // Vérifier l'accès
+        $grade = Grade::with('user')->findOrFail($id);
+
         $teacher = Auth::user();
         $hasAccess = TeacherAssignment::where('teacher_id', $teacher->id)
             ->where('class_id', $grade->user->class_id)
             ->where('subject_id', $grade->subject_id)
             ->exists();
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             return back()->with('error', 'Vous n\'avez pas accès à cette note.');
         }
-        
+
+        $deleteError = SenegalGradeSequence::validateDeletion($grade);
+        if ($deleteError !== null) {
+            return back()->with('error', $deleteError);
+        }
+
         $classId = $grade->user->class_id;
         $subjectId = $grade->subject_id;
         

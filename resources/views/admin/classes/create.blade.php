@@ -2,7 +2,7 @@
 
 @php
     $class = new App\Models\SchoolClass();
-    $class->academic_year_id = $selectedAcademicYear->id;
+    $class->academic_year_id = $selectedAcademicYear?->id;
 @endphp
 
 @push('scripts')

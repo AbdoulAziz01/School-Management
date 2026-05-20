@@ -30,6 +30,30 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    @if(session('teacher_created'))
+                        @php $created = session('teacher_created'); @endphp
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <strong>Enseignant créé :</strong> {{ $created['name'] }}
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Email :</strong> {{ $created['email'] }}</li>
+                                @if($created['reset_sent'])
+                                    <li>Identifiant et mot de passe temporaire envoyés <strong>uniquement par email</strong> (vérifiez les spams). L'administrateur ne voit pas le mot de passe.</li>
+                                @else
+                                    <li class="text-warning">
+                                        Identifiants non envoyés par email.
+                                        @if(!empty($created['mail_error']))
+                                            {{ $created['mail_error'] }}
+                                        @else
+                                            Configurez Brevo dans <code>.env</code>, puis renvoyez l'email depuis la fiche enseignant.
+                                        @endif
+                                    </li>
+                                    <li><strong>Identifiant (secours) :</strong> <code>{{ $created['identifier'] }}</code> — à transmettre manuellement si l'email a échoué.</li>
+                                @endif
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
                     @if(session('success'))
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             {{ session('success') }}

@@ -95,6 +95,45 @@
         top: 0;
         z-index: 1;
     }
+
+    .student-search-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        max-height: 320px;
+        overflow-y: auto;
+        margin-top: 0.25rem;
+        border-radius: 0.375rem;
+    }
+
+    .student-search-dropdown .list-group-item {
+        cursor: pointer;
+        border-left: none;
+        border-right: none;
+    }
+
+    .student-search-dropdown .list-group-item:first-child {
+        border-top: none;
+    }
+
+    .student-search-dropdown .list-group-item:hover,
+    .student-search-dropdown .list-group-item.active {
+        background-color: #fff3e6;
+        color: #212529;
+    }
+
+    .student-suggestion-chip {
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+
+    .student-suggestion-chip:hover {
+        background-color: #fff3e6 !important;
+        border-color: #fd7e14 !important;
+        color: #212529 !important;
+    }
 </style>
 @endpush
 
@@ -110,7 +149,7 @@
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body py-3">
             <form action="{{ route('admin.students.index') }}" method="GET" class="row g-2 align-items-end" id="student-search-form">
-                <div class="col-md-8 col-lg-9">
+                <div class="col-md-8 col-lg-9 position-relative">
                     <label for="student-search-input" class="form-label mb-1 fw-semibold">
                         <i class="fas fa-search me-1 text-warning"></i> Rechercher un élève
                     </label>
@@ -122,7 +161,12 @@
                         placeholder="Nom, prénom, identifiant ou email…"
                         value="{{ $search ?? '' }}"
                         autocomplete="off"
+                        role="combobox"
+                        aria-expanded="false"
+                        aria-controls="student-search-suggestions"
+                        aria-autocomplete="list"
                     >
+                    <div id="student-search-suggestions" class="student-search-dropdown list-group shadow-sm d-none" role="listbox"></div>
                 </div>
                 <div class="col-md-4 col-lg-3 d-flex gap-2">
                     <button type="submit" class="btn btn-warning flex-grow-1 text-dark fw-semibold">
@@ -199,7 +243,11 @@
              role="tabpanel" 
              aria-labelledby="list-tab" 
              tabindex="0">
-            @include('admin.students._list', ['students' => $students, 'search' => $search ?? ''])
+            @include('admin.students._list', [
+                'students' => $students,
+                'search' => $search ?? '',
+                'searchSuggestions' => $searchSuggestions ?? collect(),
+            ])
         </div>
         
         <!-- Onglet Par classe -->
@@ -265,6 +313,109 @@
         
         // Focus sur le champ de recherche si une recherche est active
         const searchInput = document.getElementById('student-search-input');
+        const suggestionsBox = document.getElementById('student-search-suggestions');
+        const searchForm = document.getElementById('student-search-form');
+        let suggestTimer = null;
+        let activeSuggestionIndex = -1;
+
+        function hideSuggestions() {
+            if (!suggestionsBox) return;
+            suggestionsBox.classList.add('d-none');
+            suggestionsBox.innerHTML = '';
+            activeSuggestionIndex = -1;
+            if (searchInput) {
+                searchInput.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        function renderSuggestions(items) {
+            if (!suggestionsBox || !searchInput) return;
+
+            if (!items.length) {
+                hideSuggestions();
+                return;
+            }
+
+            suggestionsBox.innerHTML = items.map(function (item, index) {
+                const cls = item.class ? '<small class="text-muted ms-2">' + item.class + '</small>' : '';
+                const id = item.identifier ? '<small class="text-muted">' + item.identifier + '</small>' : '';
+                return '<button type="button" class="list-group-item list-group-item-action text-start" role="option" data-index="' + index + '" data-search-url="' + item.search_url + '" data-url="' + item.url + '">' +
+                    '<strong>' + item.name + '</strong>' + cls +
+                    (id ? '<br>' + id : '') +
+                    '</button>';
+            }).join('');
+
+            suggestionsBox.classList.remove('d-none');
+            searchInput.setAttribute('aria-expanded', 'true');
+
+            suggestionsBox.querySelectorAll('[role="option"]').forEach(function (btn) {
+                btn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    window.location.href = btn.dataset.searchUrl || btn.dataset.url;
+                });
+            });
+        }
+
+        function fetchSuggestions(query) {
+            if (query.length < 2) {
+                hideSuggestions();
+                return;
+            }
+
+            fetch('{{ route('admin.students.search-suggestions') }}?q=' + encodeURIComponent(query), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (res) { return res.json(); })
+                .then(renderSuggestions)
+                .catch(function () { hideSuggestions(); });
+        }
+
+        if (searchInput && suggestionsBox) {
+            searchInput.addEventListener('input', function () {
+                clearTimeout(suggestTimer);
+                const query = this.value.trim();
+                suggestTimer = setTimeout(function () { fetchSuggestions(query); }, 250);
+            });
+
+            searchInput.addEventListener('keydown', function (e) {
+                const options = suggestionsBox.querySelectorAll('[role="option"]');
+                if (!options.length || suggestionsBox.classList.contains('d-none')) {
+                    return;
+                }
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, options.length - 1);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+                } else if (e.key === 'Escape') {
+                    hideSuggestions();
+                    return;
+                } else if (e.key === 'Enter' && activeSuggestionIndex >= 0) {
+                    e.preventDefault();
+                    options[activeSuggestionIndex].dispatchEvent(new MouseEvent('mousedown'));
+                    return;
+                } else {
+                    return;
+                }
+
+                options.forEach(function (opt, i) {
+                    opt.classList.toggle('active', i === activeSuggestionIndex);
+                });
+            });
+
+            searchInput.addEventListener('blur', function () {
+                setTimeout(hideSuggestions, 150);
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!searchForm.contains(e.target)) {
+                    hideSuggestions();
+                }
+            });
+        }
+
         if (searchInput && searchInput.value.trim() !== '') {
             searchInput.focus();
             searchInput.select();

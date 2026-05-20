@@ -7,6 +7,9 @@ use App\Models\AcademicYear;
 use App\Models\Level;
 use App\Models\SchoolClass;
 use App\Models\User;
+use App\Support\StudentSearch;
+use App\Support\StudentGradeEvolution;
+use App\Support\SenegalGradeSequence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,20 +31,16 @@ class StudentController extends Controller
         try {
             $search = trim((string) $request->input('search', ''));
 
-            // Récupérer TOUS les étudiants (tous statuts)
-            $studentsQuery = User::with(['class', 'class.academicYear', 'class.level'])
-                ->whereIn('role', ['student', 'eleve']);
+            $studentsQuery = StudentSearch::baseQuery()
+                ->with(['class', 'class.academicYear', 'class.level']);
 
-            if ($search !== '') {
-                $term = '%' . addcslashes($search, '%_\\') . '%';
-                $studentsQuery->where(function ($query) use ($term) {
-                    $query->where('name', 'like', $term)
-                        ->orWhere('identifier', 'like', $term)
-                        ->orWhere('email', 'like', $term);
-                });
-            }
+            StudentSearch::apply($studentsQuery, $search);
 
             $students = $studentsQuery->orderBy('name')->paginate(20)->withQueryString();
+
+            $searchSuggestions = $search !== '' && $students->total() === 0
+                ? StudentSearch::suggestions($search, 8)
+                : collect();
                 
             // Récupérer les étudiants non affectés pour l'onglet d'affectation (tous statuts)
             $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
@@ -99,6 +98,7 @@ class StudentController extends Controller
                 'studentsByClass' => $studentsByClass,
                 'active_tab' => $activeTab,
                 'search' => $search,
+                'searchSuggestions' => $searchSuggestions,
             ]);
 
         } catch (\Exception $e) {
@@ -109,6 +109,29 @@ class StudentController extends Controller
             }
             return redirect()->back()->with('error', 'Une erreur est survenue.');
         }
+    }
+
+    /**
+     * Suggestions de recherche (autocomplétion).
+     */
+    public function searchSuggestions(Request $request)
+    {
+        $q = trim((string) $request->input('q', ''));
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $suggestions = StudentSearch::suggestions($q, 8)->map(fn (User $student) => [
+            'id'         => $student->id,
+            'name'       => $student->name,
+            'identifier' => $student->identifier,
+            'class'      => $student->class?->name,
+            'url'        => route('admin.students.show', $student),
+            'search_url' => route('admin.students.index', ['search' => $student->name]),
+        ]);
+
+        return response()->json($suggestions);
     }
 
     /**
@@ -291,7 +314,7 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')],
             'date_of_birth' => 'required|date|before:today',
             'class_id' => 'nullable|exists:classes,id',
             'status' => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
@@ -310,7 +333,7 @@ class StudentController extends Controller
 
             $student = User::create([
                 'name' => $validated['name'],
-                'email' => $validated['email'],
+                'email' => $validated['email'] ?? null,
                 'identifier' => $identifier,
                 'password' => bcrypt('password'), // Mot de passe par défaut
                 'role' => 'eleve',
@@ -362,11 +385,11 @@ class StudentController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
-                'required',
+                'nullable',
                 'string',
                 'email',
                 'max:255',
-                Rule::unique('users')->ignore($student->id)
+                Rule::unique('users')->ignore($student->id),
             ],
             'date_of_birth' => 'required|date|before:today',
             'class_id' => 'nullable|exists:classes,id',
@@ -378,7 +401,7 @@ class StudentController extends Controller
 
             $student->update([
                 'name' => $validated['name'],
-                'email' => $validated['email'],
+                'email' => $validated['email'] ?? null,
                 'status' => $validated['status'],
                 'date_of_birth' => $validated['date_of_birth'],
                 'class_id' => $validated['class_id'] ?? null,
@@ -559,21 +582,54 @@ public function pending()
             'grades.subject'
         ]);
 
-        // Récupérer les notes groupées par matière
-        $gradesBySubject = $student->grades->groupBy('subject.name')->map(function ($subjectGrades) {
-            $avg = $subjectGrades->avg('grade');
-            return [
-                'subject' => $subjectGrades->first()->subject->name ?? 'Inconnu',
-                'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,
-                'grades' => $subjectGrades->sortByDesc('date'),
-                'average' => round($avg, 2),
-                'count' => $subjectGrades->count()
-            ];
-        });
+        // Colonnes d'évaluation (S1·D1 → S2·Compo)
+        $evaluationColumns = [];
+        foreach ([1, 2] as $semester) {
+            foreach (SenegalGradeSequence::ORDER as $type) {
+                $evaluationColumns[] = [
+                    'key'    => 's'.$semester.'_'.$type,
+                    'header' => 'S'.$semester.' · '.match ($type) {
+                        'devoir1'     => 'D1',
+                        'devoir2'     => 'D2',
+                        'composition' => 'Compo',
+                        default       => $type,
+                    },
+                ];
+            }
+        }
 
-        // Calculer la moyenne générale pondérée
-        $totalCoef = $gradesBySubject->sum('coefficient');
-        $weightedSum = $gradesBySubject->sum(fn($g) => $g['average'] * $g['coefficient']);
+        // Notes groupées par matière avec une note par colonne d'évaluation
+        $gradesBySubject = $student->grades->groupBy('subject.name')->map(function ($subjectGrades) {
+            $official = $subjectGrades
+                ->whereIn('type', SenegalGradeSequence::ORDER)
+                ->whereIn('semester', [1, 2]);
+
+            $slots = [];
+            foreach ([1, 2] as $semester) {
+                foreach (SenegalGradeSequence::ORDER as $type) {
+                    $grade = $official->first(
+                        fn ($g) => (int) $g->semester === $semester && $g->type === $type
+                    );
+                    $slots['s'.$semester.'_'.$type] = $grade !== null ? (float) $grade->grade : null;
+                }
+            }
+
+            $average = $official->isNotEmpty()
+                ? round((float) $official->avg('grade'), 2)
+                : null;
+
+            return [
+                'subject'     => $subjectGrades->first()->subject->name ?? 'Inconnu',
+                'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,
+                'slots'       => $slots,
+                'average'     => $average,
+            ];
+        })->sortKeys();
+
+        // Moyenne générale pondérée (sur D1, D2, Compo uniquement)
+        $gradedSubjects = $gradesBySubject->filter(fn ($g) => $g['average'] !== null);
+        $totalCoef = $gradedSubjects->sum('coefficient');
+        $weightedSum = $gradedSubjects->sum(fn ($g) => $g['average'] * $g['coefficient']);
         $generalAverage = $totalCoef > 0 ? round($weightedSum / $totalCoef, 2) : 0;
 
         // Récupérer les absences
@@ -597,13 +653,18 @@ public function pending()
             ? round(($attendanceStats['present'] / $attendanceStats['total']) * 100, 1) 
             : 100;
 
+        $academicYearId = $student->class?->academic_year_id;
+        $gradeEvolutionJson = StudentGradeEvolution::chartData($student, $academicYearId);
+
         return view('admin.students.show', [
             'student' => $student,
             'schoolClass' => $student->class,
             'gradesBySubject' => $gradesBySubject,
             'generalAverage' => $generalAverage,
             'attendances' => $attendances,
-            'attendanceStats' => $attendanceStats
+            'attendanceStats' => $attendanceStats,
+            'gradeEvolutionJson' => $gradeEvolutionJson,
+            'evaluationColumns'  => $evaluationColumns,
         ]);
     }
 }

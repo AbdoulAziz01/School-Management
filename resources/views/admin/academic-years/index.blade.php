@@ -37,7 +37,7 @@
                         <tr>
                             <td>{{ $year->name }}</td>
                             <td>
-                                {{ $year->start_date->format('d/m/Y') }} - {{ $year->end_date->format('d/m/Y') }}
+                                {{ $year->periodLabel() }}
                             </td>
                             <td>
                                 @if($year->is_current)

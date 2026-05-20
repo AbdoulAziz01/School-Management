@@ -7,6 +7,8 @@ use App\Models\SchoolClass;
 use App\Models\AcademicYear;
 use App\Models\Level;
 use App\Models\User;
+use App\Support\SchoolSubjectProvisioner;
+use App\Support\TenantSchool;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,14 +35,25 @@ class ClassController extends Controller
      */
     public function create()
     {
+        SchoolSubjectProvisioner::ensureForSchool(TenantSchool::id() ?? auth()->user()?->school_id);
+
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
-        $levels = Level::orderBy('name')->get();
-        
-        // Si un academic_year_id est passé en paramètre
-        $selectedAcademicYear = request('academic_year_id') 
+        $levels = Level::orderBy('order')->orderBy('name')->get();
+
+        if ($academicYears->isEmpty()) {
+            return redirect()
+                ->route('admin.academic-years.index')
+                ->with('error', 'Créez d\'abord une année scolaire avant d\'ajouter une classe.');
+        }
+
+        $selectedAcademicYear = request('academic_year_id')
             ? AcademicYear::find(request('academic_year_id'))
             : AcademicYear::where('is_current', true)->first();
-            
+
+        if (! $selectedAcademicYear) {
+            $selectedAcademicYear = $academicYears->first();
+        }
+
         return view('admin.classes.create', compact('academicYears', 'levels', 'selectedAcademicYear'));
     }
 
@@ -53,7 +66,7 @@ class ClassController extends Controller
             'name' => 'required|string|max:50',
             'academic_year_id' => 'required|exists:academic_years,id',
             'level_id' => 'required|exists:levels,id',
-            'capacity' => 'nullable|integer|min:1|max:50',
+            'capacity' => 'nullable|integer|min:1|max:100',
             'room_number' => 'nullable|string|max:20',
         ]);
         
@@ -486,8 +499,10 @@ class ClassController extends Controller
      */
     public function edit(SchoolClass $class)
     {
+        SchoolSubjectProvisioner::ensureForSchool(TenantSchool::id() ?? auth()->user()?->school_id);
+
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
-        $levels = Level::orderBy('name')->get();
+        $levels = Level::orderBy('order')->orderBy('name')->get();
         
         return view('admin.classes.edit', compact('class', 'academicYears', 'levels'));
     }
@@ -501,7 +516,7 @@ class ClassController extends Controller
             'name' => 'required|string|max:50',
             'academic_year_id' => 'required|exists:academic_years,id',
             'level_id' => 'required|exists:levels,id',
-            'capacity' => 'nullable|integer|min:1|max:50',
+            'capacity' => 'nullable|integer|min:1|max:100',
             'room_number' => 'nullable|string|max:20',
         ]);
         

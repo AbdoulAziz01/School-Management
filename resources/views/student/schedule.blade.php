@@ -127,9 +127,9 @@
     <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
             <h1 class="mb-1 h3">Mon Emploi du Temps</h1>
-            @if(!isset($hasRealData) || !$hasRealData)
+            @if(!$hasRealData)
                 <span class="simulation-badge">
-                    <i class="fas fa-flask me-1"></i> Données de démonstration
+                    <i class="fas fa-info-circle me-1"></i> Aucun emploi du temps enregistré pour votre classe
                 </span>
             @endif
         </div>
@@ -209,31 +209,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $timeSlots = [
-                                ['start' => '08:00', 'end' => '09:00'],
-                                ['start' => '09:00', 'end' => '10:00'],
-                                ['start' => '10:15', 'end' => '11:15'],
-                                ['start' => '11:15', 'end' => '12:15'],
-                                ['start' => '14:00', 'end' => '15:00'],
-                                ['start' => '15:00', 'end' => '16:00'],
-                            ];
-                        @endphp
-
                         @foreach($timeSlots as $timeSlot)
                             <tr>
                                 <td class="time-column">
                                     {{ $timeSlot['start'] }}<br>
                                     <small class="text-muted">{{ $timeSlot['end'] }}</small>
                                 </td>
-                                
+
                                 @foreach($days as $dayNumber => $dayName)
                                     @php
-                                        $slot = $schedule->get($dayNumber, collect())->first(function($item) use ($timeSlot) {
-                                            return $item->start_time == $timeSlot['start'];
+                                        $slot = $schedule->get($dayNumber, collect())->first(function ($item) use ($timeSlot) {
+                                            return $item->start_time === $timeSlot['start'];
                                         });
                                     @endphp
-                                    
+
                                     <td>
                                         @if($slot)
                                             <div class="schedule-cell" style="background-color: {{ $slot->subject->color ?? '#f59e0b' }}20; border-left: 3px solid {{ $slot->subject->color ?? '#f59e0b' }};">
@@ -311,7 +300,7 @@
         <div class="col-md-4">
             <div class="card bg-success text-white">
                 <div class="card-body text-center">
-                    <h3 class="mb-0">{{ $subjects->count() }}</h3>
+                    <h3 class="mb-0">{{ $subjectCount ?? 0 }}</h3>
                     <small>Matières différentes</small>
                 </div>
             </div>

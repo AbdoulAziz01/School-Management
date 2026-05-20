@@ -70,8 +70,8 @@
                 <thead class="table-light">
                     <tr>
                         <th style="width: 120px;">Horaire</th>
-                        @foreach($days as $day)
-                            <th class="text-center">{{ $day }}</th>
+                        @foreach($days as $dayName)
+                            <th class="text-center">{{ $dayName }}</th>
                         @endforeach
                     </tr>
                 </thead>
@@ -79,12 +79,12 @@
                     @foreach($timeSlots as $slot)
                         <tr>
                             <td class="text-center align-middle fw-bold bg-light">
-                                <small>{{ $slot }}</small>
+                                <small>{{ $slot['label'] }}</small>
                             </td>
-                            @foreach($days as $day)
+                            @foreach($days as $dayName)
                                 <td class="p-2 text-center align-middle" style="min-width: 140px;">
-                                    @if(isset($scheduleGrid[$day][$slot]) && $scheduleGrid[$day][$slot])
-                                        @php $course = $scheduleGrid[$day][$slot]; @endphp
+                                    @if(isset($scheduleGrid[$dayName][$slot['label']]) && $scheduleGrid[$dayName][$slot['label']])
+                                        @php $course = $scheduleGrid[$dayName][$slot['label']]; @endphp
                                         <div class="p-2 rounded bg-primary bg-opacity-10">
                                             <strong class="text-primary d-block">{{ $course['subject']->name ?? 'N/A' }}</strong>
                                             <small class="text-muted d-block">{{ $course['class']->name ?? 'N/A' }}</small>
@@ -133,12 +133,14 @@
                                     {{ $assignment->subject->name ?? 'N/A' }}
                                 </td>
                                 <td class="text-center">
-                                    <a href="{{ route('teacher.classes.show', $assignment->class_id) }}" class="btn btn-sm btn-outline-success">
+                                    @if($assignment->schoolClass)
+                                    <a href="{{ route('teacher.classes.show', $assignment->schoolClass->id) }}" class="btn btn-sm btn-outline-success">
                                         <i class="fas fa-eye me-1"></i>Voir la classe
                                     </a>
-                                    <a href="{{ route('teacher.grades.index', ['class_id' => $assignment->class_id, 'subject_id' => $assignment->subject_id]) }}" class="btn btn-sm btn-outline-primary">
+                                    <a href="{{ route('teacher.grades.index', ['class_id' => $assignment->schoolClass->id, 'subject_id' => $assignment->subject_id]) }}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-star me-1"></i>Notes
                                     </a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

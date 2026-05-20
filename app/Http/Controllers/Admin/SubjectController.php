@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Subject;
 use App\Models\Level;
+use App\Support\SchoolSubjectProvisioner;
+use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\Rule;
 
 class SubjectController extends Controller
 {
@@ -17,6 +20,8 @@ class SubjectController extends Controller
      */
     public function index(Request $request)
     {
+        SchoolSubjectProvisioner::ensureForSchool(TenantSchool::id() ?? auth()->user()?->school_id);
+
         $query = Subject::with('teachers');
         
         // Recherche par nom ou code
@@ -43,6 +48,8 @@ class SubjectController extends Controller
      */
     public function create()
     {
+        SchoolSubjectProvisioner::ensureForSchool(TenantSchool::id() ?? auth()->user()?->school_id);
+
         $levels = Level::orderBy('name')->get();
         return view('admin.subjects.create', compact('levels'));
     }
@@ -52,9 +59,16 @@ class SubjectController extends Controller
      */
     public function store(Request $request)
     {
+        $schoolId = auth()->user()->school_id;
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:20', 'unique:subjects'],
+            'code' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('subjects', 'code')->where(fn ($q) => $q->where('school_id', $schoolId)),
+            ],
             'coefficient' => ['required', 'numeric', 'min:0.5', 'max:10'],
             'description' => ['nullable', 'string'],
             'hours_per_week' => ['nullable', 'numeric', 'min:0'],
@@ -62,7 +76,7 @@ class SubjectController extends Controller
             'is_active' => ['boolean'],
             'levels' => ['nullable', 'array'],
             'levels.*' => ['exists:levels,id'],
-        ]);
+        ], $this->validationMessages());
 
         try {
             $subject = Subject::create([
@@ -115,9 +129,18 @@ class SubjectController extends Controller
      */
     public function update(Request $request, Subject $subject)
     {
+        $schoolId = auth()->user()->school_id;
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:20', 'unique:subjects,code,' . $subject->id],
+            'code' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('subjects', 'code')
+                    ->where(fn ($q) => $q->where('school_id', $schoolId))
+                    ->ignore($subject->id),
+            ],
             'coefficient' => ['required', 'numeric', 'min:0.5', 'max:10'],
             'description' => ['nullable', 'string'],
             'hours_per_week' => ['nullable', 'numeric', 'min:0'],
@@ -125,7 +148,7 @@ class SubjectController extends Controller
             'is_active' => ['boolean'],
             'levels' => ['nullable', 'array'],
             'levels.*' => ['exists:levels,id'],
-        ]);
+        ], $this->validationMessages());
 
         try {
             $subject->update([
@@ -172,5 +195,14 @@ class SubjectController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Une erreur est survenue lors de la suppression de la matière.');
         }
+    }
+
+    private function validationMessages(): array
+    {
+        return [
+            'code.unique' => 'Ce code est déjà utilisé pour une matière de votre établissement (ex. Français avec le code FR). Modifiez la matière existante ou choisissez un autre code.',
+            'code.required' => 'Le code de la matière est obligatoire.',
+            'name.required' => 'Le nom de la matière est obligatoire.',
+        ];
     }
 }

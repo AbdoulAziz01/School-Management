@@ -37,8 +37,7 @@
                     <tr>
                         <th>Période :</th>
                         <td>
-                            Du {{ $academicYear->start_date->format('d/m/Y') }} 
-                            au {{ $academicYear->end_date->format('d/m/Y') }}
+                            {{ $academicYear->periodLabel() }}
                         </td>
                     </tr>
                     <tr>

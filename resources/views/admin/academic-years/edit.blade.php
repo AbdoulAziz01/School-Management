@@ -39,7 +39,7 @@
             
             <div class="mb-3 row">
                 <div class="col-md-6">
-                    <label for="start_date" class="form-label">Date de début *</label>
+                    <label for="start_date" class="form-label">Date de début (rentrée) *</label>
                     <input type="date" class="form-control @error('start_date') is-invalid @enderror" 
                            id="start_date" name="start_date" 
                            value="{{ old('start_date', $academicYear->start_date->format('Y-m-d')) }}" required>
@@ -49,10 +49,11 @@
                 </div>
                 
                 <div class="col-md-6">
-                    <label for="end_date" class="form-label">Date de fin *</label>
+                    <label for="end_date" class="form-label">Date de fin (clôture) <span class="text-muted fw-normal">— optionnelle</span></label>
                     <input type="date" class="form-control @error('end_date') is-invalid @enderror" 
                            id="end_date" name="end_date" 
-                           value="{{ old('end_date', $academicYear->end_date->format('Y-m-d')) }}" required>
+                           value="{{ old('end_date', $academicYear->end_date?->format('Y-m-d')) }}">
+                    <div class="form-text">Laissez vide tant que la clôture n'est pas fixée officiellement.</div>
                     @error('end_date')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -75,10 +76,18 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Mettre à jour la date de fin minimale lorsque la date de début change
-        document.getElementById('start_date').addEventListener('change', function() {
-            document.getElementById('end_date').min = this.value;
+        const startInput = document.getElementById('start_date');
+        const endInput = document.getElementById('end_date');
+
+        startInput.addEventListener('change', function() {
+            if (this.value) {
+                endInput.min = this.value;
+            }
         });
+
+        if (startInput.value) {
+            endInput.min = startInput.value;
+        }
     });
 </script>
 @endpush

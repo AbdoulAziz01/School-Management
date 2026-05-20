@@ -411,6 +411,14 @@
                 <span>Classes</span>
             </a>
         </li>
+
+        <!-- Emplois du temps -->
+        <li class="nav-item">
+            <a href="{{ route('admin.schedules.index') }}" class="nav-link {{ request()->routeIs('admin.schedules.*') ? 'active' : '' }}">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Emplois du temps</span>
+            </a>
+        </li>
         
         <!-- Matières -->
         <li class="nav-item">
