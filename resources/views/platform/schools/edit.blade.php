@@ -14,7 +14,7 @@
     </p>
 </div>
 
-<form method="POST" action="{{ route('platform.schools.update', $school) }}" class="card border-0 shadow-sm">
+<form method="POST" action="{{ route('platform.schools.update', $school) }}" enctype="multipart/form-data" class="card border-0 shadow-sm">
     @csrf
     @method('PUT')
     <div class="card-header bg-white">
@@ -33,6 +33,19 @@
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
             <small class="text-muted">Remplace les libellés par défaut comme « Établissement principal ».</small>
+        </div>
+        <div class="col-12">
+            <label class="form-label">Logo de l'établissement</label>
+            @if($school->logo_data)
+                <div class="mb-2"><img src="{{ \App\Support\SchoolLogoStorage::dataUri($school) }}" alt="Logo" style="height:56px;" class="border rounded"></div>
+            @endif
+            <input type="file" name="logo" class="form-control" accept="image/*">
+            @if($school->logo_data)
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="remove_logo" value="1" id="remove_logo">
+                    <label class="form-check-label" for="remove_logo">Supprimer le logo</label>
+                </div>
+            @endif
         </div>
         <div class="col-md-6">
             <label class="form-label">Email de contact</label>

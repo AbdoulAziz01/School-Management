@@ -19,8 +19,12 @@ class User extends Authenticatable
 
     // Constantes pour les rôles (alignées avec l'enum DB après migration 2026_01_12)
     public const ROLE_ADMIN   = 'admin';
+    public const ROLE_SURVEILLANT = 'surveillant';
     public const ROLE_TEACHER = 'teacher';
     public const ROLE_STUDENT = 'eleve';
+
+    /** Comptes avec accès au panneau /admin de l'établissement */
+    public const ROLE_SCHOOL_STAFF = [self::ROLE_ADMIN, self::ROLE_SURVEILLANT];
 
     // Aliases historiques tolérés dans les vérifications de rôle
     public const ROLE_TEACHER_ALIASES = ['teacher', 'professeur'];
@@ -175,6 +179,16 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function isSurveillant(): bool
+    {
+        return $this->role === self::ROLE_SURVEILLANT;
+    }
+
+    public function isSchoolStaff(): bool
+    {
+        return in_array($this->role, self::ROLE_SCHOOL_STAFF, true);
     }
 
     public function isTeacher(): bool

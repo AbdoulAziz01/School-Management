@@ -17,7 +17,7 @@ class EnsureSchoolAdmin
 
         $user = Auth::user();
 
-        if (! $user->isAdmin() || ! $user->school_id) {
+        if (! $user->isSchoolStaff() || ! $user->school_id) {
             if ($user->isSuperAdmin()) {
                 return redirect()->route('platform.dashboard');
             }

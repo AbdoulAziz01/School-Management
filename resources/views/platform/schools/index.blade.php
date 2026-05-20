@@ -18,7 +18,7 @@
                     <th>Nom</th>
                     <th>Code inscription</th>
                     <th>Élèves</th>
-                    <th>Admins</th>
+                    <th>Staff</th>
                     <th>Statut</th>
                     <th class="text-end">Actions</th>
                 </tr>
@@ -29,7 +29,7 @@
                         <td class="fw-semibold">{{ $school->name }}</td>
                         <td><code>{{ $school->code }}</code></td>
                         <td>{{ $school->students_count }}</td>
-                        <td>{{ $school->admins_count }}</td>
+                        <td>{{ $school->staff_count ?? $school->admins_count ?? 0 }}</td>
                         <td>
                             @if($school->is_active)
                                 <span class="badge bg-success">Actif</span>

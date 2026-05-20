@@ -5,7 +5,7 @@
 @section('content')
 <h1 class="h3 mb-4">Nouvel établissement</h1>
 
-<form method="POST" action="{{ route('platform.schools.store') }}" class="card border-0 shadow-sm">
+<form method="POST" action="{{ route('platform.schools.store') }}" enctype="multipart/form-data" class="card border-0 shadow-sm">
     @csrf
     <div class="card-body">
         <h5 class="mb-3">Informations de l'établissement</h5>
@@ -30,6 +30,10 @@
             <div class="col-md-12">
                 <label class="form-label">Adresse</label>
                 <textarea name="address" class="form-control" rows="2">{{ old('address') }}</textarea>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Logo (optionnel)</label>
+                <input type="file" name="logo" class="form-control" accept="image/png,image/jpeg,image/webp,image/svg+xml">
             </div>
             <div class="col-12">
                 <div class="form-check">

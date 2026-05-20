@@ -18,6 +18,8 @@ class School extends Model
         'address',
         'city',
         'logo_path',
+        'logo_data',
+        'logo_mime',
     ];
 
     protected $casts = [
@@ -57,6 +59,12 @@ class School extends Model
     public function admins(): HasMany
     {
         return $this->hasMany(User::class)->where('role', User::ROLE_ADMIN);
+    }
+
+    /** Administrateurs et surveillants de l'établissement */
+    public function staff(): HasMany
+    {
+        return $this->hasMany(User::class)->whereIn('role', User::ROLE_SCHOOL_STAFF);
     }
 
     public function classes(): HasMany

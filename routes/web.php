@@ -43,7 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         if (auth()->user()->role === 'super_admin') {
             return redirect()->route('platform.dashboard');
-        } elseif (auth()->user()->role === 'admin') {
+        } elseif (auth()->user()->role === 'admin' || auth()->user()->role === 'surveillant') {
             return redirect()->route('admin.dashboard');
         } elseif (auth()->user()->role === 'eleve') {
             return redirect()->route('student.dashboard');

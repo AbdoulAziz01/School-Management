@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\School;
+use App\Models\User;
+use App\Support\SchoolLogoStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,7 +16,14 @@ class SchoolSettingsController extends Controller
     {
         $school = $this->currentSchool();
 
-        return view('admin.school.settings', compact('school'));
+        $staffMembers = User::withoutGlobalScopes()
+            ->where('school_id', $school->id)
+            ->whereIn('role', User::ROLE_SCHOOL_STAFF)
+            ->orderBy('role')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'identifier', 'role', 'status', 'created_at']);
+
+        return view('admin.school.settings', compact('school', 'staffMembers'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -27,6 +36,8 @@ class SchoolSettingsController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:500'],
             'city' => ['nullable', 'string', 'max:100'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
+            'remove_logo' => ['sometimes', 'boolean'],
         ]);
 
         $school->update([
@@ -37,6 +48,12 @@ class SchoolSettingsController extends Controller
             'city' => $validated['city'] ?? null,
             'slug' => School::slugFromName($validated['name'], $school->id),
         ]);
+
+        if ($request->boolean('remove_logo')) {
+            SchoolLogoStorage::clear($school);
+        } elseif ($request->hasFile('logo')) {
+            SchoolLogoStorage::store($school, $request->file('logo'));
+        }
 
         return redirect()
             ->route('admin.school.settings.edit')

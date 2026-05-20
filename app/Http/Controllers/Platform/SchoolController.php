@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Platform;
 use App\Http\Controllers\Controller;
 use App\Models\School;
 use App\Models\User;
+use App\Support\SchoolLogoStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -17,7 +18,7 @@ class SchoolController extends Controller
         $schools = School::withCount([
             'users',
             'users as students_count' => fn ($q) => $q->whereIn('role', User::ROLE_STUDENT_ALIASES),
-            'users as admins_count' => fn ($q) => $q->where('role', User::ROLE_ADMIN),
+            'users as staff_count' => fn ($q) => $q->whereIn('role', User::ROLE_SCHOOL_STAFF),
         ])->latest()->paginate(15);
 
         return view('platform.schools.index', compact('schools'));
@@ -40,6 +41,7 @@ class SchoolController extends Controller
             'admin_name' => ['required', 'string', 'max:255'],
             'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'admin_password' => ['required', 'confirmed', Password::defaults()],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
         ]);
 
         $school = School::create([
@@ -53,7 +55,11 @@ class SchoolController extends Controller
             'is_active' => $request->boolean('is_active', true),
         ]);
 
-        $admin = $this->createSchoolAdmin($school, $validated);
+        if ($request->hasFile('logo')) {
+            SchoolLogoStorage::store($school, $request->file('logo'));
+        }
+
+        $admin = $this->createSchoolStaff($school, $validated, User::ROLE_ADMIN);
 
         return redirect()
             ->route('platform.schools.show', $school)
@@ -72,12 +78,14 @@ class SchoolController extends Controller
             'users as teachers_count' => fn ($q) => $q->whereIn('role', User::ROLE_TEACHER_ALIASES),
         ]);
 
-        $admins = User::withoutGlobalScopes()
+        $staffMembers = User::withoutGlobalScopes()
             ->where('school_id', $school->id)
-            ->where('role', User::ROLE_ADMIN)
+            ->whereIn('role', User::ROLE_SCHOOL_STAFF)
+            ->orderBy('role')
+            ->orderBy('name')
             ->get();
 
-        return view('platform.schools.show', compact('school', 'admins'));
+        return view('platform.schools.show', compact('school', 'staffMembers'));
     }
 
     public function edit(School $school): View
@@ -94,6 +102,8 @@ class SchoolController extends Controller
             'address' => ['nullable', 'string', 'max:500'],
             'city' => ['nullable', 'string', 'max:100'],
             'is_active' => ['sometimes', 'boolean'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
+            'remove_logo' => ['sometimes', 'boolean'],
         ]);
 
         $school->update([
@@ -105,6 +115,12 @@ class SchoolController extends Controller
             'city' => $validated['city'] ?? null,
             'is_active' => $request->boolean('is_active'),
         ]);
+
+        if ($request->boolean('remove_logo')) {
+            SchoolLogoStorage::clear($school);
+        } elseif ($request->hasFile('logo')) {
+            SchoolLogoStorage::store($school, $request->file('logo'));
+        }
 
         return redirect()
             ->route('platform.schools.show', $school)
@@ -135,16 +151,19 @@ class SchoolController extends Controller
             'admin_name' => ['required', 'string', 'max:255'],
             'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'admin_password' => ['required', 'confirmed', Password::defaults()],
+            'staff_role' => ['required', 'in:'.User::ROLE_ADMIN.','.User::ROLE_SURVEILLANT],
         ]);
 
-        $this->createSchoolAdmin($school, $validated);
+        $staff = $this->createSchoolStaff($school, $validated, $validated['staff_role']);
 
-        return back()->with('success', 'Administrateur d\'établissement créé.');
+        $label = $staff->role === User::ROLE_SURVEILLANT ? 'Surveillant' : 'Administrateur';
+
+        return back()->with('success', "{$label} créé — identifiant : {$staff->identifier}");
     }
 
     public function resetAdminPassword(Request $request, School $school, User $user): RedirectResponse
     {
-        if ($user->school_id !== $school->id || ! $user->isAdmin()) {
+        if ($user->school_id !== $school->id || ! $user->isSchoolStaff()) {
             abort(404);
         }
 
@@ -155,7 +174,7 @@ class SchoolController extends Controller
         $user->password = $validated['admin_password'];
         $user->save();
 
-        return back()->with('success', "Mot de passe réinitialisé pour {$user->email}.");
+        return back()->with('success', "Mot de passe réinitialisé pour {$user->identifier} ({$user->email}).");
     }
 
     public function destroy(School $school): RedirectResponse
@@ -171,9 +190,9 @@ class SchoolController extends Controller
             ->with('success', 'Établissement supprimé.');
     }
 
-    private function createSchoolAdmin(School $school, array $data): User
+    private function createSchoolStaff(School $school, array $data, string $role): User
     {
-        $identifier = $this->nextAdminIdentifier($school->id);
+        $identifier = $this->nextStaffIdentifier($school->id, $role);
 
         return User::withoutGlobalScopes()->create([
             'name' => $data['admin_name'],
@@ -181,28 +200,25 @@ class SchoolController extends Controller
             'password' => $data['admin_password'],
             'identifier' => $identifier,
             'user_id' => $identifier,
-            'role' => User::ROLE_ADMIN,
+            'role' => $role,
             'status' => User::STATUS_APPROVED,
             'school_id' => $school->id,
             'email_verified_at' => now(),
         ]);
     }
 
-    private function nextAdminIdentifier(int $schoolId): string
+    private function nextStaffIdentifier(int $schoolId, string $role): string
     {
-        $prefix = 'ADM'.$schoolId;
+        $prefix = ($role === User::ROLE_SURVEILLANT ? 'SUR' : 'ADM').$schoolId;
+
         $last = User::withoutGlobalScopes()
             ->where('school_id', $schoolId)
-            ->where('role', User::ROLE_ADMIN)
+            ->where('role', $role)
             ->where('identifier', 'like', $prefix.'%')
             ->orderByDesc('identifier')
             ->value('identifier');
 
-        if ($last) {
-            $num = (int) substr($last, strlen($prefix)) + 1;
-        } else {
-            $num = 1;
-        }
+        $num = $last ? ((int) substr($last, strlen($prefix)) + 1) : 1;
 
         return $prefix.str_pad((string) $num, 3, '0', STR_PAD_LEFT);
     }

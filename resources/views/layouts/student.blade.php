@@ -63,16 +63,21 @@
         }
         
         .sidebar-header {
-            padding: 25px 20px;
+            padding: 25px 16px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 12px;
+            text-align: center;
+            gap: 10px;
             border-bottom: 1px solid rgba(251, 191, 36, 0.2);
         }
         
         .sidebar-header .logo-icon-box {
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
+            min-width: 52px;
+            min-height: 52px;
+            flex-shrink: 0;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             border-radius: 12px;
             display: flex;
@@ -82,25 +87,54 @@
             color: #1c1917;
             box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
             animation: glow-pulse 2s ease-in-out infinite;
+            overflow: hidden;
+            padding: 0;
         }
-        
-        @keyframes glow-pulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
-            50% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.6); }
+
+        .sidebar-header .logo-icon-box.has-school-logo {
+            background: #ffffff;
+            padding: 4px;
+            animation: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+
+        .sidebar-header .logo-icon-box .school-logo-img {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            object-position: center;
+            display: block;
+        }
+
+        .sidebar-header .logo-text {
+            width: 100%;
         }
         
         .sidebar-header .logo-text h3 {
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1.05rem;
+            line-height: 1.35;
             font-weight: 700;
             color: #fbbf24;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
         }
         
         .sidebar-header .logo-text small {
             color: rgba(251, 191, 36, 0.6);
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
+            display: block;
+            margin-top: 4px;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.6); }
         }
         
         .sidebar-user {
@@ -537,11 +571,15 @@
         <!-- Sidebar -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="logo-icon-box">
-                    <i class="fas fa-graduation-cap"></i>
+                <div class="logo-icon-box {{ !empty($schoolLogoDataUri) ? 'has-school-logo' : '' }}">
+                    @if(!empty($schoolLogoDataUri))
+                        <img src="{{ $schoolLogoDataUri }}" alt="Logo" class="school-logo-img">
+                    @else
+                        <i class="fas fa-graduation-cap"></i>
+                    @endif
                 </div>
                 <div class="logo-text">
-                    <h3 class="text-truncate" title="{{ $schoolDisplayName ?? 'Mon établissement' }}">{{ $schoolDisplayName ?? 'Mon établissement' }}</h3>
+                    <h3>{{ $schoolDisplayName ?? 'Mon établissement' }}</h3>
                     <small>via EduManager · Élève</small>
                 </div>
             </div>

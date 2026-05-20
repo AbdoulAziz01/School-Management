@@ -100,7 +100,7 @@ class AuthenticatedSessionController extends Controller
 
         if ($role === User::ROLE_SUPER_ADMIN) {
             $route = 'platform.dashboard';
-        } elseif ($role === User::ROLE_ADMIN) {
+        } elseif ($role === User::ROLE_ADMIN || $role === User::ROLE_SURVEILLANT) {
             $route = 'admin.dashboard';
         } elseif (in_array($role, User::ROLE_TEACHER_ALIASES, true)) {
             $route = 'teacher.dashboard';
