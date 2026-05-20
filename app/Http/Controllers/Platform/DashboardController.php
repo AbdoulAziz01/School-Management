@@ -3,26 +3,29 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
-use App\Models\School;
-use App\Models\User;
+use App\Support\PlatformMetrics;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function index(): View
     {
-        $stats = [
-            'schools_total' => School::count(),
-            'schools_active' => School::where('is_active', true)->count(),
-            'users_total' => User::withoutGlobalScopes()->whereNotNull('school_id')->count(),
-            'students_total' => User::withoutGlobalScopes()
-                ->whereIn('role', User::ROLE_STUDENT_ALIASES)
-                ->whereNotNull('school_id')
-                ->count(),
-        ];
+        $stats = PlatformMetrics::globalStats();
 
-        $recentSchools = School::latest()->take(5)->get();
+        $recentSchools = PlatformMetrics::schoolWithCountsQuery()
+            ->latest()
+            ->take(5)
+            ->get();
 
-        return view('platform.dashboard', compact('stats', 'recentSchools'));
+        $currentYears = PlatformMetrics::currentAcademicYearsBySchool();
+
+        $watchlist = PlatformMetrics::watchlistSchools(8);
+
+        return view('platform.dashboard', compact(
+            'stats',
+            'recentSchools',
+            'currentYears',
+            'watchlist',
+        ));
     }
 }

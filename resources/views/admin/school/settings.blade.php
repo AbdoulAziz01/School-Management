@@ -8,7 +8,7 @@
         <div>
             <h1 class="h3 mb-1">Mon établissement</h1>
             <p class="text-muted mb-0">
-                Le nom ci-dessous est celui de <strong>votre école</strong>. <strong>EduManager</strong> reste le nom de la plateforme.
+                Le nom ci-dessous est celui de <strong>votre école</strong>. <strong>{{ $platformName }}</strong> reste le nom de la plateforme.
             </p>
         </div>
     </div>

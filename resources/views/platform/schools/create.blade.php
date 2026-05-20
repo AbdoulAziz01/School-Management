@@ -1,6 +1,6 @@
 @extends('platform.layouts.app')
 
-@section('title', 'Créer un établissement')
+@section('title', 'Créer un établissement — ' . $platformName)
 
 @section('content')
 <h1 class="h3 mb-4">Nouvel établissement</h1>

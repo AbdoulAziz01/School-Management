@@ -1,6 +1,6 @@
 @extends('platform.layouts.app')
 
-@section('title', $school->name)
+@section('title', $school->name . ' — ' . $platformName)
 
 @section('content')
 @php $schoolLogo = \App\Support\SchoolLogoStorage::dataUri($school); @endphp
@@ -15,7 +15,13 @@
         </div>
         <div>
             <h1 class="h3 mb-1">{{ $school->name }}</h1>
-            <p class="text-muted mb-0">ID BDD : <code>{{ $school->id }}</code> · Slug : <code>{{ $school->slug }}</code></p>
+            <p class="text-muted mb-0">
+                ID <code>{{ $school->id }}</code> · Slug <code>{{ $school->slug }}</code>
+                · Créé le {{ $school->created_at?->format('d/m/Y à H:i') }}
+                @if($school->updated_at)
+                    · Modifié {{ $school->updated_at->diffForHumans() }}
+                @endif
+            </p>
         </div>
     </div>
     <div class="d-flex flex-wrap gap-2">
@@ -29,6 +35,102 @@
                 {{ $school->is_active ? 'Désactiver' : 'Activer' }}
             </button>
         </form>
+    </div>
+</div>
+
+@if(!empty($healthAlerts))
+    <div class="mb-4">
+        @foreach($healthAlerts as $alert)
+            <div class="alert alert-{{ $alert['type'] }} py-2 mb-2">{{ $alert['message'] }}</div>
+        @endforeach
+    </div>
+@endif
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Coordonnées</h6></div>
+            <div class="card-body small">
+                <dl class="mb-0">
+                    <dt class="text-muted">Email</dt>
+                    <dd>{{ $school->email ?? '—' }}</dd>
+                    <dt class="text-muted">Téléphone</dt>
+                    <dd>{{ $school->phone ?? '—' }}</dd>
+                    <dt class="text-muted">Adresse</dt>
+                    <dd>{{ $school->address ?? '—' }}</dd>
+                    <dt class="text-muted">Ville</dt>
+                    <dd>{{ $school->city ?? '—' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Santé de l'établissement</h6></div>
+            <div class="card-body">
+                <div class="row g-3 text-center">
+                    <div class="col-4 col-md-2">
+                        <div class="h4 mb-0">{{ $school->students_count }}</div>
+                        <small class="text-muted">Élèves</small>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="h4 mb-0">{{ $school->teachers_count }}</div>
+                        <small class="text-muted">Profs</small>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="h4 mb-0">{{ $school->staff_count }}</div>
+                        <small class="text-muted">Staff</small>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="h4 mb-0">{{ $school->classes_count }}</div>
+                        <small class="text-muted">Classes</small>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="h4 mb-0">{{ $subjectsCount }}</div>
+                        <small class="text-muted">Matières</small>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="h4 mb-0 {{ $school->pending_count ? 'text-danger' : '' }}">{{ $school->pending_count }}</div>
+                        <small class="text-muted">En attente</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row small">
+                    <div class="col-md-6">
+                        <strong>Année scolaire courante :</strong>
+                        @if($currentAcademicYear)
+                            {{ $currentAcademicYear->name }}
+                            <span class="text-muted">({{ $currentAcademicYear->start_date?->format('d/m/Y') }} – {{ $currentAcademicYear->end_date?->format('d/m/Y') }})</span>
+                        @else
+                            <span class="text-warning">Non configurée</span>
+                        @endif
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Administrateur :</strong>
+                        @if($school->admins_count > 0)
+                            <span class="text-success">{{ $school->admins_count }} compte(s)</span>
+                            @if($school->surveillants_count > 0)
+                                · {{ $school->surveillants_count }} surveillant(s)
+                            @endif
+                        @else
+                            <span class="text-danger">Aucun — à créer ci-dessous</span>
+                        @endif
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <strong>Élèves sans classe :</strong>
+                        @if($school->unassigned_students_count > 0)
+                            <span class="text-warning">{{ $school->unassigned_students_count }}</span>
+                        @else
+                            <span class="text-muted">0</span>
+                        @endif
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <strong>Connexion admin établissement :</strong>
+                        <span class="text-muted">Page <code>/login</code> avec identifiant ADM…</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -69,15 +171,14 @@
     </div>
     <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="row">
-                    <div class="col-4"><div class="h4 mb-0">{{ $school->users_count }}</div><small>Total</small></div>
-                    <div class="col-4"><div class="h4 mb-0">{{ $school->students_count }}</div><small>Élèves</small></div>
-                    <div class="col-4"><div class="h4 mb-0">{{ $school->teachers_count }}</div><small>Profs</small></div>
-                </div>
-                <p class="mt-2 mb-0">
-                    @if($school->is_active)<span class="badge bg-success">Actif</span>@else<span class="badge bg-secondary">Inactif</span>@endif
-                </p>
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <div class="h2 mb-1">{{ $school->users_count }}</div>
+                <p class="text-muted mb-2">utilisateurs au total</p>
+                @if($school->is_active)
+                    <span class="badge bg-success">Établissement actif</span>
+                @else
+                    <span class="badge bg-secondary">Établissement inactif</span>
+                @endif
             </div>
         </div>
     </div>

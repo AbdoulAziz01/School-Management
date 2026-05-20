@@ -580,7 +580,7 @@
                 </div>
                 <div class="logo-text">
                     <h3>{{ $schoolDisplayName ?? 'Mon établissement' }}</h3>
-                    <small>via EduManager · Élève</small>
+                    <small>via {{ $platformName }} · Élève</small>
                 </div>
             </div>
             

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\View\Composers\PlatformBrandingComposer;
 use App\Http\View\Composers\SchoolBrandingComposer;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
@@ -31,5 +32,9 @@ class AppServiceProvider extends ServiceProvider
             'teacher.components.sidebar',
             'student.*',
         ], SchoolBrandingComposer::class);
+
+        View::share('platformName', config('platform.name', 'EduManager'));
+
+        View::composer('platform.*', PlatformBrandingComposer::class);
     }
 }

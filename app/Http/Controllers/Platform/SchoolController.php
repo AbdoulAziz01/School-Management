@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Platform;
 use App\Http\Controllers\Controller;
 use App\Models\School;
 use App\Models\User;
+use App\Support\PlatformMetrics;
 use App\Support\SchoolLogoStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,15 +14,35 @@ use Illuminate\View\View;
 
 class SchoolController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $schools = School::withCount([
-            'users',
-            'users as students_count' => fn ($q) => $q->whereIn('role', User::ROLE_STUDENT_ALIASES),
-            'users as staff_count' => fn ($q) => $q->whereIn('role', User::ROLE_SCHOOL_STAFF),
-        ])->latest()->paginate(15);
+        $query = PlatformMetrics::schoolWithCountsQuery()->latest();
 
-        return view('platform.schools.index', compact('schools'));
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            } elseif ($request->status === 'no_admin') {
+                $query->whereDoesntHave('users', fn ($q) => $q->where('role', User::ROLE_ADMIN));
+            } elseif ($request->status === 'pending') {
+                $query->whereHas('users', fn ($q) => $q->where('status', User::STATUS_PENDING));
+            }
+        }
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%");
+            });
+        }
+
+        $schools = $query->paginate(15)->withQueryString();
+        $currentYears = PlatformMetrics::currentAcademicYearsBySchool();
+
+        return view('platform.schools.index', compact('schools', 'currentYears'));
     }
 
     public function create(): View
@@ -72,11 +93,27 @@ class SchoolController extends Controller
 
     public function show(School $school): View
     {
-        $school->loadCount([
-            'users',
-            'users as students_count' => fn ($q) => $q->whereIn('role', User::ROLE_STUDENT_ALIASES),
-            'users as teachers_count' => fn ($q) => $q->whereIn('role', User::ROLE_TEACHER_ALIASES),
-        ]);
+        PlatformMetrics::loadSchoolDetailCounts($school);
+
+        $subjectsCount = PlatformMetrics::subjectsCountForSchool($school->id);
+        $currentAcademicYear = PlatformMetrics::currentAcademicYearForSchool($school->id);
+
+        $healthAlerts = [];
+        if ($school->admins_count < 1) {
+            $healthAlerts[] = ['type' => 'danger', 'message' => 'Aucun administrateur assigné à cet établissement.'];
+        }
+        if (! $currentAcademicYear) {
+            $healthAlerts[] = ['type' => 'warning', 'message' => 'Aucune année scolaire courante configurée.'];
+        }
+        if ($school->pending_count > 0) {
+            $healthAlerts[] = ['type' => 'info', 'message' => "{$school->pending_count} inscription(s) en attente de validation."];
+        }
+        if ($school->unassigned_students_count > 0) {
+            $healthAlerts[] = ['type' => 'warning', 'message' => "{$school->unassigned_students_count} élève(s) sans classe assignée."];
+        }
+        if (! $school->is_active) {
+            $healthAlerts[] = ['type' => 'secondary', 'message' => 'Établissement désactivé — les utilisateurs ne peuvent plus s\'y connecter.'];
+        }
 
         $staffMembers = User::withoutGlobalScopes()
             ->where('school_id', $school->id)
@@ -85,7 +122,13 @@ class SchoolController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('platform.schools.show', compact('school', 'staffMembers'));
+        return view('platform.schools.show', compact(
+            'school',
+            'staffMembers',
+            'subjectsCount',
+            'currentAcademicYear',
+            'healthAlerts',
+        ));
     }
 
     public function edit(School $school): View

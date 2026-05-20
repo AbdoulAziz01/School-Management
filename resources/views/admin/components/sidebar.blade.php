@@ -209,15 +209,6 @@
             letter-spacing: 0.5px;
         }
         
-        .user-info .badge-admin .crown-icon {
-            animation: crown-bounce 1s ease-in-out infinite;
-        }
-        
-        @keyframes crown-bounce {
-            0%, 100% { transform: rotate(-5deg); }
-            50% { transform: rotate(5deg); }
-        }
-        
         /* Menu Section Title */
         .menu-section {
             padding: 20px 20px 10px;
@@ -350,7 +341,7 @@
             </div>
             <div class="logo-text">
                 <h5>{{ $schoolDisplayName ?? 'Mon établissement' }}</h5>
-                <small>via EduManager</small>
+                <small>via {{ $platformName }}</small>
             </div>
         </div>
     </div>
@@ -366,7 +357,7 @@
                 @if(Auth::user()->isSurveillant())
                     <span class="cown-icon">🛡️</span> Surveillant
                 @else
-                    <span class="cown-icon">👑</span> Admin
+                    Admin
                 @endif
             </span>
         </div>

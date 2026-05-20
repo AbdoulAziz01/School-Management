@@ -604,7 +604,7 @@
     </div>
 
     <footer class="bulletin-print-footer">
-        <strong>EduManager</strong> — {{ $schoolDisplayName }}
+        <strong>{{ $platformName }}</strong> — {{ $schoolDisplayName }}
     </footer>
 
     <!-- Boutons d'action -->

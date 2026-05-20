@@ -58,6 +58,10 @@ Route::middleware('auth')->group(function () {
 Route::prefix('platform')->middleware(['auth', 'super_admin'])->name('platform.')->group(function () {
     Route::get('/', fn () => redirect()->route('platform.dashboard'));
     Route::get('/dashboard', [\App\Http\Controllers\Platform\DashboardController::class, 'index'])->name('dashboard');
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Platform\ProfileController::class, 'edit'])->name('edit');
+        Route::put('/', [\App\Http\Controllers\Platform\ProfileController::class, 'update'])->name('update');
+    });
     Route::resource('schools', \App\Http\Controllers\Platform\SchoolController::class);
     Route::patch('schools/{school}/toggle-active', [\App\Http\Controllers\Platform\SchoolController::class, 'toggleActive'])->name('schools.toggle-active');
     Route::patch('schools/{school}/regenerate-code', [\App\Http\Controllers\Platform\SchoolController::class, 'regenerateCode'])->name('schools.regenerate-code');

@@ -1,6 +1,6 @@
 @extends('platform.layouts.app')
 
-@section('title', 'Modifier — '.$school->name)
+@section('title', 'Modifier — ' . $school->name . ' — ' . $platformName)
 
 @section('content')
 <div class="mb-4">
@@ -9,7 +9,7 @@
     </a>
     <h1 class="h3 mt-2 mb-1">Modifier l'établissement</h1>
     <p class="text-muted mb-0">
-        <strong>EduManager</strong> = nom de la plateforme ERP.
+        <strong>{{ $platformName }}</strong> = nom de la plateforme ERP.
         Le champ « Nom » ci-dessous est le <strong>nom réel de l'école</strong> (visible par les utilisateurs de cet établissement).
     </p>
 </div>
