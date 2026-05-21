@@ -63,4 +63,36 @@ class AcademicYear extends Model
     {
         return $this->isClosed();
     }
+
+    /** Affectation d'élèves autorisée uniquement sur l'année courante non terminée. */
+    public function allowsStudentAssignment(): bool
+    {
+        return $this->is_current && ! $this->isClosed();
+    }
+
+    public function statusLabel(): string
+    {
+        if ($this->is_current && ! $this->isClosed()) {
+            return 'Courante';
+        }
+
+        if ($this->isClosed()) {
+            return 'Terminée';
+        }
+
+        return 'Passée';
+    }
+
+    public function statusBadgeClass(): string
+    {
+        if ($this->is_current && ! $this->isClosed()) {
+            return 'success';
+        }
+
+        if ($this->isClosed()) {
+            return 'secondary';
+        }
+
+        return 'warning';
+    }
 }

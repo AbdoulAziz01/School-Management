@@ -2,8 +2,31 @@
 
 @section('title', $school->name . ' — ' . $platformName)
 
+@push('styles')
+<style>
+    .platform-school-stat {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        height: 100%;
+        border-radius: 0.5rem;
+        transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+    .platform-school-stat:hover {
+        transform: translateY(-2px);
+        background-color: rgba(79, 70, 229, 0.06);
+        color: inherit;
+    }
+</style>
+@endpush
+
 @section('content')
 @php $schoolLogo = \App\Support\SchoolLogoStorage::dataUri($school); @endphp
+<p class="text-muted small mb-3">
+    <a href="{{ route('platform.schools.index') }}" class="text-decoration-none">
+        <i class="fas fa-arrow-left me-1"></i> Retour aux établissements
+    </a>
+</p>
 <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-3">
         <div class="border rounded bg-light d-flex align-items-center justify-content-center" style="width:64px;height:64px;overflow:hidden;">
@@ -25,6 +48,9 @@
         </div>
     </div>
     <div class="d-flex flex-wrap gap-2">
+        <a href="{{ route('platform.schools.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Retour
+        </a>
         <a href="{{ route('platform.schools.edit', $school) }}" class="btn btn-primary btn-sm">
             <i class="fas fa-pen me-1"></i> Modifier
         </a>
@@ -41,8 +67,92 @@
 @if(!empty($healthAlerts))
     <div class="mb-4">
         @foreach($healthAlerts as $alert)
-            <div class="alert alert-{{ $alert['type'] }} py-2 mb-2">{{ $alert['message'] }}</div>
+            @if(!empty($alert['href']))
+                <a href="{{ $alert['href'] }}" class="alert alert-{{ $alert['type'] }} py-2 mb-2 d-flex align-items-center gap-2 text-decoration-none">
+                    <span>{{ $alert['message'] }}</span>
+                    <i class="fas fa-arrow-down ms-auto small opacity-75"></i>
+                </a>
+            @else
+                <div class="alert alert-{{ $alert['type'] }} py-2 mb-2">{{ $alert['message'] }}</div>
+            @endif
         @endforeach
+    </div>
+@endif
+
+@if($unassignedStudents->isNotEmpty())
+    <div id="unassigned-students" class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0">
+                <i class="fas fa-user-slash text-warning me-1"></i>
+                Élèves sans classe ({{ $unassignedStudents->count() }})
+            </h5>
+            @if($currentAcademicYear)
+                <small class="text-muted">
+                    Affectation autorisée — année
+                    <span class="badge bg-{{ $currentAcademicYear->statusBadgeClass() }}">{{ $currentAcademicYear->statusLabel() }}</span>
+                    {{ $currentAcademicYear->name }}
+                </small>
+            @else
+                <small class="text-warning">Aucune année courante — affectation désactivée.</small>
+            @endif
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Identifiant</th>
+                        <th>Nom</th>
+                        <th>Email</th>
+                        <th>Statut</th>
+                        <th style="min-width: 280px;">Affecter à une classe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($unassignedStudents as $student)
+                        <tr>
+                            <td><code>{{ $student->identifier ?? $student->user_id ?? '—' }}</code></td>
+                            <td class="fw-semibold">{{ $student->name }}</td>
+                            <td><small>{{ $student->email ?? '—' }}</small></td>
+                            <td>
+                                @if($student->status === 'approved')
+                                    <span class="badge bg-success">Approuvé</span>
+                                @elseif($student->status === 'pending')
+                                    <span class="badge bg-warning text-dark">En attente</span>
+                                @else
+                                    <span class="badge bg-secondary">{{ $student->status }}</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($assignableClasses->isEmpty())
+                                    @if(! $currentAcademicYear)
+                                        <span class="text-warning small">Aucune année scolaire courante — affectation impossible.</span>
+                                    @elseif($currentAcademicYear->isClosed())
+                                        <span class="text-warning small">L'année « {{ $currentAcademicYear->name }} » est terminée — affectation impossible.</span>
+                                    @else
+                                        <span class="text-warning small">Aucune classe pour l'année courante « {{ $currentAcademicYear->name }} ».</span>
+                                    @endif
+                                @else
+                                    <form method="POST"
+                                          action="{{ route('platform.schools.students.assign-class', [$school, $student]) }}"
+                                          class="d-flex flex-wrap gap-2 align-items-center">
+                                        @csrf
+                                        <select name="class_id" class="form-select form-select-sm" style="min-width: 200px;" required>
+                                            <option value="">Classe ({{ $currentAcademicYear?->name }})…</option>
+                                            @foreach($assignableClasses as $class)
+                                                <option value="{{ $class->id }}">{{ $class->display_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-primary text-nowrap">
+                                            <i class="fas fa-check me-1"></i> Affecter
+                                        </button>
+                                    </form>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     </div>
 @endif
 
@@ -51,6 +161,41 @@
         <strong><i class="fas fa-graduation-cap me-1"></i> École de formation professionnelle</strong>
         <p class="mb-0 small">Structure : <strong>Promotions</strong> (filière, année, groupes) → <strong>Modules</strong>.</p>
     </div>
+@endif
+
+@if($academicYears->isNotEmpty())
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="fas fa-calendar-alt me-1"></i> Années scolaires</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Année</th>
+                    <th>Statut</th>
+                    <th>Période</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($academicYears as $year)
+                    <tr>
+                        <td class="fw-semibold">{{ $year->name }}</td>
+                        <td><span class="badge bg-{{ $year->statusBadgeClass() }}">{{ $year->statusLabel() }}</span></td>
+                        <td class="small text-muted">{{ $year->periodLabel() }}</td>
+                        <td class="text-end text-nowrap">
+                            <a href="{{ route('platform.schools.inspection', ['school' => $school, 'section' => 'classes', 'academic_year_id' => $year->id]) }}"
+                               class="btn btn-sm btn-outline-primary">Classes</a>
+                            <a href="{{ route('platform.schools.inspection', ['school' => $school, 'section' => 'students', 'academic_year_id' => $year->id]) }}"
+                               class="btn btn-sm btn-outline-secondary">Élèves</a>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
 @endif
 
 <div class="row g-3 mb-4">
@@ -145,37 +290,33 @@
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white"><h6 class="mb-0">Santé de l'établissement</h6></div>
             <div class="card-body">
+                @php
+                    $healthStats = [
+                        ['key' => 'students', 'value' => $school->students_count, 'label' => 'Élèves', 'class' => ''],
+                        ['key' => 'teachers', 'value' => $school->teachers_count, 'label' => 'Profs', 'class' => ''],
+                        ['key' => 'staff', 'value' => $school->staff_count, 'label' => 'Staff', 'class' => ''],
+                        ['key' => 'classes', 'value' => $school->classes_count, 'label' => 'Classes', 'class' => ''],
+                        ['key' => 'subjects', 'value' => $subjectsCount, 'label' => 'Matières', 'class' => ''],
+                        ['key' => 'pending', 'value' => $school->pending_count, 'label' => 'En attente', 'class' => $school->pending_count ? 'text-danger' : ''],
+                    ];
+                @endphp
                 <div class="row g-3 text-center">
-                    <div class="col-4 col-md-2">
-                        <div class="h4 mb-0">{{ $school->students_count }}</div>
-                        <small class="text-muted">Élèves</small>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <div class="h4 mb-0">{{ $school->teachers_count }}</div>
-                        <small class="text-muted">Profs</small>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <div class="h4 mb-0">{{ $school->staff_count }}</div>
-                        <small class="text-muted">Staff</small>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <div class="h4 mb-0">{{ $school->classes_count }}</div>
-                        <small class="text-muted">Classes</small>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <div class="h4 mb-0">{{ $subjectsCount }}</div>
-                        <small class="text-muted">Matières</small>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <div class="h4 mb-0 {{ $school->pending_count ? 'text-danger' : '' }}">{{ $school->pending_count }}</div>
-                        <small class="text-muted">En attente</small>
-                    </div>
+                    @foreach($healthStats as $stat)
+                        <div class="col-4 col-md-2">
+                            <a href="{{ route('platform.schools.inspection', ['school' => $school, 'section' => $stat['key']]) }}"
+                               class="platform-school-stat d-block py-2 px-1">
+                                <div class="h4 mb-0 {{ $stat['class'] }}">{{ $stat['value'] }}</div>
+                                <small class="text-muted">{{ $stat['label'] }}</small>
+                            </a>
+                        </div>
+                    @endforeach
                 </div>
                 <hr>
                 <div class="row small">
                     <div class="col-md-6">
                         <strong>Année scolaire courante :</strong>
                         @if($currentAcademicYear)
+                            <span class="badge bg-{{ $currentAcademicYear->statusBadgeClass() }}">{{ $currentAcademicYear->statusLabel() }}</span>
                             {{ $currentAcademicYear->name }}
                             <span class="text-muted">({{ $currentAcademicYear->periodLabel() }})</span>
                         @else
@@ -196,7 +337,7 @@
                     <div class="col-md-6 mt-2">
                         <strong>Élèves sans classe :</strong>
                         @if($school->unassigned_students_count > 0)
-                            <span class="text-warning">{{ $school->unassigned_students_count }}</span>
+                            <a href="#unassigned-students" class="text-warning">{{ $school->unassigned_students_count }}</a>
                         @else
                             <span class="text-muted">0</span>
                         @endif

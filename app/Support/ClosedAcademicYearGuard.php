@@ -52,6 +52,36 @@ class ClosedAcademicYearGuard
         );
     }
 
+    public static function allowsStudentAssignment(SchoolClass $class): bool
+    {
+        $class->loadMissing('academicYear');
+
+        return $class->academicYear?->allowsStudentAssignment() ?? false;
+    }
+
+    public static function denyStudentAssignment(SchoolClass $class, ?string $message = null): ?RedirectResponse
+    {
+        if (self::allowsStudentAssignment($class)) {
+            return null;
+        }
+
+        $year = $class->academicYear;
+        $yearName = $year?->name ?? 'inconnue';
+
+        if ($year?->isClosed()) {
+            $detail = "L'année « {$yearName} » est terminée.";
+        } elseif ($year && ! $year->is_current) {
+            $detail = "L'année « {$yearName} » est passée (non courante).";
+        } else {
+            $detail = 'Aucune année scolaire courante active pour cet établissement.';
+        }
+
+        return back()->with(
+            'error',
+            $message ?? "Affectation impossible : {$detail} Seules les classes de l'année courante sont autorisées."
+        );
+    }
+
     public static function denyYearMutation(?AcademicYear $year, ?string $message = null): ?RedirectResponse
     {
         if (! self::isLocked($year)) {

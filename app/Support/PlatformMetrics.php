@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\AcademicYear;
 use App\Models\School;
+use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -96,6 +97,41 @@ class PlatformMetrics
             ->where('is_current', true)
             ->pluck('name', 'school_id')
             ->all();
+    }
+
+    public static function unassignedStudentsQuery(): Builder
+    {
+        return User::withoutGlobalScopes()
+            ->with('school')
+            ->whereNotNull('school_id')
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->whereNull('class_id');
+    }
+
+    public static function academicYearsForSchool(int $schoolId)
+    {
+        return AcademicYear::withoutGlobalScopes()
+            ->where('school_id', $schoolId)
+            ->orderByDesc('is_current')
+            ->orderByDesc('start_date')
+            ->get();
+    }
+
+    /** Classes de l'année courante ouverte uniquement (affectation élèves). */
+    public static function assignableClassesForSchool(int $schoolId)
+    {
+        $currentYear = self::currentAcademicYearForSchool($schoolId);
+
+        if (! $currentYear?->allowsStudentAssignment()) {
+            return collect();
+        }
+
+        return SchoolClass::withoutGlobalScopes()
+            ->with(['level', 'academicYear'])
+            ->where('school_id', $schoolId)
+            ->where('academic_year_id', $currentYear->id)
+            ->orderBy('name')
+            ->get();
     }
 
     public static function watchlistSchools(int $limit = 8): array

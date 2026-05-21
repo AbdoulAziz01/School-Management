@@ -59,11 +59,17 @@ Route::middleware('auth')->group(function () {
 Route::prefix('platform')->middleware(['auth', 'super_admin'])->name('platform.')->group(function () {
     Route::get('/', fn () => redirect()->route('platform.dashboard'));
     Route::get('/dashboard', [\App\Http\Controllers\Platform\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/students/unassigned', [\App\Http\Controllers\Platform\UnassignedStudentController::class, 'index'])->name('students.unassigned');
+    Route::get('schools/{school}/inspection', [\App\Http\Controllers\Platform\SchoolInspectionController::class, 'index'])->name('schools.inspection');
+    Route::get('schools/{school}/classes/{class}', [\App\Http\Controllers\Platform\SchoolInspectionDetailController::class, 'showClass'])->name('schools.classes.show');
+    Route::get('schools/{school}/users/{user}', [\App\Http\Controllers\Platform\SchoolInspectionDetailController::class, 'showUser'])->name('schools.users.show');
+    Route::get('schools/{school}/subjects/{subject}', [\App\Http\Controllers\Platform\SchoolInspectionDetailController::class, 'showSubject'])->name('schools.subjects.show');
     Route::prefix('profile')->name('profile.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Platform\ProfileController::class, 'edit'])->name('edit');
         Route::put('/', [\App\Http\Controllers\Platform\ProfileController::class, 'update'])->name('update');
     });
     Route::resource('schools', \App\Http\Controllers\Platform\SchoolController::class);
+    Route::post('schools/{school}/students/{user}/assign-class', [\App\Http\Controllers\Platform\SchoolController::class, 'assignStudentToClass'])->name('schools.students.assign-class');
     Route::patch('schools/{school}/toggle-active', [\App\Http\Controllers\Platform\SchoolController::class, 'toggleActive'])->name('schools.toggle-active');
     Route::patch('schools/{school}/regenerate-code', [\App\Http\Controllers\Platform\SchoolController::class, 'regenerateCode'])->name('schools.regenerate-code');
     Route::prefix('schools/{school}/cycles')->name('schools.cycles.')->group(function () {

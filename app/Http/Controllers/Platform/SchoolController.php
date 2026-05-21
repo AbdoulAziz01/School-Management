@@ -11,10 +11,13 @@ use App\Support\SchoolProfile;
 use App\Support\SchoolSubjectProvisioner;
 use App\Support\StaffOtpMailer;
 use App\Models\AcademicYear;
+use App\Models\SchoolClass;
+use App\Support\ClosedAcademicYearGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SchoolController extends Controller
@@ -144,7 +147,11 @@ class SchoolController extends Controller
             $healthAlerts[] = ['type' => 'info', 'message' => "{$school->pending_count} inscription(s) en attente de validation."];
         }
         if ($school->unassigned_students_count > 0) {
-            $healthAlerts[] = ['type' => 'warning', 'message' => "{$school->unassigned_students_count} élève(s) sans classe assignée."];
+            $healthAlerts[] = [
+                'type' => 'warning',
+                'message' => "{$school->unassigned_students_count} élève(s) sans classe assignée.",
+                'href' => '#unassigned-students',
+            ];
         }
         if (! $school->is_active) {
             $healthAlerts[] = ['type' => 'secondary', 'message' => 'Établissement désactivé — les utilisateurs ne peuvent plus s\'y connecter.'];
@@ -157,13 +164,65 @@ class SchoolController extends Controller
             ->orderBy('name')
             ->get();
 
+        $unassignedStudents = PlatformMetrics::unassignedStudentsQuery()
+            ->where('school_id', $school->id)
+            ->orderBy('name')
+            ->get();
+
+        $assignableClasses = PlatformMetrics::assignableClassesForSchool($school->id);
+        $academicYears = PlatformMetrics::academicYearsForSchool($school->id);
+
         return view('platform.schools.show', compact(
             'school',
             'staffMembers',
             'subjectsCount',
             'currentAcademicYear',
             'healthAlerts',
+            'unassignedStudents',
+            'assignableClasses',
+            'academicYears',
         ));
+    }
+
+    public function assignStudentToClass(Request $request, School $school, User $user): RedirectResponse
+    {
+        if ($user->school_id !== $school->id || ! $user->isStudent()) {
+            abort(404);
+        }
+
+        $currentYear = PlatformMetrics::currentAcademicYearForSchool($school->id);
+        if (! $currentYear?->allowsStudentAssignment()) {
+            return back()->with('error', 'Affectation impossible : aucune année scolaire courante active pour cet établissement.');
+        }
+
+        $allowedClassIds = PlatformMetrics::assignableClassesForSchool($school->id)->pluck('id')->all();
+
+        $validated = $request->validate([
+            'class_id' => [
+                'required',
+                'integer',
+                Rule::in($allowedClassIds),
+            ],
+        ]);
+
+        $targetClass = SchoolClass::withoutGlobalScopes()
+            ->with('academicYear')
+            ->where('school_id', $school->id)
+            ->findOrFail($validated['class_id']);
+
+        if ($response = ClosedAcademicYearGuard::denyStudentAssignment($targetClass)) {
+            return $response;
+        }
+
+        $user->update([
+            'class_id' => $targetClass->id,
+            'status' => User::STATUS_APPROVED,
+        ]);
+
+        return back()->with(
+            'success',
+            "« {$user->name} » a été affecté(e) à la classe {$targetClass->display_name}."
+        );
     }
 
     public function edit(School $school): View
