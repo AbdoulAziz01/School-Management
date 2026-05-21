@@ -9,31 +9,72 @@ use App\Models\Grade;
 use App\Models\Subject;
 use App\Models\SchoolClass;
 use App\Models\TeacherAssignment;
+use App\Services\StudentClassPromotionService;
 use App\Models\AcademicYear;
+use App\Support\ClosedAcademicYearGuard;
+use App\Support\DashboardAcademicYearContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class TeacherGradesController extends Controller
 {
+    /** @return array<string, mixed> */
+    private function yearContext(Request $request): array
+    {
+        $selectedYear = DashboardAcademicYearContext::resolve($request, 'teacher');
+        $currentYear = AcademicYear::where('is_current', true)->first();
+
+        return [
+            'selectedYear' => $selectedYear,
+            'currentYear' => $currentYear,
+            'academicYears' => DashboardAcademicYearContext::allYears(),
+            'isSelectedYearCurrent' => $selectedYear && $currentYear
+                && (int) $selectedYear->id === (int) $currentYear->id,
+            'gradesLocked' => ClosedAcademicYearGuard::areGradesLocked($selectedYear),
+            'gradesLockedMessage' => ClosedAcademicYearGuard::gradesLockedMessage($selectedYear),
+        ];
+    }
+
+    /**
+     * Contexte d'écriture (année courante ouverte uniquement).
+     *
+     * @return array{currentYear: ?AcademicYear, gradesLocked: bool, gradesLockedMessage: string}
+     */
+    private function gradesContext(): array
+    {
+        $currentYear = AcademicYear::where('is_current', true)->first();
+
+        return [
+            'currentYear' => $currentYear,
+            'gradesLocked' => ClosedAcademicYearGuard::areGradesLocked($currentYear),
+            'gradesLockedMessage' => ClosedAcademicYearGuard::gradesLockedMessage($currentYear),
+        ];
+    }
+
     /**
      * Afficher les notes par classe/matière
      */
     public function index(Request $request)
     {
         $teacher = Auth::user();
-        $currentYear = AcademicYear::where('is_current', true)->first();
+        $yearCtx = $this->yearContext($request);
+        $selectedYear = $yearCtx['selectedYear'];
+        $academicYears = $yearCtx['academicYears'];
+        $isSelectedYearCurrent = $yearCtx['isSelectedYearCurrent'];
+        $gradesLocked = $yearCtx['gradesLocked'];
+        $gradesLockedMessage = $yearCtx['gradesLockedMessage'];
         
-        // Récupérer les classes affectées via class_teacher
-        $classes = $teacher->assignedClasses()->with('level')->get();
+        $classes = $teacher->assignedClasses()
+            ->with('level')
+            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
+            ->get();
         
-        // Récupérer les matières du professeur
         $subjects = $teacher->subjects;
         
-        // Aussi récupérer les affectations TeacherAssignment si disponibles
         $assignments = TeacherAssignment::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
-            ->when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))
+            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
         
         // Fusionner les matières
@@ -47,20 +88,22 @@ class TeacherGradesController extends Controller
         $students = collect();
         
         if ($selectedClassId && $selectedSubjectId) {
-            // Vérifier que l'enseignant a accès à cette classe
-            $hasAccess = $teacher->assignedClasses()->where('classes.id', $selectedClassId)->exists();
-            
-            if ($hasAccess) {
-                // Récupérer les élèves de la classe
+            if (! $this->hasClassAccess($teacher, (int) $selectedClassId, $selectedYear)) {
+                $students = collect();
+                $grades = collect();
+            } elseif (! $this->teachesClassSubject($teacher, (int) $selectedClassId, (int) $selectedSubjectId, $selectedYear)) {
+                $students = collect();
+                $grades = collect();
+            } else {
                 $students = User::where('class_id', $selectedClassId)
-                    ->whereIn('role', ['student', 'eleve'])
-                    ->where('status', 'approved')
+                    ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+                    ->where('status', User::STATUS_APPROVED)
                     ->orderBy('name')
                     ->get();
-                
-                // Récupérer les notes
+
                 $grades = Grade::where('subject_id', $selectedSubjectId)
                     ->whereIn('user_id', $students->pluck('id'))
+                    ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
                     ->orderBy('date', 'desc')
                     ->get()
                     ->groupBy('user_id');
@@ -91,7 +134,12 @@ class TeacherGradesController extends Controller
             'students',
             'selectedClassId',
             'selectedSubjectId',
-            'evaluationColumns'
+            'evaluationColumns',
+            'gradesLocked',
+            'gradesLockedMessage',
+            'selectedYear',
+            'academicYears',
+            'isSelectedYearCurrent',
         ));
     }
 
@@ -100,10 +148,20 @@ class TeacherGradesController extends Controller
      */
     public function create(Request $request)
     {
-        $teacher = Auth::user();
-        $currentYear = AcademicYear::where('is_current', true)->first();
+        $context = $this->gradesContext();
+        if ($context['gradesLocked'] || ! $context['currentYear']) {
+            return redirect()
+                ->route('teacher.grades.index')
+                ->with('error', $context['gradesLockedMessage'] ?: 'Aucune année scolaire active — saisie impossible.');
+        }
 
-        $classes  = $teacher->assignedClasses()->with('level')->get();
+        $teacher = Auth::user();
+        $currentYear = $context['currentYear'];
+
+        $classes  = $teacher->assignedClasses()
+            ->with(['level', 'academicYear'])
+            ->whereHas('academicYear', fn ($q) => $q->where('is_current', true)->where('is_closed', false))
+            ->get();
         $subjects = $teacher->subjects;
 
         $selectedClassId   = $request->get('class_id');
@@ -111,13 +169,12 @@ class TeacherGradesController extends Controller
         $students          = collect();
 
         if ($selectedClassId) {
-            // Garde-fou IDOR : le prof doit être affecté à cette classe
-            $hasAccess = $teacher->assignedClasses()
-                ->where('classes.id', $selectedClassId)
-                ->exists();
-
-            if (! $hasAccess) {
+            if (! $this->hasClassAccess($teacher, (int) $selectedClassId, $currentYear)) {
                 return back()->with('error', 'Vous n\'avez pas accès à cette classe.');
+            }
+
+            if ($selectedSubjectId && ! $this->teachesClassSubject($teacher, (int) $selectedClassId, (int) $selectedSubjectId, $currentYear)) {
+                return back()->with('error', 'Vous n\'enseignez pas cette matière pour cette classe.');
             }
 
             $students = User::where('class_id', $selectedClassId)
@@ -130,6 +187,7 @@ class TeacherGradesController extends Controller
         $gradeTypes = SenegalGradeSequence::evaluationTypes();
         $nextAllowed = null;
         $evaluationProgress = null;
+        $existingGradesForEvaluation = collect();
 
         if ($selectedClassId && $selectedSubjectId) {
             $nextAllowed = SenegalGradeSequence::nextAllowed(
@@ -142,6 +200,16 @@ class TeacherGradesController extends Controller
                 (int) $selectedSubjectId,
                 $currentYear?->id
             );
+
+            if ($nextAllowed) {
+                $existingGradesForEvaluation = SenegalGradeSequence::gradesForEvaluation(
+                    (int) $selectedClassId,
+                    (int) $selectedSubjectId,
+                    $nextAllowed['semester'],
+                    $nextAllowed['type'],
+                    $currentYear?->id
+                );
+            }
         }
 
         return view('teacher.grades.create', compact(
@@ -152,7 +220,8 @@ class TeacherGradesController extends Controller
             'selectedSubjectId',
             'gradeTypes',
             'nextAllowed',
-            'evaluationProgress'
+            'evaluationProgress',
+            'existingGradesForEvaluation',
         ));
     }
 
@@ -161,6 +230,11 @@ class TeacherGradesController extends Controller
      */
     public function store(Request $request)
     {
+        $context = $this->gradesContext();
+        if ($context['gradesLocked'] || ! $context['currentYear']) {
+            return back()->with('error', $context['gradesLockedMessage'] ?: 'Aucune année scolaire active — saisie impossible.');
+        }
+
         $request->validate([
             'class_id'         => 'required|exists:classes,id',
             'subject_id'       => 'required|exists:subjects,id',
@@ -174,31 +248,21 @@ class TeacherGradesController extends Controller
         ]);
 
         $teacher     = Auth::user();
-        $currentYear = AcademicYear::where('is_current', true)->first();
+        $currentYear = $context['currentYear'];
 
-        // 1. Le prof doit être affecté à cette classe
-        $hasClassAccess = $teacher->assignedClasses()
-            ->where('classes.id', $request->class_id)
-            ->exists();
-
-        if (! $hasClassAccess) {
+        if (! $this->hasClassAccess($teacher, (int) $request->class_id, $currentYear)) {
             return back()->with('error', 'Vous n\'avez pas accès à cette classe.');
         }
 
-        // 2. Le prof doit enseigner cette matière (via subjects ou TeacherAssignment)
-        $teachesSubject = $teacher->subjects()
-                ->where('subjects.id', $request->subject_id)
-                ->exists()
-            || TeacherAssignment::where('teacher_id', $teacher->id)
-                ->where('subject_id', $request->subject_id)
-                ->when($currentYear, fn ($q) => $q->where('academic_year_id', $currentYear->id))
-                ->exists();
-
-        if (! $teachesSubject) {
-            return back()->with('error', 'Vous n\'enseignez pas cette matière.');
+        $schoolClass = SchoolClass::with('academicYear')->findOrFail($request->class_id);
+        if (ClosedAcademicYearGuard::isClassLocked($schoolClass)) {
+            return back()->with('error', ClosedAcademicYearGuard::gradesLockedMessage($schoolClass->academicYear));
         }
 
-        // 3. Tous les user_id soumis doivent appartenir à la classe ciblée et être des élèves approuvés
+        if (! $this->teachesClassSubject($teacher, (int) $request->class_id, (int) $request->subject_id, $currentYear)) {
+            return back()->with('error', 'Vous n\'enseignez pas cette matière pour cette classe.');
+        }
+
         $submittedUserIds = collect($request->grades)->pluck('user_id')->unique();
         $validStudentIds  = User::where('class_id', $request->class_id)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
@@ -227,14 +291,31 @@ class TeacherGradesController extends Controller
 
         DB::beginTransaction();
         try {
+            $saved = 0;
+            $skipped = 0;
+
             foreach ($request->grades as $gradeData) {
                 $value = $gradeData['grade'] ?? null;
                 if ($value === null || $value === '') {
                     continue;
                 }
 
+                $userId = (int) $gradeData['user_id'];
+
+                if (SenegalGradeSequence::findStudentGrade(
+                    $userId,
+                    (int) $request->subject_id,
+                    $semester,
+                    $request->type,
+                    $currentYear?->id
+                )) {
+                    $skipped++;
+
+                    continue;
+                }
+
                 Grade::create([
-                    'user_id'          => (int) $gradeData['user_id'],
+                    'user_id'          => $userId,
                     'subject_id'       => $request->subject_id,
                     'grade'            => $value,
                     'type'             => $request->type,
@@ -245,9 +326,28 @@ class TeacherGradesController extends Controller
                     'comments'         => $gradeData['comments'] ?? null,
                     'appreciation'     => $gradeData['appreciation'] ?? null,
                 ]);
+                $saved++;
             }
 
             DB::commit();
+
+            if ($saved === 0 && $skipped > 0) {
+                return back()->with('warning', 'Aucune note enregistrée — les notes existantes ne peuvent pas être modifiées.');
+            }
+
+            if ($saved === 0) {
+                return back()->with('warning', 'Aucune note à enregistrer.');
+            }
+
+            if ($currentYear) {
+                $promotionService = app(StudentClassPromotionService::class);
+                foreach ($validStudentIds as $studentId) {
+                    $student = User::find($studentId);
+                    if ($student) {
+                        $promotionService->tryPromote($student, $currentYear);
+                    }
+                }
+            }
 
             return redirect()->route('teacher.grades.index', [
                 'class_id'   => $request->class_id,
@@ -264,109 +364,58 @@ class TeacherGradesController extends Controller
         }
     }
 
-    /**
-     * Heuristique simple pour déterminer le semestre courant
-     * (système sénégalais : S1 oct-jan, S2 fév-juin).
-     */
-    private function guessCurrentSemester(): int
+    private function hasClassAccess(User $teacher, int $classId, ?AcademicYear $year): bool
     {
-        $month = now()->month;
-        return ($month >= 10 || $month <= 1) ? 1 : 2;
+        return $teacher->assignedClasses()
+            ->where('classes.id', $classId)
+            ->when($year, fn ($q) => $q->where('academic_year_id', $year->id))
+            ->exists();
+    }
+
+    private function teachesClassSubject(User $teacher, int $classId, int $subjectId, ?AcademicYear $year): bool
+    {
+        if (! $this->hasClassAccess($teacher, $classId, $year)) {
+            return false;
+        }
+
+        $yearId = $year?->id;
+
+        if (TeacherAssignment::where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->where('subject_id', $subjectId)
+            ->when($yearId, fn ($q) => $q->where('academic_year_id', $yearId))
+            ->exists()) {
+            return true;
+        }
+
+        return $teacher->subjects()->where('subjects.id', $subjectId)->exists();
     }
 
     /**
-     * Modifier une note
+     * Modification interdite — les notes enregistrées sont définitives pour les enseignants.
      */
     public function edit($id)
     {
-        $grade = Grade::with(['user', 'subject'])->findOrFail($id);
-        
-        // Vérifier l'accès
-        $teacher = Auth::user();
-        $hasAccess = TeacherAssignment::where('teacher_id', $teacher->id)
-            ->where('class_id', $grade->user->class_id)
-            ->where('subject_id', $grade->subject_id)
-            ->exists();
-        
-        if (!$hasAccess) {
-            return back()->with('error', 'Vous n\'avez pas accès à cette note.');
-        }
-        
-        $gradeTypes = SenegalGradeSequence::evaluationTypes();
-
-        return view('teacher.grades.edit', compact('grade', 'gradeTypes'));
+        return redirect()
+            ->route('teacher.grades.index')
+            ->with('error', 'Les notes déjà enregistrées ne peuvent pas être modifiées. Contactez l\'administration si une correction est nécessaire.');
     }
 
     /**
-     * Mettre à jour une note
+     * Mise à jour interdite pour les enseignants.
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'grade' => 'required|numeric|min:0|max:20',
-            'date' => 'required|date',
-            'coefficient' => 'required|numeric|min:0.5|max:5',
-            'comments' => 'nullable|string|max:500',
-            'appreciation' => 'nullable|string|max:500',
-        ]);
-
-        $grade = Grade::with('user')->findOrFail($id);
-        
-        // Vérifier l'accès
-        $teacher = Auth::user();
-        $hasAccess = TeacherAssignment::where('teacher_id', $teacher->id)
-            ->where('class_id', $grade->user->class_id)
-            ->where('subject_id', $grade->subject_id)
-            ->exists();
-        
-        if (!$hasAccess) {
-            return back()->with('error', 'Vous n\'avez pas accès à cette note.');
-        }
-        
-        $grade->update([
-            'grade' => $request->grade,
-            'date' => $request->date,
-            'coefficient' => $request->coefficient,
-            'comments' => $request->comments,
-            'appreciation' => $request->appreciation,
-        ]);
-        
-        return redirect()->route('teacher.grades.index', [
-            'class_id' => $grade->user->class_id,
-            'subject_id' => $grade->subject_id
-        ])->with('success', 'Note mise à jour avec succès.');
+        return redirect()
+            ->route('teacher.grades.index')
+            ->with('error', 'Les notes déjà enregistrées ne peuvent pas être modifiées.');
     }
 
     /**
-     * Supprimer une note
+     * Suppression interdite pour les enseignants.
      */
     public function destroy($id)
     {
-        $grade = Grade::with('user')->findOrFail($id);
-
-        $teacher = Auth::user();
-        $hasAccess = TeacherAssignment::where('teacher_id', $teacher->id)
-            ->where('class_id', $grade->user->class_id)
-            ->where('subject_id', $grade->subject_id)
-            ->exists();
-
-        if (! $hasAccess) {
-            return back()->with('error', 'Vous n\'avez pas accès à cette note.');
-        }
-
-        $deleteError = SenegalGradeSequence::validateDeletion($grade);
-        if ($deleteError !== null) {
-            return back()->with('error', $deleteError);
-        }
-
-        $classId = $grade->user->class_id;
-        $subjectId = $grade->subject_id;
-        
-        $grade->delete();
-        
-        return redirect()->route('teacher.grades.index', [
-            'class_id' => $classId,
-            'subject_id' => $subjectId
-        ])->with('success', 'Note supprimée avec succès.');
+        return back()->with('error', 'Les notes enregistrées ne peuvent pas être supprimées. Contactez l\'administration.');
     }
 }

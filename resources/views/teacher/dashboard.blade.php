@@ -3,10 +3,32 @@
 @section('title', 'Tableau de bord - Enseignant')
 
 @section('content')
-<div class="mb-4">
-    <h1 class="mb-0 h3">Tableau de bord</h1>
-    <p class="text-muted">Bienvenue, {{ $teacher->name }}</p>
+<div class="mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+        <h1 class="mb-0 h3">Tableau de bord</h1>
+        <p class="text-muted mb-0">Bienvenue, {{ $teacher->name }}</p>
+    </div>
+    @include('partials.dashboard-year-filter', [
+        'action' => route('teacher.dashboard'),
+        'academicYears' => $academicYears ?? collect(),
+        'selectedYear' => $selectedYear ?? null,
+    ])
 </div>
+
+@if($gradesLocked ?? false)
+    <div class="alert alert-warning py-2 small mb-4">
+        <i class="fas fa-lock me-2"></i>{{ $gradesLockedMessage ?? 'Saisie des notes bloquée pour cette année.' }}
+    </div>
+@endif
+
+@if(isset($selectedYear) && !($isSelectedYearCurrent ?? true))
+    <div class="alert alert-light border py-2 small mb-4">
+        <i class="fas fa-info-circle me-1 text-muted"></i>
+        Consultation de l'année <strong>{{ $selectedYear->name }}</strong>
+        @if($selectedYear->isClosed()) (terminée) @endif
+        — les statistiques affichées concernent uniquement cette période.
+    </div>
+@endif
 
 {{-- Section Aperçu --}}
 <div class="mb-4 row g-4">
@@ -77,14 +99,20 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="stat-label">Année scolaire</h6>
-                        <h2 class="stat-value" style="font-size: 1.2rem;">{{ $currentYear ? $currentYear->name : 'N/A' }}</h2>
+                        <h2 class="stat-value" style="font-size: 1.2rem;">{{ $selectedYear ? $selectedYear->name : 'N/A' }}</h2>
                     </div>
                     <div class="p-3 bg-warning bg-opacity-10 rounded-circle">
                         <i class="fas fa-calendar-alt text-warning fs-4"></i>
                     </div>
                 </div>
                 <div class="mt-3">
-                    <small class="text-muted">Année en cours</small>
+                    @if($isSelectedYearCurrent ?? false)
+                        <small class="text-muted">Année en cours</small>
+                    @elseif($selectedYear?->isClosed())
+                        <small class="text-muted">Année terminée</small>
+                    @else
+                        <small class="text-muted">Année archivée</small>
+                    @endif
                 </div>
             </div>
         </div>
@@ -100,9 +128,11 @@
             </div>
             <div class="card-body">
                 <div class="gap-2 d-grid">
-                    <a href="{{ route('teacher.grades.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus-circle me-2"></i>Saisir des notes
-                    </a>
+                    @unless($gradesLocked ?? false)
+                        <a href="{{ route('teacher.grades.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-2"></i>Saisir des notes
+                        </a>
+                    @endunless
                     <a href="{{ route('teacher.attendance.index') }}" class="btn btn-outline-primary">
                         <i class="fas fa-clipboard-check me-2"></i>Faire l'appel
                     </a>
@@ -156,10 +186,12 @@
                 @else
                     <div class="text-center py-4">
                         <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Aucune note récente</p>
-                        <a href="{{ route('teacher.grades.create') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus me-2"></i>Saisir des notes
-                        </a>
+                        <p class="text-muted">Aucune note récente pour cette année scolaire</p>
+                        @unless($gradesLocked ?? false)
+                            <a href="{{ route('teacher.grades.create') }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-2"></i>Saisir des notes
+                            </a>
+                        @endunless
                     </div>
                 @endif
             </div>
@@ -185,10 +217,10 @@
                                 data-class-index="{{ $index }}">
                             <span class="fw-medium">
                                 <i class="fas fa-users me-2 text-muted"></i>
-                                {{ $item['class']->name ?? 'N/A' }}
+                                {{ $item['class']->display_name ?? ($item['class']->name ?? 'N/A') }}
                             </span>
-                            <span class="badge {{ $item['average'] >= 10 ? 'bg-success' : 'bg-danger' }} rounded-pill">
-                                {{ number_format($item['average'], 2) }}/20
+                            <span class="badge {{ ($item['average'] ?? null) === null ? 'bg-secondary' : ($item['average'] >= 10 ? 'bg-success' : 'bg-danger') }} rounded-pill">
+                                {{ ($item['average'] ?? null) !== null ? number_format($item['average'], 2).'/20' : '—' }}
                             </span>
                         </button>
                     @endforeach
@@ -201,7 +233,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                         <h6 class="mb-0">
                             <i class="fas fa-chart-line me-2"></i>
-                            <span id="chart-class-title">{{ $classAverages[0]['class']->name ?? 'Classe' }}</span>
+                            <span id="chart-class-title">{{ $classAverages[0]['class']->display_name ?? ($classAverages[0]['class']->name ?? 'Classe') }}</span>
                         </h6>
                         <span class="small text-muted">
                             Moyenne : <strong id="chart-class-average" class="{{ ($classAverages[0]['average'] ?? 0) >= 10 ? 'text-success' : 'text-danger' }}">{{ number_format($classAverages[0]['average'] ?? 0, 2) }}/20</strong>
@@ -407,8 +439,8 @@
             });
 
             titleEl.textContent = item.class;
-            avgEl.textContent = Number(item.average).toFixed(2) + '/20';
-            avgEl.className = item.average >= 10 ? 'text-success' : 'text-danger';
+            avgEl.textContent = item.average !== null ? Number(item.average).toFixed(2) + '/20' : '—';
+            avgEl.className = item.average !== null && item.average >= 10 ? 'text-success' : (item.average !== null ? 'text-danger' : 'text-muted');
 
             const subjects = item.subjects || [];
             if (subjects.length === 0) {

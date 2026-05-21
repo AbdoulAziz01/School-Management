@@ -75,9 +75,10 @@ class TeacherProfileController extends Controller
             return back()->withErrors(['current_password' => 'Le mot de passe actuel est incorrect.']);
         }
         
-        $teacher->update([
+        $teacher->forceFill([
             'password' => Hash::make($request->password),
-        ]);
+            'admin_visible_password' => null,
+        ])->save();
         
         return redirect()->route('teacher.profile.index')
             ->with('success', 'Mot de passe mis à jour avec succès.');

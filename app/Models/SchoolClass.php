@@ -16,12 +16,29 @@ class SchoolClass extends Model
 
     protected $fillable = [
         'name',
+        'promotion_name',
+        'filiere',
+        'diploma_type',
+        'formation_year',
+        'formation_department_id',
+        'formation_promotion_id',
         'academic_year_id',
         'level_id',
         'capacity',
         'description',
+        'room_number',
         'school_id',
     ];
+
+    public function formationDepartment(): BelongsTo
+    {
+        return $this->belongsTo(FormationDepartment::class, 'formation_department_id');
+    }
+
+    public function formationPromotion(): BelongsTo
+    {
+        return $this->belongsTo(FormationPromotion::class, 'formation_promotion_id');
+    }
 
     public function academicYear(): BelongsTo
     {
@@ -78,13 +95,59 @@ class SchoolClass extends Model
     }
 
     /**
+     * Groupe d'une école de formation (promotion / filière).
+     */
+    public function isFormationGroup(): bool
+    {
+        return ! empty($this->attributes['diploma_type'] ?? null)
+            || ! empty($this->attributes['filiere'] ?? null)
+            || ! empty($this->attributes['promotion_name'] ?? null);
+    }
+
+    /**
+     * Libellé affiché : niveau + section (ex. « 3ème C » au lieu de « C » seul).
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        $this->loadMissing('level');
+
+        $formatted = (string) $this->name;
+        $rawName = trim((string) $this->getRawOriginal('name'));
+        $levelName = trim((string) ($this->level?->name ?? ''));
+
+        if ($levelName === '') {
+            return $formatted;
+        }
+
+        $isSectionOnly = preg_match('/^\d+$/', $rawName) === 1
+            || preg_match('/^[A-Z]$/i', $rawName) === 1;
+
+        if ($isSectionOnly) {
+            return $levelName.' '.$formatted;
+        }
+
+        $normalize = static fn (string $value): string => strtolower(preg_replace('/\s+/', '', $value) ?? $value);
+        $levelKey = $normalize($levelName);
+        $nameKey = $normalize($rawName);
+
+        if ($nameKey !== '' && (str_starts_with($nameKey, $levelKey) || str_starts_with($levelKey, $nameKey))) {
+            return $formatted;
+        }
+
+        return $formatted;
+    }
+
+    /**
      * Convertit les chiffres en lettres pour les noms de classe
      * Exemple : "6eme 1" devient "6ème A"
      */
     public function getNameAttribute($value)
     {
-        // Si la valeur est vide, on la retourne telle quelle
         if (empty($value)) {
+            return $value;
+        }
+
+        if ($this->isFormationGroup()) {
             return $value;
         }
 

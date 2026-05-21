@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Modifier la matière')
+@section('title', !empty($isFormationSchool) && $isFormationSchool ? 'Modifier le module' : 'Modifier la matière')
 
 @section('content')
 <div class="container-fluid">
@@ -9,23 +9,17 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-edit me-2"></i>Modifier la matière : {{ $subject->name }}
+                        <i class="fas fa-edit me-2"></i>{{ !empty($isFormationSchool) && $isFormationSchool ? 'Modifier le module' : 'Modifier la matière' }} : {{ $subject->name }}
                     </h5>
                 </div>
                 <form action="{{ route('admin.subjects.update', $subject) }}" method="POST">
                     @csrf
                     @method('PUT')
                     <div class="card-body">
-                        @if(session('error'))
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                {{ session('error') }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        @endif
                         
                         <div class="row">
                             <div class="col-md-8 mb-3">
-                                <label for="name" class="form-label">Nom de la matière <span class="text-danger">*</span></label>
+                                <label for="name" class="form-label">{{ !empty($isFormationSchool) && $isFormationSchool ? 'Nom du module' : 'Nom de la matière' }} <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $subject->name) }}" required>
                                 @error('name')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -63,7 +57,7 @@
                                 <label class="form-label d-block">&nbsp;</label>
                                 <div class="form-check form-check-inline mt-2">
                                     <input class="form-check-input" type="checkbox" id="is_core_subject" name="is_core_subject" value="1" {{ old('is_core_subject', $subject->is_core_subject) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_core_subject">Matière principale</label>
+                                    <label class="form-check-label" for="is_core_subject">{{ !empty($isFormationSchool) && $isFormationSchool ? 'Module principal' : 'Matière principale' }}</label>
                                 </div>
                                 <div class="form-check form-check-inline mt-2">
                                     <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', $subject->is_active) ? 'checked' : '' }}>
@@ -80,7 +74,7 @@
                             @enderror
                         </div>
                         
-                        @if($levels->count() > 0)
+                        @if($levels->count() > 0 && empty($isFormationSchool))
                         <div class="mb-3">
                             <label class="form-label">Niveaux associés</label>
                             <div class="row">

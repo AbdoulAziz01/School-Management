@@ -115,4 +115,13 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    | Envoi automatique des identifiants professeur (Brevo). Désactivé par défaut :
+    | l'admin transmet identifiant + mot de passe manuellement.
+    */
+    'teacher_credentials_email_enabled' => filter_var(
+        env('TEACHER_SEND_CREDENTIALS_EMAIL', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
 ];

@@ -48,8 +48,26 @@ class SenegalGradeSequence
 
     public static function hasEvaluation(int $classId, int $subjectId, int $semester, string $type, ?int $academicYearId): bool
     {
-        return self::existingEvaluations($classId, $subjectId, $academicYearId)
-            ->contains(fn (Grade $g) => (int) $g->semester === $semester && $g->type === $type);
+        $studentIds = User::query()
+            ->where('class_id', $classId)
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->where('status', User::STATUS_APPROVED)
+            ->pluck('id');
+
+        if ($studentIds->isEmpty()) {
+            return false;
+        }
+
+        $gradedCount = Grade::query()
+            ->where('subject_id', $subjectId)
+            ->where('semester', $semester)
+            ->where('type', $type)
+            ->whereIn('user_id', $studentIds)
+            ->when($academicYearId, fn ($q) => $q->where('academic_year_id', $academicYearId))
+            ->distinct()
+            ->count('user_id');
+
+        return $gradedCount >= $studentIds->count();
     }
 
     /**
@@ -120,7 +138,7 @@ class SenegalGradeSequence
         }
 
         if (self::hasEvaluation($classId, $subjectId, $semester, $type, $academicYearId)) {
-            return '« '.self::LABELS[$type].' » (semestre '.$semester.') est déjà saisi pour cette classe et matière. Modifiez les notes existantes.';
+            return '« '.self::LABELS[$type].' » (semestre '.$semester.') est déjà entièrement saisi pour cette classe et matière.';
         }
 
         return null;
@@ -168,5 +186,52 @@ class SenegalGradeSequence
         }
 
         return $progress;
+    }
+
+    /**
+     * Note déjà enregistrée pour un élève (évaluation verrouillée).
+     */
+    public static function findStudentGrade(
+        int $userId,
+        int $subjectId,
+        int $semester,
+        string $type,
+        ?int $academicYearId
+    ): ?Grade {
+        return Grade::query()
+            ->where('user_id', $userId)
+            ->where('subject_id', $subjectId)
+            ->where('semester', $semester)
+            ->where('type', $type)
+            ->when($academicYearId, fn ($q) => $q->where('academic_year_id', $academicYearId))
+            ->first();
+    }
+
+    /** @return Collection<int, Grade> keyed by user_id */
+    public static function gradesForEvaluation(
+        int $classId,
+        int $subjectId,
+        int $semester,
+        string $type,
+        ?int $academicYearId
+    ): Collection {
+        $studentIds = User::query()
+            ->where('class_id', $classId)
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->where('status', User::STATUS_APPROVED)
+            ->pluck('id');
+
+        if ($studentIds->isEmpty()) {
+            return collect();
+        }
+
+        return Grade::query()
+            ->where('subject_id', $subjectId)
+            ->where('semester', $semester)
+            ->where('type', $type)
+            ->whereIn('user_id', $studentIds)
+            ->when($academicYearId, fn ($q) => $q->where('academic_year_id', $academicYearId))
+            ->get()
+            ->keyBy('user_id');
     }
 }

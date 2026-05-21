@@ -1,43 +1,65 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Gestion des classes')
+@section('title', !empty($isFormationSchool) && $isFormationSchool ? 'Gestion des promotions' : 'Gestion des classes')
 
 @section('content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3">Gestion des classes</h1>
-                <a href="{{ route('admin.classes.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i> Nouvelle classe
-                </a>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h1 class="h3 mb-0">{{ !empty($isFormationSchool) && $isFormationSchool ? 'Gestion des promotions' : 'Gestion des classes' }}</h1>
+                <div class="d-flex flex-wrap gap-2">
+                    @if(!empty($canProcessPromotions) && $promotionYear)
+                        <form method="POST" action="{{ route('admin.classes.process-all-promotions') }}"
+                              onsubmit="return confirm('Appliquer le passage en classe supérieure pour TOUTES les classes de {{ $promotionYear->name }} ?\n\nSeuls les élèves admis (moyenne ≥ {{ config('school.passing_grade_min', 10) }}/20) seront promus.');">
+                            @csrf
+                            <input type="hidden" name="academic_year_id" value="{{ $promotionYear->id }}">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-level-up-alt me-1"></i>
+                                Passages toutes classes ({{ $promotionYear->name }})
+                            </button>
+                        </form>
+                    @endif
+                    <a href="{{ route('admin.classes.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> {{ !empty($isFormationSchool) && $isFormationSchool ? 'Nouvelle promotion' : 'Nouvelle classe' }}
+                    </a>
+                </div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
+            @if(!empty($isFormationSchool) && $isFormationSchool)
+                <p class="text-muted mb-4">
+                    Créez une promotion en une fois : nom, filière, année de formation, année scolaire et tous les groupes/classes.
+                </p>
             @endif
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Liste des classes</h5>
+                    <h5 class="mb-0">{{ !empty($isFormationSchool) && $isFormationSchool ? 'Liste des promotions' : 'Liste des classes' }}</h5>
                     <div class="text-muted small">
-                        {{ $classes->total() }} classe(s)
+                        {{ $classes->total() }} {{ !empty($isFormationSchool) && $isFormationSchool ? 'groupe(s)' : 'classe(s)' }}
                     </div>
                 </div>
                 <div class="card-body p-0">
                     @if($classes->isEmpty())
                         <div class="alert alert-info m-3">
-                            Aucune classe n'a été créée pour le moment.
+                            {{ !empty($isFormationSchool) && $isFormationSchool ? 'Aucune promotion n\'a été créée pour le moment.' : 'Aucune classe n\'a été créée pour le moment.' }}
                         </div>
                     @else
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Nom</th>
-                                        <th>Niveau</th>
+                                        @if(!empty($isFormationSchool) && $isFormationSchool)
+                                            <th>Département</th>
+                                            <th>Promotion</th>
+                                            <th>Groupe</th>
+                                            <th>Diplôme</th>
+                                            <th>Filière</th>
+                                            <th>Année</th>
+                                        @else
+                                            <th>Nom</th>
+                                            <th>Niveau</th>
+                                        @endif
                                         <th>Année scolaire</th>
                                         <th class="text-nowrap">Effectif</th>
                                         <th>Professeurs affectés</th>
@@ -46,20 +68,48 @@
                                 </thead>
                                 <tbody>
                                     @foreach($classes as $class)
-                                        <tr>
-                                            <td class="text-truncate" style="max-width: 150px;" title="{{ $class->name }}">
-                                                {{ $class->name }}
-                                            </td>
-                                            <td class="text-nowrap">
-                                                <span class="badge bg-secondary">{{ $class->level->name ?? 'Non défini' }}</span>
-                                            </td>
+                                        @php
+                                            $isLocked = $class->academicYear?->isReadOnly();
+                                            $displayCount = $isLocked
+                                                ? ($cohortCounts[$class->id] ?? $class->students_count)
+                                                : $class->students_count;
+                                        @endphp
+                                        <tr class="{{ $isLocked ? 'table-secondary' : '' }}">
+                                            @if(!empty($isFormationSchool) && $isFormationSchool)
+                                                <td>{{ $class->formationPromotion?->formationDepartment?->name ?? $class->formationDepartment?->name ?? '—' }}</td>
+                                                <td>{{ $class->formationPromotion?->name ?? $class->promotion_name ?? '—' }}</td>
+                                                <td><strong>{{ $class->name }}</strong></td>
+                                                <td>{{ \App\Support\SenegalFormationDiplomas::label($class->formationPromotion?->diploma_type ?? $class->diploma_type) ?? '—' }}</td>
+                                                <td>{{ $class->formationPromotion?->filiere ?? $class->filiere ?? '—' }}</td>
+                                                <td>{{ $class->formationPromotion?->formation_year ?? $class->formation_year ?? '—' }}</td>
+                                            @else
+                                                <td class="text-truncate" style="max-width: 150px;" title="{{ $class->name }}">
+                                                    {{ $class->name }}
+                                                </td>
+                                                <td class="text-muted small">
+                                                    @if($class->diploma_type)
+                                                        {{ \App\Support\SenegalFormationDiplomas::label($class->diploma_type) }}
+                                                        @if($class->formation_year)
+                                                            — {{ $class->formation_year }}
+                                                        @endif
+                                                    @else
+                                                        {{ $class->level->name ?? 'Non défini' }}
+                                                    @endif
+                                                </td>
+                                            @endif
                                             <td class="text-nowrap">
                                                 <span class="text-muted">{{ $class->academicYear->name }}</span>
+                                                @if($isLocked)
+                                                    <span class="badge bg-secondary ms-1">Archivée</span>
+                                                @endif
                                             </td>
                                             <td class="text-nowrap">
-                                                <span class="badge" style="{{ $class->students_count > 0 ? 'background-color: #fd7e14;' : 'background-color: #f8f9fa; color: #212529;' }}">
-                                                    {{ $class->students_count }} élève(s)
+                                                <span class="badge" style="{{ $displayCount > 0 ? 'background-color: #fd7e14;' : 'background-color: #f8f9fa; color: #212529;' }}">
+                                                    {{ $displayCount }} élève(s)
                                                 </span>
+                                                @if($isLocked && $displayCount !== $class->students_count)
+                                                    <br><small class="text-muted">({{ $class->students_count }} actuellement)</small>
+                                                @endif
                                             </td>
                                             <td>
                                                 @if($class->teachers->count() > 0)
@@ -86,6 +136,7 @@
                                                        data-bs-toggle="tooltip">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
+                                                    @unless($isLocked)
                                                     <a href="{{ route('admin.classes.edit', $class) }}" 
                                                        class="btn btn-sm btn-outline-secondary" 
                                                        title="Modifier"
@@ -100,9 +151,15 @@
                                                             data-bs-target="#deleteModal{{ $class->id }}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
+                                                    @else
+                                                    <span class="btn btn-sm btn-outline-secondary disabled" title="Année terminée — consultation seule">
+                                                        <i class="fas fa-lock"></i>
+                                                    </span>
+                                                    @endunless
                                                 </div>
                                                 
                                                 <!-- Modal de confirmation de suppression -->
+                                                @unless($isLocked)
                                                 <div class="modal fade" id="deleteModal{{ $class->id }}" tabindex="-1" aria-hidden="true">
                                                     <div class="modal-dialog">
                                                         <div class="modal-content">
@@ -129,6 +186,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
+                                                @endunless
                                             </td>
                                         </tr>
                                     @endforeach

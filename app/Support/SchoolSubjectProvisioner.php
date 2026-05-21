@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Level;
+use App\Models\School;
 use App\Models\Subject;
 
 /**
@@ -71,6 +72,11 @@ class SchoolSubjectProvisioner
     public static function ensureForSchool(?int $schoolId): void
     {
         if (! $schoolId) {
+            return;
+        }
+
+        $school = School::find($schoolId);
+        if ($school?->isFormation()) {
             return;
         }
 

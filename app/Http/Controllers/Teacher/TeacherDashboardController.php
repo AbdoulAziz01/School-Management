@@ -8,45 +8,52 @@ use App\Models\TeacherAssignment;
 use App\Models\Grade;
 use App\Models\Subject;
 use App\Models\AcademicYear;
+use App\Support\ClosedAcademicYearGuard;
+use App\Support\DashboardAcademicYearContext;
 use App\Support\SenegalGradeSequence;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TeacherDashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $teacher = Auth::user();
+        $selectedYear = DashboardAcademicYearContext::resolve($request, 'teacher');
         $currentYear = AcademicYear::where('is_current', true)->first();
-        
-        // Récupérer les classes affectées via class_teacher
-        $assignedClasses = $teacher->assignedClasses()->with('level')->get();
+        $academicYears = DashboardAcademicYearContext::allYears();
+        $isSelectedYearCurrent = $selectedYear && $currentYear
+            && (int) $selectedYear->id === (int) $currentYear->id;
+        $gradesLocked = ClosedAcademicYearGuard::areGradesLocked($selectedYear);
+        $gradesLockedMessage = ClosedAcademicYearGuard::gradesLockedMessage($selectedYear);
+
+        $assignedClasses = $teacher->assignedClasses()
+            ->with('level')
+            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
+            ->get();
         $classIds = $assignedClasses->pluck('id')->toArray();
-        
-        // Nombre de classes
+
         $classesCount = $assignedClasses->count();
-        
-        // Nombre total d'élèves dans ces classes
+
         $studentsCount = User::whereIn('class_id', $classIds)
-            ->whereIn('role', ['student', 'eleve'])
-            ->where('status', 'approved')
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->where('status', User::STATUS_APPROVED)
             ->count();
-        
-        // Matières enseignées (via teacher_subjects ou teacher_assignments)
+
         $subjects = $teacher->subjects;
         $subjectsCount = $subjects->count();
-        
-        // Récupérer aussi les affectations TeacherAssignment si disponibles
+
         $assignments = TeacherAssignment::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
-            ->when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))
+            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
-        
-        // Notes récentes saisies par cet enseignant
+
         $subjectIds = $subjects->pluck('id')->merge($assignments->pluck('subject_id'))->unique()->toArray();
-        
+
         $recentGrades = Grade::with(['user', 'subject'])
             ->whereIn('subject_id', $subjectIds)
-            ->whereIn('user_id', function($query) use ($classIds) {
+            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
+            ->whereIn('user_id', function ($query) use ($classIds) {
                 $query->select('id')
                     ->from('users')
                     ->whereIn('class_id', $classIds);
@@ -54,8 +61,7 @@ class TeacherDashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
-        
-        // Calculer les moyennes par classe et par matière enseignée
+
         $classAverages = [];
         foreach ($assignedClasses as $class) {
             $studentIds = User::where('class_id', $class->id)
@@ -64,7 +70,7 @@ class TeacherDashboardController extends Controller
 
             $classSubjectIds = TeacherAssignment::where('teacher_id', $teacher->id)
                 ->where('class_id', $class->id)
-                ->when($currentYear, fn ($q) => $q->where('academic_year_id', $currentYear->id))
+                ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
                 ->pluck('subject_id')
                 ->unique();
 
@@ -80,13 +86,13 @@ class TeacherDashboardController extends Controller
                     continue;
                 }
 
-                $evaluations = $this->evaluationAverages($studentIds, $subjectId, $currentYear);
+                $evaluations = $this->evaluationAverages($studentIds, $subjectId, $selectedYear);
 
                 $gradesQuery = Grade::whereIn('user_id', $studentIds)
                     ->where('subject_id', $subjectId)
                     ->whereIn('type', SenegalGradeSequence::ORDER)
                     ->whereIn('semester', [1, 2])
-                    ->when($currentYear, fn ($q) => $q->where('academic_year_id', $currentYear->id));
+                    ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id));
 
                 $avg   = $gradesQuery->avg('grade');
                 $count = $gradesQuery->count();
@@ -103,18 +109,18 @@ class TeacherDashboardController extends Controller
                 ->whereIn('subject_id', $classSubjectIds)
                 ->whereIn('type', SenegalGradeSequence::ORDER)
                 ->whereIn('semester', [1, 2])
-                ->when($currentYear, fn ($q) => $q->where('academic_year_id', $currentYear->id))
+                ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
                 ->avg('grade');
 
             $classAverages[] = [
                 'class'    => $class,
-                'average'  => round($overall ?? 0, 2),
+                'average'  => $overall !== null ? round((float) $overall, 2) : null,
                 'subjects' => $subjectAverages,
             ];
         }
 
         $classPerformanceJson = collect($classAverages)->map(fn ($item) => [
-            'class'    => $item['class']->name ?? 'N/A',
+            'class'    => $item['class']->display_name ?? ($item['class']->name ?? 'N/A'),
             'average'  => $item['average'],
             'subjects' => collect($item['subjects'])->map(fn ($s) => [
                 'name'        => $s['subject']->name ?? '—',
@@ -134,17 +140,20 @@ class TeacherDashboardController extends Controller
             'recentGrades',
             'classAverages',
             'classPerformanceJson',
-            'currentYear'
+            'selectedYear',
+            'currentYear',
+            'academicYears',
+            'isSelectedYearCurrent',
+            'gradesLocked',
+            'gradesLockedMessage',
         ));
     }
 
     /**
-     * Moyennes par évaluation (S1 D1 → D2 → Compo, puis S2).
-     *
      * @param  \Illuminate\Support\Collection<int, int>|array<int, int>  $studentIds
      * @return array<int, array{label: string, semester: int, type: string, average: float|null, count: int}>
      */
-    private function evaluationAverages($studentIds, int $subjectId, ?AcademicYear $currentYear): array
+    private function evaluationAverages($studentIds, int $subjectId, ?AcademicYear $selectedYear): array
     {
         $shortLabels = [
             'devoir1'     => 'D1',
@@ -160,7 +169,7 @@ class TeacherDashboardController extends Controller
                     ->where('subject_id', $subjectId)
                     ->where('semester', $semester)
                     ->where('type', $type)
-                    ->when($currentYear, fn ($q) => $q->where('academic_year_id', $currentYear->id));
+                    ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id));
 
                 $avg   = $query->avg('grade');
                 $count = $query->count();

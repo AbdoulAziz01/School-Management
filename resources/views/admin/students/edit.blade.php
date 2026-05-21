@@ -84,6 +84,11 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label class="form-label">Connexion</label>
+                                    @include('admin.students._credentials-panel')
+                                </div>
+
+                                <div class="mb-3">
                                     <label for="status" class="form-label">Statut <span class="text-danger">*</span></label>
                                     <select class="form-select @error('status') is-invalid @enderror" 
                                             id="status" name="status" required>

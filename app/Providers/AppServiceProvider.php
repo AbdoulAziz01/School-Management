@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Http\View\Composers\PlatformBrandingComposer;
 use App\Http\View\Composers\SchoolBrandingComposer;
+use App\Http\View\Composers\StudentSidebarComposer;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Pagination\Paginator;
@@ -46,6 +47,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Paginator::useBootstrapFive();
+
+        View::composer([
+            'layouts.student',
+            'student.*',
+        ], StudentSidebarComposer::class);
 
         View::composer([
             'admin.layouts.app',

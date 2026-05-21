@@ -30,12 +30,6 @@
                 </div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             @if($assignments->isEmpty())
                 <div class="alert alert-info">
                     Aucune affectation trouvée pour cet enseignant.

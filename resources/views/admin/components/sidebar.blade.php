@@ -404,11 +404,11 @@
             </a>
         </li>
         
-        <!-- Classes -->
+        <!-- Classes / Promotions -->
         <li class="nav-item">
             <a href="{{ route('admin.classes.index') }}" class="nav-link {{ request()->routeIs('admin.classes.*') ? 'active' : '' }}">
                 <i class="fas fa-door-open"></i>
-                <span>Classes</span>
+                <span>{{ !empty($isFormationSchool) && $isFormationSchool ? 'Promotions' : 'Classes' }}</span>
             </a>
         </li>
 
@@ -420,11 +420,11 @@
             </a>
         </li>
         
-        <!-- Matières -->
+        <!-- Matières / Modules -->
         <li class="nav-item">
             <a href="{{ route('admin.subjects.index') }}" class="nav-link {{ request()->routeIs('admin.subjects.*') ? 'active' : '' }}">
                 <i class="fas fa-book-open"></i>
-                <span>Matières</span>
+                <span>{{ !empty($isFormationSchool) && $isFormationSchool ? 'Modules' : 'Matières' }}</span>
             </a>
         </li>
         

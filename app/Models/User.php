@@ -7,13 +7,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\BelongsToSchool;
+use App\Models\Concerns\HasAdminVisiblePassword;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\SchoolClass;
 use App\Models\Grade;
 
 class User extends Authenticatable
 {
-    use BelongsToSchool, HasFactory, Notifiable, HasRoles;
+    use BelongsToSchool, HasAdminVisiblePassword, HasFactory, Notifiable, HasRoles;
 
     public const ROLE_SUPER_ADMIN = 'super_admin';
 
@@ -48,6 +49,8 @@ class User extends Authenticatable
         'role',
         'status',
         'class_id',
+        'last_promotion_academic_year_id',
+        'promotion_source_class_id',
         'date_of_birth',
         'phone',
         'address',
@@ -101,6 +104,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
+        'admin_visible_password',
         'remember_token',
     ];
 

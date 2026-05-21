@@ -118,20 +118,43 @@
 
 @section('content')
     <div class="flex-wrap pt-3 pb-2 mb-4 d-flex justify-content-between flex-md-nowrap align-items-center border-bottom">
-        <h1 class="mb-0 h3">Affectation des Élèves aux Classes</h1>
+        <h1 class="mb-0 h3">
+            @if(!empty($isFormationSchool) && $isFormationSchool)
+                Groupe : {{ $class->name }}
+            @else
+                Affectation des Élèves aux Classes
+            @endif
+        </h1>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('admin.classes.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Retour
+            </a>
+            @if((empty($isFormationSchool) || !$isFormationSchool) && !empty($canProcessClassPromotions))
+                <form method="POST" action="{{ route('admin.classes.process-promotions', $class) }}"
+                      onsubmit="return confirm('Traiter le passage en classe supérieure pour les élèves admis (notes complètes, moyenne ≥ {{ config('school.passing_grade_min', 10) }}/20) ?');">
+                    @csrf
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-level-up-alt me-1"></i> Passages en classe supérieure
+                    </button>
+                </form>
+            @endif
+        </div>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    @if(!empty($isReadOnly))
+        <div class="mb-4 alert alert-secondary border">
+            <i class="fas fa-archive me-2"></i>
+            <strong>Archive {{ $class->academicYear->name }} — consultation seule.</strong>
+            Les statistiques, élèves et résultats ci-dessous correspondent à l'année scolaire terminée (données conservées).
         </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    @elseif(!empty($archivedHistoryClass) && ($classStats['students_with_grades'] ?? 0) === 0)
+        <div class="mb-4 alert alert-info border">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Nouvelle année {{ $class->academicYear->name }}</strong> — aucune note saisie pour le moment.
+            Les {{ $classStats['total_students'] }} élève(s) affichés viennent du passage en classe supérieure.
+            <a href="{{ route('admin.classes.show', $archivedHistoryClass) }}" class="alert-link fw-semibold">
+                Voir les résultats archivés de {{ $archivedHistoryClass->academicYear->name ?? 'l\'année précédente' }} →
+            </a>
         </div>
     @endif
 
@@ -148,19 +171,69 @@
     <div class="mb-4 shadow-sm card">
         <div class="text-white card-header bg-primary">
             <h5 class="mb-0">
-                <i class="fas fa-info-circle"></i> Informations de la classe : {{ $class->name }}
+                <i class="fas fa-info-circle"></i>
+                @if(!empty($isFormationSchool) && $isFormationSchool)
+                    Informations du groupe : {{ $class->name }}
+                @else
+                    Informations de la classe : {{ $class->name }}
+                @endif
             </h5>
         </div>
         <div class="card-body">
             <div class="row">
+                @if(!empty($isFormationSchool) && $isFormationSchool && ($class->promotion_name || $class->diploma_type || $class->formationPromotion))
+                    @php $promotion = $class->formationPromotion; @endphp
+                    @if($promotion?->formationDepartment || $class->formationDepartment)
+                        <div class="col-md-4 mb-3">
+                            <p class="mb-1"><strong><i class="fas fa-building me-2"></i>Département :</strong></p>
+                            <p class="text-muted mb-0">{{ $promotion?->formationDepartment?->name ?? $class->formationDepartment?->name ?? '—' }}</p>
+                        </div>
+                    @endif
+                    <div class="col-md-4 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-graduation-cap me-2"></i>Promotion :</strong></p>
+                        <p class="text-muted mb-0">{{ $promotion?->name ?? $class->promotion_name ?? '—' }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-certificate me-2"></i>Diplôme :</strong></p>
+                        <p class="text-muted mb-0">{{ \App\Support\SenegalFormationDiplomas::label($promotion?->diploma_type ?? $class->diploma_type) ?? '—' }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-book me-2"></i>Filière :</strong></p>
+                        <p class="text-muted mb-0">{{ $promotion?->filiere ?? $class->filiere ?? '—' }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-sort-numeric-up me-2"></i>Année de formation :</strong></p>
+                        <p class="text-muted mb-0">{{ $promotion?->formation_year ?? $class->formation_year ?? '—' }}</p>
+                    </div>
+                    @if($promotion && $promotion->groups()->count() > 0)
+                        <div class="col-md-4 mb-3">
+                            <p class="mb-1"><strong><i class="fas fa-users me-2"></i>Effectif promotion :</strong></p>
+                            <p class="text-muted mb-0">{{ $promotion->studentsCount() }} élève(s) sur {{ $promotion->groups()->count() }} groupe(s)</p>
+                        </div>
+                    @endif
+                    @if($class->room_number)
+                        <div class="col-md-4 mb-3">
+                            <p class="mb-1"><strong><i class="fas fa-door-open me-2"></i>Salle :</strong></p>
+                            <p class="text-muted mb-0">{{ $class->room_number }}</p>
+                        </div>
+                    @endif
+                    @if($class->description)
+                        <div class="col-12 mb-3">
+                            <p class="mb-1"><strong><i class="fas fa-align-left me-2"></i>Description :</strong></p>
+                            <p class="text-muted mb-0">{{ $class->description }}</p>
+                        </div>
+                    @endif
+                @endif
                 <div class="col-md-3">
                     <p class="mb-1"><strong><i class="fas fa-calendar me-2"></i>Année scolaire :</strong></p>
                     <p class="text-muted">{{ $class->academicYear->name ?? 'Non définie' }}</p>
                 </div>
+                @if(empty($isFormationSchool) || !$isFormationSchool)
                 <div class="col-md-3">
                     <p class="mb-1"><strong><i class="fas fa-layer-group me-2"></i>Niveau :</strong></p>
                     <p class="text-muted">{{ $class->level->name ?? 'Non défini' }}</p>
                 </div>
+                @endif
                 <div class="col-md-3">
                     <p class="mb-1"><strong><i class="fas fa-users me-2"></i>Effectif :</strong></p>
                     <p class="text-muted">{{ $classStats['total_students'] }} élève(s)</p>
@@ -172,12 +245,204 @@
             </div>
         </div>
     </div>
+
+    @if(!empty($promotionPreview['enabled']))
+    <div class="mb-4 shadow-sm card border-success">
+        <div class="card-header bg-success text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0">
+                <i class="fas fa-level-up-alt me-2"></i>
+                Passage en classe supérieure — Aperçu ({{ $promotionPreview['academic_year_name'] }})
+            </h5>
+            <span class="badge bg-white text-success">
+                Seuil : {{ $promotionPreview['passing_grade_min'] }}/20 · même calcul que les statistiques de la classe
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="mb-4 row g-3">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center border border-success rounded bg-success bg-opacity-10">
+                        <div class="display-6 fw-bold text-success">{{ $promotionPreview['counts']['will_pass'] }}</div>
+                        <small class="text-muted">Admis / Diplômés</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center border border-danger rounded bg-danger bg-opacity-10">
+                        <div class="display-6 fw-bold text-danger">{{ $promotionPreview['counts']['will_stay'] }}</div>
+                        <small class="text-muted">Redoublent (&lt; {{ $promotionPreview['passing_grade_min'] }}/20)</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center border border-warning rounded bg-warning bg-opacity-10">
+                        <div class="display-6 fw-bold text-warning">{{ $promotionPreview['counts']['incomplete'] }}</div>
+                        <small class="text-muted">Sans moyenne calculable</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center border border-secondary rounded">
+                        <div class="display-6 fw-bold text-secondary">{{ $promotionPreview['counts']['no_target'] }}</div>
+                        <small class="text-muted">Admis sans classe sup.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <h6 class="text-success mb-3">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Élèves admis / diplômés ({{ $promotionPreview['counts']['will_pass'] }})
+                    </h6>
+                    <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Élève</th>
+                                    <th>Moy. annuelle</th>
+                                    <th>Destination</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($promotionPreview['will_pass'] as $student)
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $student['name'] }}</strong>
+                                            @if(!empty($student['is_processed']))
+                                                <span class="badge bg-info ms-1">Passage effectué</span>
+                                            @endif
+                                            <br><small class="text-muted">{{ $student['identifier'] }}</small>
+                                        </td>
+                                        <td>
+                                            @if($student['annual_average'] !== null)
+                                                <span class="badge bg-success">{{ $student['annual_average'] }}/20</span>
+                                            @else
+                                                —
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <small>{{ $student['outcome_label'] }}</small>
+                                            @if(!empty($student['target_class_name']))
+                                                <br><small class="text-muted">→ {{ $student['target_class_name'] }}</small>
+                                            @endif
+                                        </td>
+                                        <td><a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-primary">Fiche</a></td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="text-center text-muted py-3">Aucun élève admis pour le passage.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <h6 class="text-danger mb-3">
+                        <i class="fas fa-redo me-1"></i>
+                        Élèves qui redoublent ({{ $promotionPreview['counts']['will_stay'] }})
+                    </h6>
+                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Élève</th>
+                                    <th>Moy. annuelle</th>
+                                    <th>Destination</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($promotionPreview['will_stay'] as $student)
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $student['name'] }}</strong>
+                                            @if(!empty($student['is_processed']))
+                                                <span class="badge bg-secondary ms-1">Traité</span>
+                                            @endif
+                                            <br><small class="text-muted">{{ $student['identifier'] }}</small>
+                                        </td>
+                                        <td>
+                                            @if($student['annual_average'] !== null)
+                                                <span class="badge bg-danger">{{ $student['annual_average'] }}/20</span>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <small>{{ $student['outcome_label'] }}</small>
+                                            @if(!empty($student['target_class_name']))
+                                                <br><small class="text-muted">→ {{ $student['target_class_name'] }}</small>
+                                            @endif
+                                        </td>
+                                        <td><a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-primary">Fiche</a></td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="text-center text-muted py-3">Aucun redoublant.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if($promotionPreview['counts']['incomplete'] > 0)
+                    <h6 class="text-warning mb-3 mt-4">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        Non évaluables — pas assez de notes ({{ $promotionPreview['counts']['incomplete'] }})
+                    </h6>
+                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Élève</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($promotionPreview['incomplete'] as $student)
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $student['name'] }}</strong>
+                                            <br><small class="text-muted">{{ $student['identifier'] }}</small>
+                                        </td>
+                                        <td><a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-primary">Fiche</a></td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            @if($promotionPreview['counts']['processed'] > 0)
+                <div class="mt-4 alert alert-info mb-0">
+                    <strong><i class="fas fa-info-circle me-1"></i> {{ $promotionPreview['counts']['processed'] }} élève(s) déjà traité(s)</strong>
+                    — les listes ci-dessus conservent les moyennes réelles de l'année {{ $promotionPreview['academic_year_name'] }}.
+                </div>
+            @endif
+
+            @if($promotionPreview['counts']['no_target'] > 0)
+                <div class="mt-4 alert alert-warning mb-0">
+                    <strong><i class="fas fa-exclamation-triangle me-1"></i> {{ $promotionPreview['counts']['no_target'] }} admis(s) sans classe de destination</strong>
+                    — créez les classes du niveau supérieur pour la prochaine année scolaire.
+                    <ul class="mb-0 mt-2 small">
+                        @foreach($promotionPreview['no_target'] as $student)
+                            <li>{{ $student['name'] }} ({{ $student['annual_average'] }}/20) — <a href="{{ $student['url'] }}">Voir la fiche</a></li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+    </div>
+    @endif
     
     <!-- Statistiques de la classe -->
     <div class="mb-4 shadow-sm card">
         <div class="card-header" style="background-color: #fd7e14; color: white;">
             <h5 class="mb-0">
-                <i class="fas fa-chart-bar"></i> Statistiques et Performances de la Classe
+                <i class="fas fa-chart-bar"></i>
+                @if(!empty($isReadOnly))
+                    Statistiques archivées ({{ $class->academicYear->name }})
+                @else
+                    Statistiques et Performances de la Classe
+                @endif
             </h5>
         </div>
         <div class="card-body">
@@ -569,7 +834,12 @@
     <div class="shadow-sm card">
         <div class="text-white card-header bg-success">
             <h5 class="mb-0">
-                <i class="fas fa-user-graduate"></i> Élèves affectés
+                <i class="fas fa-user-graduate"></i>
+                @if(!empty($isReadOnly))
+                    Élèves de la cohorte {{ $class->academicYear->name }}
+                @else
+                    Élèves affectés
+                @endif
                 <span class="badge bg-light text-dark float-end">{{ $assignedStudents->total() }}</span>
             </h5>
         </div>
@@ -600,10 +870,14 @@
                                 <td><small>{{ $student->email }}</small></td>
                                 <td>
                                     <span class="badge fs-6" style="background-color: #fd7e14;">
-                                        {{ $student->class->name ?? 'Non affecté' }}
+                                        {{ $student->schoolClass->name ?? $student->class->name ?? 'Non affecté' }}
                                     </span>
+                                    @if(!empty($isReadOnly) && (int) $student->class_id !== (int) $class->id)
+                                        <br><small class="text-muted">Promu(e) — classe actuelle</small>
+                                    @endif
                                 </td>
                                 <td class="text-end">
+                                    @unless(!empty($isReadOnly))
                                     <form action="{{ route('admin.students.unassign', $student) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -612,6 +886,11 @@
                                             <i class="fas fa-user-minus"></i> Retirer
                                         </button>
                                     </form>
+                                    @else
+                                    <a href="{{ route('admin.students.show', $student) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i> Fiche
+                                    </a>
+                                    @endunless
                                 </td>
                             </tr>
                             @endforeach

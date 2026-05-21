@@ -8,6 +8,7 @@ use App\Models\AcademicYear;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Support\SchoolSubjectProvisioner;
+use App\Support\SchoolUserIdentifier;
 use App\Support\TenantSchool;
 use App\Models\TeacherAssignment;
 use App\Models\User;
@@ -85,7 +86,13 @@ class TeacherController extends Controller
         try {
             DB::beginTransaction();
 
-            $identifier = $this->nextTeacherIdentifier(auth()->user()->school_id);
+            $schoolId = auth()->user()->school_id ?? TenantSchool::id();
+
+            if (! $schoolId) {
+                throw new \RuntimeException('Établissement introuvable pour la génération de l\'identifiant.');
+            }
+
+            $identifier = SchoolUserIdentifier::next($schoolId, 'P');
 
             $teacher = User::withoutGlobalScopes()->create([
                 'name' => $validated['name'],
@@ -109,17 +116,25 @@ class TeacherController extends Controller
 
             DB::commit();
 
-            $resetResult = $this->sendTeacherCredentials($teacher);
+            $plainPassword = $this->assignTeacherPassword($teacher);
+
+            if ($this->teacherCredentialsEmailEnabled()) {
+                $mailResult = $this->sendTeacherCredentials($teacher, $plainPassword);
+
+                if ($mailResult === true) {
+                    return redirect()
+                        ->route('admin.teachers.show', $teacher)
+                        ->with('success', 'Enseignant créé. Identifiants affichés ci-dessous et envoyés à '.$teacher->email.'.');
+                }
+
+                return redirect()
+                    ->route('admin.teachers.show', $teacher)
+                    ->with('error', is_string($mailResult) ? $mailResult : 'Enseignant créé, mais l\'envoi email a échoué.');
+            }
 
             return redirect()
-                ->route('admin.teachers.index')
-                ->with('teacher_created', [
-                    'name' => $teacher->name,
-                    'identifier' => $identifier,
-                    'email' => $teacher->email,
-                    'reset_sent' => $resetResult === true,
-                    'mail_error' => is_string($resetResult) ? $resetResult : null,
-                ]);
+                ->route('admin.teachers.show', $teacher)
+                ->with('success', 'Enseignant créé. Communiquez les identifiants affichés sur cette fiche.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erreur création enseignant', ['error' => $e->getMessage()]);
@@ -137,7 +152,11 @@ class TeacherController extends Controller
         $teacher = User::whereIn('role', User::ROLE_TEACHER_ALIASES)
             ->with(['assignedClasses.level', 'assignedClasses.academicYear', 'assignedClasses.students', 'subjects'])
             ->findOrFail($id);
-        return view('admin.teachers.show', compact('teacher'));
+
+        $pendingCredentials = $this->resolveTeacherCredentials($teacher);
+        $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
+
+        return view('admin.teachers.show', compact('teacher', 'pendingCredentials', 'canViewPassword'));
     }
 
     /**
@@ -150,8 +169,11 @@ class TeacherController extends Controller
 
         $teacher->load(['subjects', 'assignedClasses']);
 
+        $pendingCredentials = $this->resolveTeacherCredentials($teacher);
+        $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
+
         return view('admin.teachers.edit', array_merge(
-            compact('teacher'),
+            compact('teacher', 'pendingCredentials', 'canViewPassword'),
             $this->teachingFormData(),
             [
                 'selectedSubjectIds' => old('subjects', $teacher->subjects->pluck('id')->all()),
@@ -214,13 +236,14 @@ class TeacherController extends Controller
                 ->route('admin.teachers.edit', $teacher)
                 ->with('success', 'Les informations de l\'enseignant ont été mises à jour avec succès.');
 
-            if ($request->boolean('send_invitation_email')) {
-                $mailResult = $this->sendTeacherCredentials($teacher);
+            if ($request->boolean('send_invitation_email') && $this->teacherCredentialsEmailEnabled()) {
+                $plainPassword = $this->assignTeacherPassword($teacher);
+                $mailResult = $this->sendTeacherCredentials($teacher, $plainPassword);
 
                 if ($mailResult === true) {
                     return $redirect->with(
                         'success',
-                        'Enregistré. Identifiant et mot de passe temporaire envoyés à '.$teacher->email.' (confidentiel).'
+                        'Enregistré. Identifiant et mot de passe temporaire envoyés à '.$teacher->email.'.'
                     );
                 }
 
@@ -230,10 +253,7 @@ class TeacherController extends Controller
                 );
             }
 
-            return $redirect->with(
-                'info',
-                'Enregistré sans envoi d\'email. Cochez « Envoyer l\'email d\'invitation » puis Enregistrer, ou utilisez le bouton dédié.'
-            );
+            return $redirect;
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erreur mise à jour enseignant', [
@@ -247,22 +267,38 @@ class TeacherController extends Controller
     }
 
     /**
-     * Renvoie l'email d'invitation (lien de définition du mot de passe).
+     * Renvoie l'email d'invitation (si activé) ou affiche les identifiants à l'écran.
      */
     public function sendInvitation(User $teacher)
     {
         abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
+        $this->assertCanManageTeacherCredentials();
 
-        $result = $this->sendTeacherCredentials($teacher);
+        $plainPassword = $teacher->adminVisiblePassword() ?? $this->assignTeacherPassword($teacher);
+
+        $result = $this->sendTeacherCredentials($teacher, $plainPassword, manual: true);
 
         if ($result === true) {
             return back()->with(
                 'success',
-                'Identifiant et mot de passe temporaire envoyés à '.$teacher->email.' (seul le professeur les voit).'
+                'Identifiant et mot de passe temporaire envoyés à '.$teacher->email.'.'
             );
         }
 
         return back()->with('error', is_string($result) ? $result : 'Impossible d\'envoyer l\'email d\'invitation.');
+    }
+
+    /**
+     * Génère un nouveau mot de passe consultable par l'admin.
+     */
+    public function regenerateCredentials(User $teacher)
+    {
+        abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
+        $this->assertCanManageTeacherCredentials();
+
+        $this->assignTeacherPassword($teacher);
+
+        return back()->with('success', 'Nouveau mot de passe généré. Il reste visible sur cette fiche.');
     }
 
     /**
@@ -292,13 +328,67 @@ class TeacherController extends Controller
         }
     }
 
+    private function teacherCredentialsEmailEnabled(): bool
+    {
+        return (bool) config('mail.teacher_credentials_email_enabled', false);
+    }
+
+    /** @return array{name: string, identifier: string|null, email: string, password: string} */
+    private function teacherCredentialsFlash(User $teacher, string $plainPassword): array
+    {
+        return [
+            'name' => $teacher->name,
+            'identifier' => $teacher->identifier,
+            'email' => $teacher->email,
+            'password' => $plainPassword,
+        ];
+    }
+
+    /** @return array{name: string, identifier: string|null, email: string, password: string}|null */
+    private function resolveTeacherCredentials(User $teacher): ?array
+    {
+        if (! auth()->user()?->canViewUserPasswords()) {
+            return null;
+        }
+
+        $plainPassword = $teacher->adminVisiblePassword();
+
+        if ($plainPassword === null) {
+            return null;
+        }
+
+        return $this->teacherCredentialsFlash($teacher, $plainPassword);
+    }
+
+    private function assertCanManageTeacherCredentials(): void
+    {
+        abort_unless(auth()->user()?->canViewUserPasswords(), 403, 'Accès réservé à l\'administrateur.');
+    }
+
+    private function assignTeacherPassword(User $teacher): string
+    {
+        $plainPassword = Str::password(10, symbols: false);
+
+        $teacher->forceFill([
+            'password' => Hash::make($plainPassword),
+        ])->save();
+
+        $teacher->setAdminVisiblePassword($plainPassword);
+
+        return $plainPassword;
+    }
+
     /**
-     * Génère un mot de passe temporaire, l'envoie par email (seul le professeur le voit), puis l'enregistre.
+     * Envoie identifiant + mot de passe par email (si activé dans la config).
      *
      * @return bool|string true si envoyé, string = message d'erreur
      */
-    private function sendTeacherCredentials(User $teacher): bool|string
+    private function sendTeacherCredentials(User $teacher, ?string $plainPassword = null, bool $manual = false): bool|string
     {
+        if (! $manual && ! $this->teacherCredentialsEmailEnabled()) {
+            return 'Envoi email désactivé (TEACHER_SEND_CREDENTIALS_EMAIL=false).';
+        }
+
         if (empty($teacher->email)) {
             return 'Cet enseignant n\'a pas d\'adresse email.';
         }
@@ -315,7 +405,7 @@ class TeacherController extends Controller
             return 'Configuration incomplète : renseignez MAIL_PASSWORD et MAIL_FROM_ADDRESS dans .env, puis php artisan config:clear.';
         }
 
-        $plainPassword = Str::password(10, symbols: false);
+        $plainPassword ??= Str::password(10, symbols: false);
 
         try {
             Mail::to($teacher->email)->send(new TeacherCredentialsMail($teacher, $plainPassword));
@@ -324,6 +414,8 @@ class TeacherController extends Controller
                 'password' => Hash::make($plainPassword),
                 'invitation_email_sent_at' => now(),
             ])->save();
+
+            $teacher->setAdminVisiblePassword($plainPassword);
 
             return true;
         } catch (TransportExceptionInterface $e) {
@@ -407,22 +499,5 @@ class TeacherController extends Controller
                 );
             }
         }
-    }
-
-    private function nextTeacherIdentifier(?int $schoolId): string
-    {
-        $year = date('Y');
-        $prefix = 'P'.$year;
-
-        $last = User::withoutGlobalScopes()
-            ->whereIn('role', User::ROLE_TEACHER_ALIASES)
-            ->when($schoolId, fn ($q) => $q->where('school_id', $schoolId))
-            ->where('identifier', 'like', $prefix.'%')
-            ->orderByDesc('identifier')
-            ->value('identifier');
-
-        $num = $last ? ((int) substr($last, strlen($prefix)) + 1) : 1;
-
-        return $prefix.str_pad((string) $num, 3, '0', STR_PAD_LEFT);
     }
 }

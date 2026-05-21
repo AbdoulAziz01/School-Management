@@ -17,12 +17,6 @@
                 </div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             <div class="row">
                 <div class="col-md-4 mb-4">
                     <!-- Photo de profil -->

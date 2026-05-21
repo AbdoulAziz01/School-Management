@@ -45,14 +45,39 @@
                         <td>
                             @if($academicYear->is_current)
                                 <span class="badge bg-success">Année en cours</span>
-                            @else
-                                <form action="{{ route('admin.academic-years.set-current', $academicYear) }}" method="POST" class="d-inline">
+                            @endif
+                            @if($academicYear->is_closed)
+                                <span class="badge bg-secondary">Terminée</span>
+                                <form action="{{ route('admin.academic-years.reopen', $academicYear) }}" method="POST" class="d-inline ms-2">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                        Définir comme année courante
+                                    <button type="submit" class="btn btn-sm btn-outline-warning">
+                                        Rouvrir l'année
                                     </button>
                                 </form>
+                            @else
+                                @if(!$academicYear->is_current)
+                                    <form action="{{ route('admin.academic-years.set-current', $academicYear) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            Définir comme année courante
+                                        </button>
+                                    </form>
+                                @endif
+                                <form action="{{ route('admin.academic-years.close', $academicYear) }}" method="POST" class="d-inline ms-2"
+                                      onsubmit="return confirm('Marquer cette année comme terminée ? La saisie des notes sera bloquée pour tous les enseignants.');">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check-circle me-1"></i> Marquer comme terminée
+                                    </button>
+                                </form>
+                                @if($academicYear->is_current)
+                                    <p class="small text-muted mb-0 mt-2">
+                                        Clôture l'année en cours : les professeurs pourront consulter les notes mais plus rien saisir.
+                                    </p>
+                                @endif
                             @endif
                         </td>
                     </tr>
@@ -118,8 +143,20 @@
     </div>
     <div class="p-0 card-body">
         @if($academicYear->classes->isEmpty())
-            <div class="p-3 text-center text-muted">
-                Aucune classe n'a été créée pour cette année scolaire.
+            <div class="p-4 text-center">
+                <p class="text-muted mb-3">Aucune classe n'a été créée pour cette année scolaire.</p>
+                @if(empty($isFormationSchool) || !$isFormationSchool)
+                    <form action="{{ route('admin.academic-years.provision', $academicYear) }}" method="POST"
+                          onsubmit="return confirm('Générer automatiquement les classes, matières et affectations professeurs à partir de l\'année précédente ?');">
+                        @csrf
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-magic me-1"></i> Générer la structure automatiquement
+                        </button>
+                    </form>
+                    <p class="small text-muted mt-2 mb-0">
+                        Copie les classes, affectations professeurs et emplois du temps depuis la dernière année.
+                    </p>
+                @endif
             </div>
         @else
             <div class="table-responsive">
@@ -144,10 +181,16 @@
                                            class="btn" style="color: #fd7e14; border-color: #fd7e14;" title="Voir">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        @unless($class->academicYear?->isReadOnly())
                                         <a href="{{ route('admin.classes.edit', $class) }}" 
                                            class="btn btn-outline-secondary" title="Modifier">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        @else
+                                        <span class="btn btn-outline-secondary disabled" title="Année archivée — consultation seule">
+                                            <i class="fas fa-lock"></i>
+                                        </span>
+                                        @endunless
                                     </div>
                                 </td>
                             </tr>
@@ -187,7 +230,7 @@
                                 <td>{{ $assignment->subject->name }}</td>
                                 <td>{{ $assignment->schoolClass->name }}</td>
                                 <td>
-                                    <form action="{{ route('admin.teachers.unassign', $assignment) }}" 
+                                    <form action="{{ route('admin.teachers.assignments.destroy', $assignment) }}" 
                                           method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')

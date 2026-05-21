@@ -96,13 +96,30 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <div>
             <h1 class="h3 mb-1">Mes Notes</h1>
+            @if($selectedYear ?? null)
+                <p class="text-muted small mb-0">{{ $selectedYear->name }}</p>
+            @endif
         </div>
-        @if($grades->isNotEmpty())
-        <a href="{{ route('student.bulletin') }}" class="btn btn-primary bulletin-btn">
-            <i class="fas fa-file-alt me-2"></i>Voir mon bulletin
-        </a>
-        @endif
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            @include('partials.dashboard-year-filter', [
+                'action' => route('student.grades'),
+                'academicYears' => $academicYears ?? collect(),
+                'selectedYear' => $selectedYear ?? null,
+            ])
+            @if($grades->isNotEmpty())
+                <a href="{{ route('student.bulletin', ['academic_year_id' => $selectedYear?->id]) }}" class="btn btn-primary bulletin-btn">
+                    <i class="fas fa-file-alt me-2"></i>Voir mon bulletin
+                </a>
+            @endif
+        </div>
     </div>
+
+    @if(isset($selectedYear) && !($isSelectedYearCurrent ?? true))
+        <div class="alert alert-light border py-2 small mb-4">
+            <i class="fas fa-info-circle me-1 text-muted"></i>
+            Notes de l'année <strong>{{ $selectedYear->name }}</strong> uniquement.
+        </div>
+    @endif
 
     @if($grades->isEmpty())
     <!-- État vide - Aucune note -->
@@ -125,7 +142,7 @@
             <div class="card stat-card bg-primary text-white">
                 <div class="card-body text-center">
                     <i class="fas fa-chart-line fa-2x mb-2 opacity-75"></i>
-                    <div class="stat-value">{{ number_format($generalAverage, 2) }}</div>
+                    <div class="stat-value">{{ $generalAverage !== null ? number_format($generalAverage, 2) : '—' }}</div>
                     <div class="small opacity-75">Moyenne Générale</div>
                 </div>
             </div>
@@ -218,37 +235,59 @@
                                         <th>Date</th>
                                         <th>Type</th>
                                         <th>Note</th>
-                                        <th>Moy. Classe</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @php $subjectSlug = Str::slug($subjectData['subject']); @endphp
                                     @foreach($subjectData['grades']->take(5) as $grade)
                                         <tr>
                                             <td>{{ $grade->date ? $grade->date->format('d/m/Y') : ($grade->created_at ? $grade->created_at->format('d/m/Y') : 'N/A') }}</td>
-                                            <td>{{ $grade->type ?? 'Devoir' }}</td>
+                                            <td>{{ \App\Support\SenegalGradeSequence::LABELS[$grade->type] ?? ucfirst($grade->type ?? 'Devoir') }}</td>
                                             <td>
-                                                @php
-                                                    $gradeValue = $grade->grade ?? $grade->value ?? 0;
-                                                    $gradeClass = $gradeValue >= 16 ? 'grade-excellent' : 
-                                                                  ($gradeValue >= 12 ? 'grade-good' : 
-                                                                  ($gradeValue >= 10 ? 'grade-average' : 'grade-poor'));
-                                                @endphp
-                                                <span class="grade-badge {{ $gradeClass }}">
-                                                    {{ $gradeValue }}/20
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span class="text-muted">{{ $grade->class_average ?? '-' }}/20</span>
+                                                @if($grade->grade !== null)
+                                                    @php
+                                                        $gradeValue = (float) $grade->grade;
+                                                        $gradeClass = $gradeValue >= 16 ? 'grade-excellent' :
+                                                                      ($gradeValue >= 12 ? 'grade-good' :
+                                                                      ($gradeValue >= 10 ? 'grade-average' : 'grade-poor'));
+                                                    @endphp
+                                                    <span class="grade-badge {{ $gradeClass }}">
+                                                        {{ number_format($gradeValue, 2) }}/20
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
                                             </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
-                        
+
                         @if($subjectData['grades']->count() > 5)
+                            <div class="collapse" id="more-{{ $subjectSlug }}">
+                                <div class="table-responsive mt-2">
+                                    <table class="table table-sm grade-table mb-0">
+                                        <tbody>
+                                            @foreach($subjectData['grades']->slice(5) as $grade)
+                                                <tr>
+                                                    <td>{{ $grade->date ? $grade->date->format('d/m/Y') : ($grade->created_at ? $grade->created_at->format('d/m/Y') : 'N/A') }}</td>
+                                                    <td>{{ \App\Support\SenegalGradeSequence::LABELS[$grade->type] ?? ucfirst($grade->type ?? 'Devoir') }}</td>
+                                                    <td>
+                                                        @if($grade->grade !== null)
+                                                            {{ number_format((float) $grade->grade, 2) }}/20
+                                                        @else
+                                                            —
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                             <div class="text-center mt-2">
-                                <button class="btn btn-sm btn-link" data-bs-toggle="collapse" data-bs-target="#more-{{ Str::slug($subjectData['subject']) }}">
+                                <button type="button" class="btn btn-sm btn-link" data-bs-toggle="collapse" data-bs-target="#more-{{ $subjectSlug }}">
                                     Voir plus ({{ $subjectData['grades']->count() - 5 }} notes)
                                 </button>
                             </div>
@@ -268,6 +307,7 @@
     </div>
     @endif
 
+    @if($grades->isNotEmpty())
     <!-- Diagramme d'évolution des notes -->
     <div class="row mt-4">
         <div class="col-12">
@@ -293,11 +333,12 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Bouton bulletin en bas -->
     @if($grades->isNotEmpty())
     <div class="text-center mt-5 mb-4">
-        <a href="{{ route('student.bulletin') }}" class="btn btn-lg btn-primary bulletin-btn">
+        <a href="{{ route('student.bulletin', ['academic_year_id' => $selectedYear?->id]) }}" class="btn btn-lg btn-primary bulletin-btn">
             <i class="fas fa-print me-2"></i>Accéder à mon bulletin complet
         </a>
         <p class="text-muted mt-2">

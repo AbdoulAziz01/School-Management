@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @include('partials.form-draft-meta')
     <title>@yield('title', 'Tableau de bord') - Espace Élève</title>
     
     <!-- Bootstrap CSS -->
@@ -139,12 +140,12 @@
         
         .sidebar-user {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
-            margin: 15px;
-            padding: 15px;
-            border-radius: 16px;
+            margin: 10px 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
             display: flex;
-            align-items: center;
-            gap: 14px;
+            align-items: flex-start;
+            gap: 10px;
             border: 1px solid rgba(251, 191, 36, 0.2);
             transition: all 0.4s ease;
         }
@@ -155,29 +156,71 @@
         }
         
         .user-avatar {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: #1c1917;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             flex-shrink: 0;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
         }
         
         .sidebar-user .user-info {
             flex: 1;
+            min-width: 0;
         }
         
         .sidebar-user h6 {
-            margin: 0 0 4px 0;
+            margin: 0 0 3px 0;
             font-weight: 600;
             color: #fef3c7;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-user-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .sidebar-user small.role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #57534e 0%, #44403c 100%);
+            color: #fbbf24;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sidebar-user-class-tag {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #fde68a;
+            line-height: 1.2;
+        }
+
+        .sidebar-user-year {
+            display: block;
+            margin-top: 2px;
+            font-size: 0.62rem;
+            color: rgba(254, 243, 199, 0.55);
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .sidebar-user small {
@@ -506,6 +549,21 @@
             .sidebar-toggle {
                 display: block !important;
             }
+
+            .sidebar-user {
+                margin: 8px 10px;
+                padding: 8px 10px;
+            }
+
+            .user-avatar {
+                width: 34px;
+                height: 34px;
+                font-size: 0.85rem;
+            }
+
+            .sidebar-user h6 {
+                font-size: 0.8rem;
+            }
         }
         
         @media (max-width: 576px) {
@@ -590,7 +648,20 @@
                 </div>
                 <div class="user-info">
                     <h6>{{ Auth::user()->name ?? 'Utilisateur' }}</h6>
-                    <small><i class="fas fa-user-graduate"></i> Élève</small>
+                    <div class="sidebar-user-meta">
+                        <small class="role-badge"><i class="fas fa-user-graduate"></i> Élève</small>
+                        @if(($studentSidebarClassLabel ?? 'Non assigné') !== 'Non assigné')
+                            <span class="sidebar-user-class-tag">{{ $studentSidebarClassLabel }}</span>
+                        @endif
+                    </div>
+                    @if($studentSidebarYear ?? null)
+                        @php
+                            $yearShort = $studentSidebarYear->start_date
+                                ? $studentSidebarYear->start_date->format('Y').'/'.($studentSidebarYear->end_date?->format('Y') ?? '…')
+                                : $studentSidebarYear->name;
+                        @endphp
+                        <span class="sidebar-user-year">{{ $yearShort }}</span>
+                    @endif
                 </div>
             </div>
             
@@ -731,8 +802,16 @@
             });
         });
     </script>
+    <script>
+        document.querySelectorAll('.alert.alert-dismissible').forEach(function (alertEl) {
+            setTimeout(function () {
+                bootstrap.Alert.getOrCreateInstance(alertEl).close();
+            }, 5000);
+        });
+    </script>
     
     @include('partials.botpress-webchat')
+    <script src="{{ asset('js/form-draft-autosave.js') }}"></script>
     @stack('scripts')
 </body>
 </html>

@@ -74,9 +74,34 @@
 @endpush
 
 @section('content')
-<div class="mb-4">
+<div class="mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
     <h1 class="mb-0 h3">Tableau de bord</h1>
+    @if($academicYears->isNotEmpty())
+        <form method="GET" action="{{ route('admin.dashboard') }}" class="d-flex align-items-center gap-2">
+            <span class="text-muted small d-none d-sm-inline"><i class="fas fa-calendar-alt me-1"></i>Année :</span>
+            <select name="academic_year_id" class="form-select form-select-sm" style="min-width: 11rem;" onchange="this.form.submit()" aria-label="Choisir l'année scolaire">
+                @foreach($academicYears as $year)
+                    <option value="{{ $year->id }}" @selected($selectedYear?->id === $year->id)>
+                        {{ $year->name }}
+                        @if($year->is_current) — courante @endif
+                        @if($year->isClosed()) — terminée @endif
+                    </option>
+                @endforeach
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Actualiser">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </form>
+    @endif
 </div>
+
+@if($selectedYear && !$isSelectedYearCurrent)
+    <div class="mb-3 alert alert-light border py-2 small mb-4">
+        <i class="fas fa-info-circle me-1 text-muted"></i>
+        Statistiques affichées pour <strong>{{ $selectedYear->name }}</strong>.
+        L'année courante est <strong>{{ $currentYear?->name ?? '—' }}</strong>.
+    </div>
+@endif
 
     <!-- Cartes de statistiques -->
     <div class="mb-4 row g-4">
@@ -104,7 +129,12 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="stat-label">Total des classes</h6>
+                            <h6 class="stat-label">
+                                Total des classes
+                                @if($selectedYear)
+                                    <span class="text-muted fw-normal">({{ $selectedYear->name }})</span>
+                                @endif
+                            </h6>
                             <h2 class="stat-value">{{ $classesCount ?? 0 }}</h2>
                         </div>
                         <div class="p-3 bg-success bg-opacity-10 rounded-circle">
@@ -123,15 +153,20 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="stat-label">Élèves non affectés</h6>
-                            <h2 class="stat-value">{{ $unassignedStudentsCount ?? 0 }}</h2>
+                            <h6 class="stat-label">
+                                Total élèves
+                                @if($selectedYear)
+                                    <span class="text-muted fw-normal">({{ $selectedYear->name }})</span>
+                                @endif
+                            </h6>
+                            <h2 class="stat-value">{{ $totalStudentsCount ?? 0 }}</h2>
                         </div>
                         <div class="p-3 bg-warning bg-opacity-10 rounded-circle">
                             <i class="fas fa-user-graduate text-warning fs-4"></i>
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{{ route('admin.students.assign') }}" class="btn btn-sm btn-outline-warning w-100">Affecter les élèves</a>
+                        <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-warning w-100">Voir les élèves</a>
                     </div>
                 </div>
             </div>
@@ -143,7 +178,18 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="stat-label">Année scolaire</h6>
-                            <h2 class="stat-value">{{ $currentYear ? $currentYear->name : 'Aucune' }}</h2>
+                            <h2 class="stat-value fs-5">{{ $selectedYear ? $selectedYear->name : 'Aucune' }}</h2>
+                            @if($selectedYear)
+                                <div class="mt-1">
+                                    @if($selectedYear->is_current)
+                                        <span class="badge bg-success">Courante</span>
+                                    @elseif($selectedYear->isClosed())
+                                        <span class="badge bg-secondary">Terminée</span>
+                                    @else
+                                        <span class="badge bg-light text-dark border">Archivée</span>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                         <div class="p-3 bg-info bg-opacity-10 rounded-circle">
                             <i class="fas fa-calendar-alt text-info fs-4"></i>

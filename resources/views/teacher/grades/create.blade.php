@@ -13,7 +13,7 @@
     </nav>
     
     <h1 class="mb-0 h3">Saisir des notes</h1>
-    <p class="text-muted">Entrez les notes pour une classe et une matière</p>
+    <p class="text-muted">Entrez les notes pour une classe et une matière. Une fois enregistrées, elles ne peuvent plus être modifiées.</p>
 </div>
 
 <form method="POST" action="{{ route('teacher.grades.store') }}" id="gradesForm">
@@ -32,7 +32,7 @@
                         <option value="">-- Sélectionner --</option>
                         @foreach($classes as $class)
                             <option value="{{ $class->id }}" {{ ($selectedClassId == $class->id || old('class_id') == $class->id) ? 'selected' : '' }}>
-                                {{ $class->name }}
+                                {{ $class->display_name }}
                             </option>
                         @endforeach
                     </select>
@@ -105,9 +105,21 @@
     
     {{-- Tableau de saisie des notes --}}
     @if($students->count() > 0 && ($nextAllowed ?? null))
+        @php
+            $savedCount = ($existingGradesForEvaluation ?? collect())->count();
+            $pendingCount = $students->count() - $savedCount;
+        @endphp
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Saisie des notes ({{ $students->count() }} élèves)</h5>
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Saisie des notes ({{ $students->count() }} élèves)
+                    @if($savedCount > 0)
+                        <span class="badge bg-secondary ms-2">{{ $savedCount }} enregistrée(s)</span>
+                        @if($pendingCount > 0)
+                            <span class="badge bg-primary ms-1">{{ $pendingCount }} restante(s)</span>
+                        @endif
+                    @endif
+                </h5>
                 <div>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="fillAbsent">
                         <i class="fas fa-user-slash me-1"></i>Marquer absents
@@ -127,7 +139,10 @@
                         </thead>
                         <tbody>
                             @foreach($students as $index => $student)
-                                <tr>
+                                @php
+                                    $savedGrade = ($existingGradesForEvaluation ?? collect())->get($student->id);
+                                @endphp
+                                <tr class="{{ $savedGrade ? 'table-light' : '' }}">
                                     <td>{{ $index + 1 }}</td>
                                     <td>
                                         <input type="hidden" name="grades[{{ $index }}][user_id]" value="{{ $student->id }}">
@@ -139,19 +154,32 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <input type="number" 
-                                               name="grades[{{ $index }}][grade]" 
-                                               class="form-control grade-input" 
-                                               min="0" 
-                                               max="20" 
-                                               step="0.25" 
-                                               placeholder="--">
+                                        @if($savedGrade)
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge {{ $savedGrade->grade >= 10 ? 'bg-success' : 'bg-danger' }} fs-6">
+                                                    {{ number_format($savedGrade->grade, 2) }}
+                                                </span>
+                                                <span class="text-muted small"><i class="fas fa-lock me-1"></i>Enregistrée</span>
+                                            </div>
+                                        @else
+                                            <input type="number" 
+                                                   name="grades[{{ $index }}][grade]" 
+                                                   class="form-control grade-input" 
+                                                   min="0" 
+                                                   max="20" 
+                                                   step="0.25" 
+                                                   placeholder="--">
+                                        @endif
                                     </td>
                                     <td>
-                                        <input type="text" 
-                                               name="grades[{{ $index }}][comments]" 
-                                               class="form-control" 
-                                               placeholder="Remarque...">
+                                        @if($savedGrade)
+                                            <span class="text-muted small">{{ $savedGrade->comments ?: '—' }}</span>
+                                        @else
+                                            <input type="text" 
+                                                   name="grades[{{ $index }}][comments]" 
+                                                   class="form-control" 
+                                                   placeholder="Remarque...">
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach

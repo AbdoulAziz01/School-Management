@@ -68,6 +68,7 @@
                                 <tr><td><strong>Date de naissance :</strong></td><td>{{ $student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('d/m/Y') : '-' }}</td></tr>
                                 <tr><td><strong>Adresse :</strong></td><td>{{ $student->address ?? 'Non spécifiée' }}</td></tr>
                             </table>
+                            @include('admin.students._credentials-panel')
                         </div>
                         <div class="col-md-5">
                             <h5 class="mb-3" style="color: #fd7e14;">Informations scolaires</h5>

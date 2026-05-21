@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -24,14 +26,13 @@ class LoginRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-public function rules(): array
-{
-    return [
-        'identifier' => ['required', 'string'],
-        'password' => ['required', 'string'],
-    ];
-}
-
+    public function rules(): array
+    {
+        return [
+            'identifier' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ];
+    }
 
     /**
      * Attempt to authenticate the request's credentials.
@@ -43,32 +44,22 @@ public function rules(): array
         $this->ensureIsNotRateLimited();
 
         $login = trim((string) $this->input('identifier'));
-
-        $credentials = [
-            'password' => $this->password,
-        ];
+        $password = (string) $this->input('password');
+        $remember = $this->boolean('remember');
 
         if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
-            $credentials['email'] = $login;
+            if (! Auth::attempt(['email' => $login, 'password' => $password], $remember)) {
+                $this->failedAttempt();
+            }
         } else {
-            $credentials['identifier'] = $login;
+            $this->authenticateByIdentifier($login, $password, $remember);
         }
 
-        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'identifier' => trans('auth.failed'),
-            ]);
-        }
-
-        // Récupérer l'utilisateur authentifié
         $user = Auth::user();
 
-        // Vérifier le statut du compte
         if ($user->status === 'rejected') {
             Auth::logout();
-            
+
             throw ValidationException::withMessages([
                 'identifier' => 'Votre compte a été rejeté par l\'administration.',
             ]);
@@ -76,14 +67,41 @@ public function rules(): array
 
         if ($user->status !== 'approved') {
             Auth::logout();
-            
+
             throw ValidationException::withMessages([
                 'identifier' => 'Votre compte est en attente de validation par l\'administration.',
             ]);
         }
 
-        // Si l'utilisateur est approuvé, on continue
         RateLimiter::clear($this->throttleKey());
+    }
+
+    private function authenticateByIdentifier(string $login, string $password, bool $remember): void
+    {
+        $matches = User::withoutGlobalScopes()->where('identifier', $login)->get();
+
+        if ($matches->isEmpty()) {
+            $this->failedAttempt();
+        }
+
+        $authenticated = $matches->filter(
+            fn (User $user) => Hash::check($password, $user->password)
+        );
+
+        if ($authenticated->count() !== 1) {
+            $this->failedAttempt();
+        }
+
+        Auth::login($authenticated->first(), $remember);
+    }
+
+    private function failedAttempt(): never
+    {
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'identifier' => trans('auth.failed'),
+        ]);
     }
 
     /**

@@ -11,7 +11,22 @@ class Level extends Model
     use BelongsToSchool;
     use HasFactory;
 
-    protected $fillable = ['name', 'order', 'cycle', 'serie', 'school_id'];
+    protected $fillable = ['name', 'order', 'cycle', 'serie', 'school_id', 'description'];
+
+    public function cycleLabel(): string
+    {
+        return match ($this->cycle) {
+            'college'   => 'Collège',
+            'lycee'     => 'Lycée',
+            'formation' => 'Cycle formation',
+            default     => (string) $this->cycle,
+        };
+    }
+
+    public function isFormationCycle(): bool
+    {
+        return $this->cycle === 'formation';
+    }
 
     public function classes()
     {

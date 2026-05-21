@@ -14,8 +14,13 @@ class SchoolBrandingComposer
         $schoolName = config('platform.name', 'EduManager');
         $schoolLogoDataUri = null;
 
-        if (Auth::check() && Auth::user()->school_id) {
-            $school = Auth::user()->school;
+        if (Auth::check()) {
+            $schoolId = \App\Support\TenantSchool::id() ?? Auth::user()->school_id;
+            if ($schoolId) {
+                $school = \App\Models\School::find($schoolId) ?? Auth::user()->school;
+            } elseif (Auth::user()->school_id) {
+                $school = Auth::user()->school;
+            }
             if ($school) {
                 $schoolName = $school->name;
                 $schoolLogoDataUri = SchoolLogoStorage::dataUri($school);
@@ -23,6 +28,7 @@ class SchoolBrandingComposer
         }
 
         $view->with('currentSchool', $school);
+        $view->with('isFormationSchool', $school?->isFormation() ?? false);
         $view->with('schoolDisplayName', $schoolName);
         $view->with('schoolLogoDataUri', $schoolLogoDataUri);
     }

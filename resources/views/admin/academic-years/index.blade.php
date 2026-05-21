@@ -11,12 +11,6 @@
     </div>
 </div>
 
-@if(session('success'))
-    <div class="alert alert-success">
-        {{ session('success') }}
-    </div>
-@endif
-
 <div class="mb-4 card">
     <div class="card-header">
         <h5 class="mb-0">Liste des années scolaires</h5>
@@ -42,8 +36,14 @@
                             <td>
                                 @if($year->is_current)
                                     <span class="badge bg-success">Année en cours</span>
-                                @else
-                                    <form action="{{ route('admin.academic-years.set-current', $year) }}" method="POST" class="d-inline">
+                                @endif
+                                @if($year->is_closed)
+                                    <span class="badge bg-secondary">Terminée</span>
+                                @elseif(!$year->is_current)
+                                    <span class="badge bg-light text-dark border">En cours d'activité</span>
+                                @endif
+                                @if(!$year->is_current && !$year->is_closed)
+                                    <form action="{{ route('admin.academic-years.set-current', $year) }}" method="POST" class="d-inline ms-1">
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit" class="btn btn-sm btn-outline-secondary">

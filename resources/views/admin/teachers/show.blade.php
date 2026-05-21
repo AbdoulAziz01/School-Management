@@ -76,27 +76,7 @@
                     </li>
                     <li class="list-group-item">
                         <span class="text-muted d-block mb-2"><i class="fas fa-key me-2"></i>Connexion</span>
-                        @if($teacher->invitation_email_sent_at)
-                            <p class="small text-muted mb-2">
-                                <i class="fas fa-check-circle text-success me-1"></i>
-                                Dernière tentative le {{ $teacher->invitation_email_sent_at->format('d/m/Y à H:i') }} (vérifiez les spams).
-                            </p>
-                        @else
-                            <p class="small text-muted mb-2">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Aucun email d'invitation enregistré pour l'instant.
-                            </p>
-                        @endif
-                        @if($teacher->email)
-                            <form action="{{ route('admin.teachers.send-invitation', $teacher) }}" method="POST"
-                                  onsubmit="return confirm('Envoyer identifiant et nouveau mot de passe temporaire à {{ $teacher->email }} ?');">
-                                @csrf
-                                <button type="submit" class="btn btn-outline-primary btn-sm w-100">
-                                    <i class="fas fa-envelope me-1"></i>
-                                    {{ $teacher->invitation_email_sent_at ? 'Renvoyer les identifiants' : 'Envoyer les identifiants' }}
-                                </button>
-                            </form>
-                        @endif
+                        @include('admin.teachers._credentials-panel')
                     </li>
                 </ul>
                 <div class="card-footer">

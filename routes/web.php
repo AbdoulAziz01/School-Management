@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\TeacherClassController;
+use App\Http\Controllers\Admin\TeacherAssignmentController;
 use App\Http\Controllers\Teacher\TeacherDashboardController;
 use App\Http\Controllers\Teacher\TeacherClassesController;
 use App\Http\Controllers\Teacher\TeacherGradesController;
@@ -65,6 +66,14 @@ Route::prefix('platform')->middleware(['auth', 'super_admin'])->name('platform.'
     Route::resource('schools', \App\Http\Controllers\Platform\SchoolController::class);
     Route::patch('schools/{school}/toggle-active', [\App\Http\Controllers\Platform\SchoolController::class, 'toggleActive'])->name('schools.toggle-active');
     Route::patch('schools/{school}/regenerate-code', [\App\Http\Controllers\Platform\SchoolController::class, 'regenerateCode'])->name('schools.regenerate-code');
+    Route::prefix('schools/{school}/cycles')->name('schools.cycles.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Platform\SchoolLevelController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Platform\SchoolLevelController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Platform\SchoolLevelController::class, 'store'])->name('store');
+        Route::get('/{level}/edit', [\App\Http\Controllers\Platform\SchoolLevelController::class, 'edit'])->name('edit');
+        Route::put('/{level}', [\App\Http\Controllers\Platform\SchoolLevelController::class, 'update'])->name('update');
+        Route::delete('/{level}', [\App\Http\Controllers\Platform\SchoolLevelController::class, 'destroy'])->name('destroy');
+    });
     Route::post('schools/{school}/admins', [\App\Http\Controllers\Platform\SchoolController::class, 'storeAdmin'])->name('schools.admins.store');
     Route::patch('schools/{school}/admins/{user}/password', [\App\Http\Controllers\Platform\SchoolController::class, 'resetAdminPassword'])->name('schools.admins.reset-password');
 });
@@ -194,6 +203,11 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::delete('/students/{student}/unassign', [StudentController::class, 'unassign'])->name('admin.students.unassign');
     Route::get('/students/search-suggestions', [StudentController::class, 'searchSuggestions'])->name('admin.students.search-suggestions');
     
+    Route::post('students/{student}/regenerate-credentials', [StudentController::class, 'regenerateCredentials'])
+        ->name('admin.students.regenerate-credentials');
+    Route::post('students/{student}/send-credentials', [StudentController::class, 'sendCredentials'])
+        ->name('admin.students.send-credentials');
+
     // Ressource pour les étudiants (cette ligne DOIT venir après les routes personnalisées)
     Route::resource('students', StudentController::class)->names('admin.students');
     
@@ -204,13 +218,29 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::resource('teachers', TeacherController::class)->names('admin.teachers');
     Route::post('teachers/{teacher}/send-invitation', [TeacherController::class, 'sendInvitation'])
         ->name('admin.teachers.send-invitation');
+    Route::post('teachers/{teacher}/regenerate-credentials', [TeacherController::class, 'regenerateCredentials'])
+        ->name('admin.teachers.regenerate-credentials');
 
     // Gestion des affectations de classes aux enseignants
-    Route::prefix('teachers/{teacher}')->name('admin.teachers.')->group(function() {
+    Route::prefix('teachers/{teacher}')->name('admin.teachers.')->group(function () {
         Route::get('/classes', [TeacherClassController::class, 'edit'])->name('classes.edit');
         Route::put('/classes', [TeacherClassController::class, 'update'])->name('classes.update');
+
+        Route::get('/assignments', [TeacherAssignmentController::class, 'teacherAssignments'])->name('assignments');
+        Route::get('/assignments/create', [TeacherAssignmentController::class, 'createAssignment'])->name('assignments.create');
+        Route::post('/assignments', [TeacherAssignmentController::class, 'storeAssignment'])->name('assignments.store');
     });
+
+    Route::delete('/teacher-assignments/{assignment}', [TeacherAssignmentController::class, 'destroyAssignment'])
+        ->name('admin.teachers.assignments.destroy');
+    Route::get('/teachers/assignments/classes/{academicYearId}', [TeacherAssignmentController::class, 'getClasses'])
+        ->name('admin.teachers.assignments.classes');
     
+    // Cycles de formation (écoles de formation uniquement)
+    Route::resource('cycles', \App\Http\Controllers\Admin\LevelController::class)
+        ->names('admin.cycles')
+        ->parameters(['cycles' => 'level']);
+
     // Gestion des classes
     Route::resource('classes', 'App\Http\Controllers\Admin\ClassController')->names('admin.classes');
     
@@ -219,11 +249,21 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         ->name('admin.classes.list');
     Route::get('/classes/create', [\App\Http\Controllers\Admin\ClassController::class, 'create'])
         ->name('admin.classes.create');
+    Route::post('/classes/process-all-promotions', [\App\Http\Controllers\Admin\ClassController::class, 'processAllPromotions'])
+        ->name('admin.classes.process-all-promotions');
+    Route::post('/classes/{class}/process-promotions', [\App\Http\Controllers\Admin\ClassController::class, 'processPromotions'])
+        ->name('admin.classes.process-promotions');
     
     // Gestion des années académiques
     Route::resource('academic-years', 'App\Http\Controllers\Admin\AcademicYearController')->names('admin.academic-years');
     Route::patch('/academic-years/{academicYear}/set-current', [\App\Http\Controllers\Admin\AcademicYearController::class, 'setCurrent'])
         ->name('admin.academic-years.set-current');
+    Route::post('/academic-years/{academicYear}/provision', [\App\Http\Controllers\Admin\AcademicYearController::class, 'provision'])
+        ->name('admin.academic-years.provision');
+    Route::patch('/academic-years/{academicYear}/close', [\App\Http\Controllers\Admin\AcademicYearController::class, 'close'])
+        ->name('admin.academic-years.close');
+    Route::patch('/academic-years/{academicYear}/reopen', [\App\Http\Controllers\Admin\AcademicYearController::class, 'reopen'])
+        ->name('admin.academic-years.reopen');
     
     // Gestion des matières
     Route::resource('subjects', 'App\Http\Controllers\Admin\SubjectController')->names('admin.subjects');

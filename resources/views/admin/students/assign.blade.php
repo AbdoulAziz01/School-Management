@@ -100,10 +100,6 @@
         <h1 class="mb-0 h3">Affectation des Élèves aux Classes</h1>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
     <div class="mb-4 card">
         <div class="card-header">
             <h5 class="mb-0">Élèves non affectés</h5>

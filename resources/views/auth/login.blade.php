@@ -101,7 +101,7 @@
                                    class="form-control @error('identifier') is-invalid @enderror" 
                                    id="identifier" 
                                    name="identifier" 
-                                   placeholder="Email ou identifiant (ex: admin@ecole.sn, ADM2001)"
+                                   placeholder="Email ou identifiant (ex: E2026001)"
                                    value="{{ old('identifier') }}" 
                                    required 
                                    autofocus>

@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Gestion des matières')
+@section('title', !empty($isFormationSchool) && $isFormationSchool ? 'Gestion des modules' : 'Gestion des matières')
 
 @section('content')
 <div class="container-fluid">
@@ -8,7 +8,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h5 class="mb-0">Liste des matières</h5>
+                    <h5 class="mb-0">{{ !empty($isFormationSchool) && $isFormationSchool ? 'Liste des modules' : 'Liste des matières' }}</h5>
                     <div class="d-flex align-items-center gap-3">
                         <form action="{{ route('admin.subjects.index') }}" method="GET" class="d-flex gap-2">
                             <input type="text" name="search" class="form-control form-control-sm" placeholder="Rechercher..." value="{{ request('search') }}" style="min-width: 200px;">
@@ -26,34 +26,27 @@
                                 </a>
                             @endif
                         </form>
-                        <span class="text-muted small">{{ $subjects->total() }} matière(s)</span>
+                        <span class="text-muted small">{{ $subjects->total() }} {{ !empty($isFormationSchool) && $isFormationSchool ? 'module(s)' : 'matière(s)' }}</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small mb-3">
-                        Le catalogue standard (Français, Maths, SVT, etc.) est installé automatiquement pour votre établissement.
-                        Ajustez le coefficient et les niveaux sur chaque matière ; utilisez « Ajouter » seulement pour une matière optionnelle.
-                    </p>
-                    @if(session('success'))
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            {{ session('success') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    @endif
-                    
-                    @if(session('error'))
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            {{ session('error') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
+                    @if(!empty($isFormationSchool) && $isFormationSchool)
+                        <p class="text-muted small mb-3">
+                            Les modules sont propres à votre établissement. Associez-les aux promotions via les affectations enseignants.
+                        </p>
+                    @else
+                        <p class="text-muted small mb-3">
+                            Le catalogue standard (Français, Maths, SVT, etc.) est installé automatiquement pour votre établissement.
+                            Ajustez le coefficient et les niveaux sur chaque matière ; utilisez « Ajouter » seulement pour une matière optionnelle.
+                        </p>
                     @endif
                     
                     @if($subjects->isEmpty())
                         <div class="alert alert-info">
                             @if(request('search') || request('status'))
-                                Aucune matière ne correspond à votre recherche.
+                                Aucun{{ !empty($isFormationSchool) && $isFormationSchool ? ' module' : 'e matière' }} ne correspond à votre recherche.
                             @else
-                                Aucune matière n'a été créée pour le moment.
+                                Aucun{{ !empty($isFormationSchool) && $isFormationSchool ? ' module' : 'e matière' }} n'a été créé{{ !empty($isFormationSchool) && $isFormationSchool ? '' : 'e' }} pour le moment.
                             @endif
                         </div>
                     @else
@@ -106,7 +99,7 @@
                                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                             </div>
                                                             <div class="modal-body">
-                                                                <p>Êtes-vous sûr de vouloir supprimer la matière <strong>{{ $subject->name }}</strong> ?</p>
+                                                                <p>Êtes-vous sûr de vouloir supprimer {{ !empty($isFormationSchool) && $isFormationSchool ? 'le module' : 'la matière' }} <strong>{{ $subject->name }}</strong> ?</p>
                                                                 <p class="text-danger"><i class="fas fa-warning me-1"></i>Cette action est irréversible.</p>
                                                             </div>
                                                             <div class="modal-footer">
@@ -136,7 +129,7 @@
                 </div>
                 <div class="card-footer">
                     <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i> Ajouter une matière
+                        <i class="fas fa-plus me-2"></i> {{ !empty($isFormationSchool) && $isFormationSchool ? 'Ajouter un module' : 'Ajouter une matière' }}
                     </a>
                 </div>
             </div>

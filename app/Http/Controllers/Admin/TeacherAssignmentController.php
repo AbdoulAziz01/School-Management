@@ -20,8 +20,6 @@ class TeacherAssignmentController extends Controller
      */
     public function teacherAssignments(User $teacher)
     {
-        $this->authorize('viewAny', TeacherAssignment::class);
-        
         $assignments = $teacher->teacherAssignments()
             ->with(['schoolClass', 'subject', 'academicYear'])
             ->orderBy('academic_year_id', 'desc')
@@ -40,8 +38,6 @@ class TeacherAssignmentController extends Controller
      */
     public function createAssignment(User $teacher)
     {
-        $this->authorize('create', TeacherAssignment::class);
-        
         $academicYears = \App\Models\AcademicYear::orderBy('start_date', 'desc')->get();
         $subjects = \App\Models\Subject::orderBy('name')->get();
         
@@ -57,8 +53,6 @@ class TeacherAssignmentController extends Controller
      */
     public function storeAssignment(Request $request, User $teacher)
     {
-        $this->authorize('create', TeacherAssignment::class);
-        
         $validated = $request->validate([
             'academic_year_id' => 'required|exists:academic_years,id',
             'class_id' => 'required|exists:classes,id',
@@ -110,15 +104,10 @@ class TeacherAssignmentController extends Controller
      */
     public function destroyAssignment(TeacherAssignment $assignment)
     {
-        $this->authorize('delete', $assignment);
-        
         try {
-            $teacherId = $assignment->teacher_id;
             $assignment->delete();
-            
-            return redirect()
-                ->route('admin.teachers.assignments', $teacherId)
-                ->with('success', 'Affectation supprimée avec succès.');
+
+            return back()->with('success', 'Affectation supprimée avec succès.');
                 
         } catch (\Exception $e) {
             Log::error('Erreur lors de la suppression de l\'affectation : ' . $e->getMessage());

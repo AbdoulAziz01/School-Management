@@ -3,17 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\StudentCredentialsMail;
 use App\Models\AcademicYear;
 use App\Models\Level;
 use App\Models\SchoolClass;
 use App\Models\User;
+use App\Support\ClosedAcademicYearGuard;
+use App\Support\SchoolUserIdentifier;
 use App\Support\StudentSearch;
 use App\Support\StudentGradeEvolution;
 use App\Support\SenegalGradeSequence;
+use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class StudentController extends Controller
 {
@@ -184,6 +192,11 @@ class StudentController extends Controller
                 ],
             ]);
 
+            $targetClass = SchoolClass::with('academicYear')->findOrFail($validated['class_id']);
+            if ($response = ClosedAcademicYearGuard::denyClassMutation($targetClass)) {
+                return $response;
+            }
+
             DB::beginTransaction();
 
             // Garde-fou : on n'affecte QUE des élèves (jamais admin/prof par erreur)
@@ -226,6 +239,11 @@ class StudentController extends Controller
             'class_id'   => 'required|exists:classes,id',
         ]);
 
+        $targetClass = SchoolClass::with('academicYear')->findOrFail($request->class_id);
+        if ($response = ClosedAcademicYearGuard::denyClassMutation($targetClass)) {
+            return $response;
+        }
+
         try {
             DB::beginTransaction();
 
@@ -266,6 +284,14 @@ class StudentController extends Controller
             'class_id' => 'required|exists:classes,id',
         ]);
 
+        $targetClass = SchoolClass::with('academicYear')->findOrFail($request->class_id);
+        if (ClosedAcademicYearGuard::isClassLocked($targetClass)) {
+            return response()->json([
+                'success' => false,
+                'message' => "L'année scolaire {$targetClass->academicYear->name} est terminée — affectation impossible.",
+            ], 403);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -290,6 +316,29 @@ class StudentController extends Controller
                 'message' => 'Erreur lors de l\'affectation.',
             ], 500);
         }
+    }
+
+    /**
+     * Retire un élève de sa classe.
+     */
+    public function unassign(User $student)
+    {
+        abort_unless(
+            in_array($student->role, User::ROLE_STUDENT_ALIASES, true),
+            404,
+            'Utilisateur introuvable ou n\'est pas un élève.'
+        );
+
+        if ($student->class_id) {
+            $currentClass = SchoolClass::with('academicYear')->find($student->class_id);
+            if ($currentClass && ($response = ClosedAcademicYearGuard::denyClassMutation($currentClass))) {
+                return $response;
+            }
+        }
+
+        $student->update(['class_id' => null]);
+
+        return redirect()->back()->with('success', 'Élève retiré de sa classe avec succès.');
     }
 
     /**
@@ -323,30 +372,34 @@ class StudentController extends Controller
         try {
             DB::beginTransaction();
 
-            // Générer un identifiant unique
-            $lastStudent = User::where('role', 'eleve')
-                ->orderBy('id', 'desc')
-                ->first();
+            $schoolId = TenantSchool::id() ?? auth()->user()?->school_id;
 
-            $studentNumber = $lastStudent ? (int)substr($lastStudent->identifier, 1) + 1 : 1;
-            $identifier = 'E' . str_pad($studentNumber, 5, '0', STR_PAD_LEFT);
+            if (! $schoolId) {
+                throw new \RuntimeException('Établissement introuvable pour la génération de l\'identifiant.');
+            }
 
-            $student = User::create([
+            $identifier = SchoolUserIdentifier::next($schoolId, 'E');
+            $plainPassword = 'password';
+
+            $student = User::withoutGlobalScopes()->create([
                 'name' => $validated['name'],
                 'email' => $validated['email'] ?? null,
                 'identifier' => $identifier,
-                'password' => bcrypt('password'), // Mot de passe par défaut
-                'role' => 'eleve',
+                'password' => Hash::make($plainPassword),
+                'role' => User::ROLE_STUDENT,
                 'status' => $validated['status'],
                 'date_of_birth' => $validated['date_of_birth'],
                 'class_id' => $validated['class_id'] ?? null,
+                'school_id' => $schoolId,
             ]);
+
+            $student->setAdminVisiblePassword($plainPassword);
 
             DB::commit();
 
             return redirect()
                 ->route('admin.students.show', $student)
-                ->with('success', 'Élève créé avec succès. Identifiant: ' . $identifier);
+                ->with('success', 'Élève créé avec succès. Identifiants affichés sur la fiche.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -365,6 +418,8 @@ class StudentController extends Controller
     {
         abort_unless($student->isStudent(), 404);
 
+        $student->load(['school']);
+
         $classes = SchoolClass::with('academicYear')
             ->orderBy('name')
             ->get()
@@ -372,7 +427,11 @@ class StudentController extends Controller
                 return $class->academicYear->name;
             });
 
-        return view('admin.students.edit', compact('student', 'classes'));
+        $pendingCredentials = $this->resolveStudentCredentials($student);
+        $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
+        $schoolCode = $student->school?->code;
+
+        return view('admin.students.edit', compact('student', 'classes', 'pendingCredentials', 'canViewPassword', 'schoolCode'));
     }
 
     /**
@@ -473,9 +532,10 @@ class StudentController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $student->update([
-            'password' => bcrypt($validated['password']),
-        ]);
+        $student->forceFill([
+            'password' => Hash::make($validated['password']),
+        ])->save();
+        $student->setAdminVisiblePassword($validated['password']);
 
         return redirect()
             ->route('admin.students.show', $student)
@@ -567,6 +627,37 @@ public function pending()
     }
 
     /**
+     * Envoie identifiant + mot de passe à l'élève par email.
+     */
+    public function sendCredentials(User $student)
+    {
+        abort_unless($student->isStudent(), 404);
+        $this->assertCanManageStudentCredentials();
+
+        $plainPassword = $student->adminVisiblePassword() ?? $this->assignStudentPassword($student);
+        $result = $this->sendStudentCredentials($student, $plainPassword);
+
+        if ($result === true) {
+            return back()->with('success', 'Identifiants envoyés à '.$student->email.'.');
+        }
+
+        return back()->with('error', is_string($result) ? $result : 'Impossible d\'envoyer l\'email.');
+    }
+
+    /**
+     * Génère un nouveau mot de passe consultable par l'admin.
+     */
+    public function regenerateCredentials(User $student)
+    {
+        abort_unless($student->isStudent(), 404);
+        $this->assertCanManageStudentCredentials();
+
+        $this->assignStudentPassword($student);
+
+        return back()->with('success', 'Nouveau mot de passe généré. Il reste visible sur cette fiche.');
+    }
+
+    /**
      * Affiche les détails d'un étudiant
      */
     public function show(User $student)
@@ -575,11 +666,12 @@ public function pending()
 
         // Charger les relations
         $student->load([
-            'class', 
-            'class.academicYear', 
+            'class',
+            'class.academicYear',
             'class.level',
             'grades',
-            'grades.subject'
+            'grades.subject',
+            'school',
         ]);
 
         // Colonnes d'évaluation (S1·D1 → S2·Compo)
@@ -656,6 +748,10 @@ public function pending()
         $academicYearId = $student->class?->academic_year_id;
         $gradeEvolutionJson = StudentGradeEvolution::chartData($student, $academicYearId);
 
+        $pendingCredentials = $this->resolveStudentCredentials($student);
+        $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
+        $schoolCode = $student->school?->code;
+
         return view('admin.students.show', [
             'student' => $student,
             'schoolClass' => $student->class,
@@ -665,6 +761,104 @@ public function pending()
             'attendanceStats' => $attendanceStats,
             'gradeEvolutionJson' => $gradeEvolutionJson,
             'evaluationColumns'  => $evaluationColumns,
+            'pendingCredentials' => $pendingCredentials,
+            'canViewPassword' => $canViewPassword,
+            'schoolCode' => $schoolCode,
         ]);
+    }
+
+    private function assertCanManageStudentCredentials(): void
+    {
+        abort_unless(auth()->user()?->canViewUserPasswords(), 403, 'Accès réservé à l\'administrateur.');
+    }
+
+    /** @return array{name: string, identifier: string|null, email: string|null, password: string}|null */
+    private function resolveStudentCredentials(User $student): ?array
+    {
+        if (! auth()->user()?->canViewUserPasswords()) {
+            return null;
+        }
+
+        $plainPassword = $student->adminVisiblePassword();
+
+        if ($plainPassword === null && Hash::check('password', $student->password)) {
+            $student->setAdminVisiblePassword('password');
+            $plainPassword = 'password';
+        }
+
+        if ($plainPassword === null) {
+            return null;
+        }
+
+        return [
+            'name' => $student->name,
+            'identifier' => $student->identifier,
+            'email' => $student->email,
+            'password' => $plainPassword,
+        ];
+    }
+
+    private function assignStudentPassword(User $student): string
+    {
+        $plainPassword = Str::password(10, symbols: false);
+
+        $student->forceFill([
+            'password' => Hash::make($plainPassword),
+        ])->save();
+
+        $student->setAdminVisiblePassword($plainPassword);
+
+        return $plainPassword;
+    }
+
+    /** @return bool|string */
+    private function sendStudentCredentials(User $student, ?string $plainPassword = null): bool|string
+    {
+        if (empty($student->email)) {
+            return 'Cet élève n\'a pas d\'adresse email.';
+        }
+
+        if (empty($student->identifier)) {
+            return 'Cet élève n\'a pas d\'identifiant de connexion.';
+        }
+
+        if (config('mail.default') === 'log') {
+            return 'MAIL_MAILER=log : aucun email réel n\'est envoyé. Mettez MAIL_MAILER=smtp dans .env puis php artisan config:clear.';
+        }
+
+        if (empty(config('mail.mailers.smtp.password')) && config('mail.default') === 'smtp') {
+            return 'Configuration incomplète : renseignez MAIL_PASSWORD dans .env.';
+        }
+
+        $plainPassword ??= $this->assignStudentPassword($student);
+
+        try {
+            $student->loadMissing('school');
+            Mail::to($student->email)->send(new StudentCredentialsMail($student, $plainPassword));
+
+            $student->forceFill([
+                'password' => Hash::make($plainPassword),
+                'invitation_email_sent_at' => now(),
+            ])->save();
+
+            $student->setAdminVisiblePassword($plainPassword);
+
+            return true;
+        } catch (TransportExceptionInterface $e) {
+            Log::error('Erreur SMTP envoi identifiants élève', [
+                'student_id' => $student->id,
+                'email' => $student->email,
+                'message' => $e->getMessage(),
+            ]);
+
+            return 'Erreur d\'envoi email : '.$e->getMessage();
+        } catch (\Throwable $e) {
+            Log::error('Erreur envoi identifiants élève', [
+                'student_id' => $student->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return 'Erreur d\'envoi email : '.$e->getMessage();
+        }
     }
 }

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @include('partials.form-draft-meta')
     <title>@yield('title', 'Tableau de bord - Administration')</title>
     
     <!-- Bootstrap CSS -->
@@ -562,9 +563,16 @@
                 }
             }
         })();
+
+        document.querySelectorAll('.alert.alert-dismissible:not(.alert-no-autoclose)').forEach(function (alertEl) {
+            setTimeout(function () {
+                bootstrap.Alert.getOrCreateInstance(alertEl).close();
+            }, 5000);
+        });
     </script>
     
     @include('partials.botpress-webchat')
+    <script src="{{ asset('js/form-draft-autosave.js') }}"></script>
     @stack('scripts')
 </body>
 </html>

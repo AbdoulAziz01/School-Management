@@ -20,7 +20,12 @@ class SubjectController extends Controller
      */
     public function index(Request $request)
     {
-        SchoolSubjectProvisioner::ensureForSchool(TenantSchool::id() ?? auth()->user()?->school_id);
+        $schoolId = TenantSchool::id() ?? auth()->user()?->school_id;
+        $school = $schoolId ? \App\Models\School::find($schoolId) : null;
+
+        if ($school?->isClassic()) {
+            SchoolSubjectProvisioner::ensureForSchool($schoolId);
+        }
 
         $query = Subject::with('teachers');
         
@@ -40,7 +45,10 @@ class SubjectController extends Controller
         
         $subjects = $query->orderBy('name')->paginate(15);
 
-        return view('admin.subjects.index', compact('subjects'));
+        $levelsCount = Level::count();
+        $isFormationSchool = $school?->isFormation() ?? false;
+
+        return view('admin.subjects.index', compact('subjects', 'isFormationSchool', 'levelsCount'));
     }
 
     /**
@@ -48,10 +56,17 @@ class SubjectController extends Controller
      */
     public function create()
     {
-        SchoolSubjectProvisioner::ensureForSchool(TenantSchool::id() ?? auth()->user()?->school_id);
+        $schoolId = TenantSchool::id() ?? auth()->user()?->school_id;
+        $school = $schoolId ? \App\Models\School::find($schoolId) : null;
 
-        $levels = Level::orderBy('name')->get();
-        return view('admin.subjects.create', compact('levels'));
+        if ($school?->isClassic()) {
+            SchoolSubjectProvisioner::ensureForSchool($schoolId);
+        }
+
+        $levels = Level::orderBy('order')->orderBy('name')->get();
+        $isFormationSchool = $school?->isFormation() ?? false;
+
+        return view('admin.subjects.create', compact('levels', 'isFormationSchool'));
     }
 
     /**
@@ -119,9 +134,14 @@ class SubjectController extends Controller
      */
     public function edit(Subject $subject)
     {
-        $levels = Level::orderBy('name')->get();
+        $schoolId = TenantSchool::id() ?? auth()->user()?->school_id;
+        $school = $schoolId ? \App\Models\School::find($schoolId) : null;
+
+        $levels = Level::orderBy('order')->orderBy('name')->get();
         $subject->load('levels');
-        return view('admin.subjects.edit', compact('subject', 'levels'));
+        $isFormationSchool = $school?->isFormation() ?? false;
+
+        return view('admin.subjects.edit', compact('subject', 'levels', 'isFormationSchool'));
     }
 
     /**

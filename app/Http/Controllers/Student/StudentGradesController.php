@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\AcademicYear;
+use App\Models\TeacherAssignment;
+use App\Support\DashboardAcademicYearContext;
+use App\Support\StudentClassContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +14,7 @@ use Carbon\Carbon;
 
 class StudentGradesController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         
@@ -19,12 +22,17 @@ class StudentGradesController extends Controller
             return redirect()->route('login');
         }
 
-        // Récupérer les enseignants de la classe de l'élève pour chaque matière
-        $teachersBySubject = $this->getTeachersBySubject($user);
+        $selectedYear = DashboardAcademicYearContext::resolve($request, 'student');
+        $currentYear = AcademicYear::where('is_current', true)->first();
+        $academicYears = DashboardAcademicYearContext::allYears();
+        $isSelectedYearCurrent = $selectedYear && $currentYear
+            && (int) $selectedYear->id === (int) $currentYear->id;
 
-        // Récupérer les vraies notes groupées par matière
+        $teachersBySubject = $this->getTeachersBySubject($user, $selectedYear);
+
         $realGrades = $user->grades()
             ->with('subject')
+            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
 
         // Afficher uniquement les vraies notes (pas de données simulées)
@@ -50,137 +58,77 @@ class StudentGradesController extends Controller
         }
 
         // Calculer la moyenne générale
-        $generalAverage = $grades->isNotEmpty() ? collect($grades)->avg('average') : 0;
+        $generalAverage = $grades->isNotEmpty() ? round(collect($grades)->avg('average'), 2) : null;
 
-        // Informations élève pour le bulletin
         $studentInfo = [
             'name' => $user->name,
-            'class' => $user->schoolClass->name ?? 'Non assigné',
+            'class' => StudentClassContext::labelForYear($user, $selectedYear),
             'identifier' => $user->identifier ?? '-',
-            'academic_year' => '2025-2026',
+            'academic_year' => $selectedYear?->name ?? '—',
             'trimester' => $this->getCurrentTrimester(),
         ];
 
-        // Données d'évolution des notes pour le graphique
-        $gradesEvolution = $this->getGradesEvolution($user);
+        $gradesEvolution = $this->getGradesEvolution($user, $selectedYear);
 
-        return view('student.grades', compact('grades', 'generalAverage', 'studentInfo', 'gradesEvolution'));
+        return view('student.grades', compact(
+            'grades',
+            'generalAverage',
+            'studentInfo',
+            'gradesEvolution',
+            'selectedYear',
+            'currentYear',
+            'academicYears',
+            'isSelectedYearCurrent',
+        ));
     }
     
     /**
      * Récupérer les enseignants par matière pour la classe de l'élève
      */
-    private function getTeachersBySubject($user)
+    private function getTeachersBySubject($user, ?AcademicYear $year = null): array
     {
+        $class = StudentClassContext::resolveForYear($user, $year);
+        if (! $class) {
+            return [];
+        }
+
+        $yearId = $year?->id;
         $teachersBySubject = [];
-        
-        if (!$user->class_id) {
+
+        $assignments = TeacherAssignment::with('teacher')
+            ->where('class_id', $class->id)
+            ->when($yearId, fn ($q) => $q->where('academic_year_id', $yearId))
+            ->get();
+
+        foreach ($assignments as $assignment) {
+            if ($assignment->teacher && ! isset($teachersBySubject[$assignment->subject_id])) {
+                $teachersBySubject[$assignment->subject_id] = $assignment->teacher->name;
+            }
+        }
+
+        if ($teachersBySubject !== []) {
             return $teachersBySubject;
         }
-        
-        // Récupérer les enseignants affectés à la classe de l'élève
+
         $classTeachers = DB::table('class_teacher')
             ->join('users', 'class_teacher.teacher_id', '=', 'users.id')
-            ->where('class_teacher.class_id', $user->class_id)
+            ->where('class_teacher.class_id', $class->id)
             ->select('users.id', 'users.name')
             ->get();
-        
-        // Pour chaque enseignant, trouver les matières qu'il enseigne
+
         foreach ($classTeachers as $teacher) {
             $subjectIds = DB::table('teacher_subjects')
                 ->where('teacher_id', $teacher->id)
                 ->pluck('subject_id');
-            
+
             foreach ($subjectIds as $subjectId) {
-                if (!isset($teachersBySubject[$subjectId])) {
+                if (! isset($teachersBySubject[$subjectId])) {
                     $teachersBySubject[$subjectId] = $teacher->name;
                 }
             }
         }
-        
+
         return $teachersBySubject;
-    }
-
-    /**
-     * Afficher le bulletin scolaire
-     */
-    public function bulletin(Request $request)
-    {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return redirect()->route('login');
-        }
-
-        $trimester = $request->query('trimester', $this->getCurrentTrimester());
-
-        // Récupérer les enseignants par matière
-        $teachersBySubject = $this->getTeachersBySubject($user);
-
-        // Récupérer les vraies notes uniquement
-        $realGrades = $user->grades()
-            ->with('subject')
-            ->get();
-
-        if ($realGrades->isEmpty()) {
-            $grades = collect();
-        } else {
-            $grades = $realGrades->groupBy('subject.name')
-                ->map(function ($subjectGrades) use ($teachersBySubject) {
-                    $avg = $subjectGrades->avg('grade');
-                    $subjectId = $subjectGrades->first()->subject->id;
-                    $teacherName = $teachersBySubject[$subjectId] ?? 'Professeur';
-                    
-                    return [
-                        'subject' => $subjectGrades->first()->subject->name,
-                        'subject_color' => $subjectGrades->first()->subject->color ?? '#f59e0b',
-                        'grades' => $subjectGrades->sortByDesc('date'),
-                        'average' => round($avg, 2),
-                        'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,
-                        'teacher' => $teacherName,
-                        'appreciation' => $this->getAppreciation($avg)
-                    ];
-                });
-        }
-
-        // Calculer la moyenne générale pondérée
-        $totalCoef = collect($grades)->sum('coefficient');
-        $weightedSum = collect($grades)->sum(function($g) {
-            return $g['average'] * $g['coefficient'];
-        });
-        $generalAverage = $totalCoef > 0 ? $weightedSum / $totalCoef : 0;
-
-        // Rang (à implémenter avec les vraies données quand disponibles)
-        $rank = null;
-        $totalStudents = $user->schoolClass ? $user->schoolClass->students()->count() : 0;
-
-        // Informations élève
-        $studentInfo = [
-            'name' => $user->name,
-            'class' => $user->schoolClass->name ?? 'Non assigné',
-            'identifier' => $user->identifier ?? '-',
-            'academic_year' => '2025-2026',
-            'trimester' => $trimester,
-            'date_of_birth' => $user->date_of_birth ?? '-',
-            'level' => $user->schoolClass->level->name ?? '-',
-        ];
-
-        // Statistiques de classe (à calculer avec les vraies données)
-        $classStats = [
-            'average' => null,
-            'highest' => null,
-            'lowest' => null,
-        ];
-
-        return view('student.bulletin', compact(
-            'grades', 
-            'generalAverage', 
-            'studentInfo', 
-            'rank',
-            'totalStudents',
-            'classStats',
-            'trimester'
-        ));
     }
 
     /**
@@ -210,10 +158,11 @@ class StudentGradesController extends Controller
     /**
      * Évolution mensuelle des moyennes de l'élève sur toute l'année scolaire.
      */
-    private function getGradesEvolution($user): array
+    private function getGradesEvolution($user, ?AcademicYear $selectedYear = null): array
     {
         $grades = $user->grades()
             ->with('subject')
+            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->orderBy('date')
             ->orderBy('created_at')
             ->get();
@@ -222,7 +171,7 @@ class StudentGradesController extends Controller
             return [];
         }
 
-        $academicYear = $user->schoolClass?->academicYear;
+        $academicYear = $selectedYear ?? $user->schoolClass?->academicYear;
         [$periodStart, $periodEnd] = $this->getAcademicYearMonthRange($academicYear);
 
         $evolution = [];

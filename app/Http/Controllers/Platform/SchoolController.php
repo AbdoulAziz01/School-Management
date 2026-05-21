@@ -7,10 +7,14 @@ use App\Models\School;
 use App\Models\User;
 use App\Support\PlatformMetrics;
 use App\Support\SchoolLogoStorage;
+use App\Support\SchoolProfile;
 use App\Support\SchoolSubjectProvisioner;
+use App\Support\StaffOtpMailer;
+use App\Models\AcademicYear;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SchoolController extends Controller
@@ -48,34 +52,46 @@ class SchoolController extends Controller
 
     public function create(): View
     {
-        return view('platform.schools.create');
+        $school = new School([
+            'timezone'  => 'Africa/Dakar',
+            'locale'    => 'fr',
+            'is_active' => true,
+        ]);
+
+        return view('platform.schools.create', compact('school'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'is_active' => ['sometimes', 'boolean'],
-            'admin_name' => ['required', 'string', 'max:255'],
-            'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'admin_password' => ['required', 'confirmed', Password::defaults()],
-            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
-        ]);
+        $validated = $request->validate(
+            array_merge(
+                SchoolProfile::fullRules(),
+                [
+                    'is_active'     => ['sometimes', 'boolean'],
+                    'admin_name'    => ['required', 'string', 'max:255'],
+                    'admin_email'   => ['required', 'email', 'max:255', 'unique:users,email'],
+                ]
+            ),
+            [
+                'admin_email.unique' => 'Cette adresse email est déjà utilisée par un autre compte (admin, enseignant, élève…). Choisissez une adresse différente pour l\'administrateur de l\'établissement.',
+            ],
+            [
+                'admin_email' => 'email admin',
+            ]
+        );
 
-        $school = School::create([
-            'name' => $validated['name'],
-            'slug' => School::slugFromName($validated['name']),
-            'code' => School::generateUniqueCode(),
-            'email' => $validated['email'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'address' => $validated['address'] ?? null,
-            'city' => $validated['city'] ?? null,
-            'is_active' => $request->boolean('is_active', true),
-        ]);
+        unset($validated['default_academic_year_id']);
+
+        $school = School::create(array_merge(
+            SchoolProfile::fullAttributes($validated),
+            [
+                'slug'      => School::slugFromName($validated['name']),
+                'code'      => School::generateUniqueCode(),
+                'is_active' => $request->boolean('is_active', true),
+                'timezone'  => $validated['timezone'] ?? 'Africa/Dakar',
+                'locale'    => $validated['locale'] ?? 'fr',
+            ]
+        ));
 
         if ($request->hasFile('logo')) {
             SchoolLogoStorage::store($school, $request->file('logo'));
@@ -85,13 +101,22 @@ class SchoolController extends Controller
 
         SchoolSubjectProvisioner::ensureForSchool($school->id);
 
-        return redirect()
+        $otpResult = StaffOtpMailer::send($admin, StaffOtpMailer::accountLabelFor($admin));
+
+        $redirect = redirect()
             ->route('platform.schools.show', $school)
             ->with('success', "École « {$school->name} » créée. Code d'inscription : {$school->code}")
             ->with('new_admin_login', [
                 'email' => $admin->email,
                 'identifier' => $admin->identifier,
+                'otp_sent' => $otpResult === true,
             ]);
+
+        if (is_string($otpResult)) {
+            $redirect->with('error', "Compte admin créé, mais l'email OTP n'a pas pu être envoyé : {$otpResult}");
+        }
+
+        return $redirect;
     }
 
     public function show(School $school): View
@@ -136,31 +161,28 @@ class SchoolController extends Controller
 
     public function edit(School $school): View
     {
-        return view('platform.schools.edit', compact('school'));
+        $academicYears = AcademicYear::withoutGlobalScopes()
+            ->where('school_id', $school->id)
+            ->orderByDesc('start_date')
+            ->get(['id', 'name', 'is_current']);
+
+        return view('platform.schools.edit', compact('school', 'academicYears'));
     }
 
     public function update(Request $request, School $school): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'is_active' => ['sometimes', 'boolean'],
-            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
-            'remove_logo' => ['sometimes', 'boolean'],
-        ]);
+        $validated = $request->validate(array_merge(
+            SchoolProfile::fullRules($school->id),
+            ['is_active' => ['sometimes', 'boolean']]
+        ));
 
-        $school->update([
-            'name' => $validated['name'],
-            'slug' => School::slugFromName($validated['name'], $school->id),
-            'email' => $validated['email'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'address' => $validated['address'] ?? null,
-            'city' => $validated['city'] ?? null,
-            'is_active' => $request->boolean('is_active'),
-        ]);
+        $school->update(array_merge(
+            SchoolProfile::fullAttributes($validated),
+            [
+                'slug'      => School::slugFromName($validated['name'], $school->id),
+                'is_active' => $request->boolean('is_active'),
+            ]
+        ));
 
         if ($request->boolean('remove_logo')) {
             SchoolLogoStorage::clear($school);
@@ -196,15 +218,25 @@ class SchoolController extends Controller
         $validated = $request->validate([
             'admin_name' => ['required', 'string', 'max:255'],
             'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'admin_password' => ['required', 'confirmed', Password::defaults()],
             'staff_role' => ['required', 'in:'.User::ROLE_ADMIN.','.User::ROLE_SURVEILLANT],
+        ], [
+            'admin_email.unique' => 'Cette adresse email est déjà utilisée par un autre compte. Choisissez une adresse différente.',
+        ], [
+            'admin_email' => 'email',
         ]);
 
         $staff = $this->createSchoolStaff($school, $validated, $validated['staff_role']);
 
         $label = $staff->role === User::ROLE_SURVEILLANT ? 'Surveillant' : 'Administrateur';
+        $otpResult = StaffOtpMailer::send($staff, StaffOtpMailer::accountLabelFor($staff));
 
-        return back()->with('success', "{$label} créé — identifiant : {$staff->identifier}");
+        $redirect = back()->with('success', "{$label} créé — identifiant : {$staff->identifier}. Un code OTP a été envoyé à {$staff->email}.");
+
+        if (is_string($otpResult)) {
+            $redirect->with('error', "Compte créé, mais l'email OTP n'a pas pu être envoyé : {$otpResult}");
+        }
+
+        return $redirect;
     }
 
     public function resetAdminPassword(Request $request, School $school, User $user): RedirectResponse
@@ -213,14 +245,13 @@ class SchoolController extends Controller
             abort(404);
         }
 
-        $validated = $request->validate([
-            'admin_password' => ['required', 'confirmed', Password::defaults()],
-        ]);
+        $otpResult = StaffOtpMailer::send($user, StaffOtpMailer::accountLabelFor($user));
 
-        $user->password = $validated['admin_password'];
-        $user->save();
+        if ($otpResult === true) {
+            return back()->with('success', "Un nouveau code OTP a été envoyé à {$user->email} ({$user->identifier}).");
+        }
 
-        return back()->with('success', "Mot de passe réinitialisé pour {$user->identifier} ({$user->email}).");
+        return back()->with('error', $otpResult);
     }
 
     public function destroy(School $school): RedirectResponse
@@ -243,7 +274,7 @@ class SchoolController extends Controller
         return User::withoutGlobalScopes()->create([
             'name' => $data['admin_name'],
             'email' => $data['admin_email'],
-            'password' => $data['admin_password'],
+            'password' => Hash::make(Str::random(32)),
             'identifier' => $identifier,
             'user_id' => $identifier,
             'role' => $role,

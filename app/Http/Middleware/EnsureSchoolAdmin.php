@@ -19,7 +19,7 @@ class EnsureSchoolAdmin
 
         if (! $user->isSchoolStaff() || ! $user->school_id) {
             if ($user->isSuperAdmin()) {
-                return redirect()->route('platform.dashboard');
+                return $next($request);
             }
 
             return redirect()->route('login')->with('error', 'Accès réservé à l\'administrateur de l\'établissement.');

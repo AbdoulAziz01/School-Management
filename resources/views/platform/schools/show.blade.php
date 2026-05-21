@@ -46,7 +46,37 @@
     </div>
 @endif
 
+@if($school->isFormation())
+    <div class="alert alert-info border-0 shadow-sm mb-4">
+        <strong><i class="fas fa-graduation-cap me-1"></i> École de formation professionnelle</strong>
+        <p class="mb-0 small">Structure : <strong>Promotions</strong> (filière, année, groupes) → <strong>Modules</strong>.</p>
+    </div>
+@endif
+
 <div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Identité & direction</h6></div>
+            <div class="card-body small">
+                <dl class="mb-0">
+                    <dt class="text-muted">Type</dt>
+                    <dd>{{ $school->establishmentTypeLabel() ?? '—' }}</dd>
+                    @if($school->motto)
+                        <dt class="text-muted">Devise</dt>
+                        <dd class="fst-italic">« {{ $school->motto }} »</dd>
+                    @endif
+                    @if($school->authorization_number)
+                        <dt class="text-muted">N° autorisation</dt>
+                        <dd>{{ $school->authorization_number }}</dd>
+                    @endif
+                    <dt class="text-muted">Proviseur / Directeur</dt>
+                    <dd>{{ $school->director_name ?? '—' }}</dd>
+                    <dt class="text-muted">Censeur / Adjoint</dt>
+                    <dd>{{ $school->deputy_director_name ?? '—' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white"><h6 class="mb-0">Coordonnées</h6></div>
@@ -54,17 +84,64 @@
                 <dl class="mb-0">
                     <dt class="text-muted">Email</dt>
                     <dd>{{ $school->email ?? '—' }}</dd>
+                    <dt class="text-muted">Secrétariat</dt>
+                    <dd>{{ $school->secretariat_email ?? '—' }}</dd>
                     <dt class="text-muted">Téléphone</dt>
                     <dd>{{ $school->phone ?? '—' }}</dd>
+                    @if($school->whatsapp)
+                        <dt class="text-muted">WhatsApp</dt>
+                        <dd>{{ $school->whatsapp }}</dd>
+                    @endif
+                    @if($school->website)
+                        <dt class="text-muted">Site web</dt>
+                        <dd><a href="{{ $school->website }}" target="_blank" rel="noopener">{{ $school->website }}</a></dd>
+                    @endif
                     <dt class="text-muted">Adresse</dt>
-                    <dd>{{ $school->address ?? '—' }}</dd>
-                    <dt class="text-muted">Ville</dt>
-                    <dd>{{ $school->city ?? '—' }}</dd>
+                    <dd>{{ collect([$school->address, $school->district, $school->city, $school->department, $school->region])->filter()->implode(', ') ?: '—' }}</dd>
                 </dl>
             </div>
         </div>
     </div>
-    <div class="col-lg-8">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Paramètres</h6></div>
+            <div class="card-body small">
+                <dl class="mb-0">
+                    <dt class="text-muted">Fuseau horaire</dt>
+                    <dd>{{ \App\Models\School::TIMEZONES[$school->timezone] ?? $school->timezone ?? '—' }}</dd>
+                    <dt class="text-muted">Langue</dt>
+                    <dd>{{ \App\Models\School::LOCALES[$school->locale] ?? $school->locale ?? '—' }}</dd>
+                    <dt class="text-muted">Code inscription</dt>
+                    <dd><code>{{ $school->code }}</code></dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if($school->description || $school->secretariat_hours)
+<div class="row g-3 mb-4">
+    @if($school->description)
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h6 class="mb-0">Présentation</h6></div>
+                <div class="card-body small">{{ $school->description }}</div>
+            </div>
+        </div>
+    @endif
+    @if($school->secretariat_hours)
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h6 class="mb-0">Horaires secrétariat</h6></div>
+                <div class="card-body small">{{ $school->secretariat_hours }}</div>
+            </div>
+        </div>
+    @endif
+</div>
+@endif
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-12">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white"><h6 class="mb-0">Santé de l'établissement</h6></div>
             <div class="card-body">
@@ -224,20 +301,21 @@
             <ul class="list-group list-group-flush">
                 @foreach($staffMembers as $member)
                     <li class="list-group-item">
-                        <small class="text-muted">Réinitialiser mot de passe — {{ $member->identifier }}</small>
-                        <form method="POST" action="{{ route('platform.schools.admins.reset-password', [$school, $member]) }}" class="row g-2 align-items-end mt-1">
-                            @csrf
-                            @method('PATCH')
-                            <div class="col-md-5">
-                                <input type="password" name="admin_password" class="form-control form-control-sm" placeholder="Nouveau mot de passe" required minlength="8">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <small class="text-muted">Code OTP — {{ $member->identifier }}</small>
+                                @if($member->invitation_email_sent_at)
+                                    <div class="small text-muted">Dernier envoi : {{ $member->invitation_email_sent_at->format('d/m/Y à H:i') }}</div>
+                                @endif
                             </div>
-                            <div class="col-md-5">
-                                <input type="password" name="admin_password_confirmation" class="form-control form-control-sm" placeholder="Confirmer" required minlength="8">
-                            </div>
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">OK</button>
-                            </div>
-                        </form>
+                            <form method="POST" action="{{ route('platform.schools.admins.reset-password', [$school, $member]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    {{ $member->invitation_email_sent_at ? 'Renvoyer le code OTP' : 'Envoyer le code OTP' }}
+                                </button>
+                            </form>
+                        </div>
                     </li>
                 @endforeach
             </ul>
@@ -263,14 +341,7 @@
                     <div class="mb-3">
                         <label class="form-label">Email</label>
                         <input type="email" name="admin_email" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mot de passe</label>
-                        <input type="password" name="admin_password" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Confirmer</label>
-                        <input type="password" name="admin_password_confirmation" class="form-control" required>
+                        <div class="form-text">Un code OTP de connexion sera envoyé par email.</div>
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Créer le compte</button>
                 </form>
@@ -282,6 +353,9 @@
 @if(session('new_admin_login'))
 <div class="alert alert-success mt-4">
     Compte créé : {{ session('new_admin_login.email') }} · identifiant <code>{{ session('new_admin_login.identifier') }}</code>
+    @if(session('new_admin_login.otp_sent'))
+        · code OTP envoyé par email
+    @endif
 </div>
 @endif
 @endsection

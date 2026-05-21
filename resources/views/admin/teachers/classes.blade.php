@@ -18,12 +18,6 @@
                 </div>
                 
                 <div class="card-body">
-                    @if (session('success'))
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
-                        </div>
-                    @endif
-
                     <form action="{{ route('admin.teachers.classes.update', $teacher) }}" method="POST">
                         @csrf
                         @method('PUT')

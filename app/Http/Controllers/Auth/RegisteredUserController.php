@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\School;
 use App\Models\Subject;
 use App\Models\User;
+use App\Support\SchoolUserIdentifier;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,22 +77,7 @@ class RegisteredUserController extends Controller
             default => 'U',
         };
 
-        $year = date('Y');
-
-        $lastUser = User::withoutGlobalScopes()
-            ->where('school_id', $school->id)
-            ->where('identifier', 'like', $prefix.$year.'%')
-            ->orderByDesc('identifier')
-            ->first();
-
-        if ($lastUser) {
-            $lastNumber = (int) substr($lastUser->identifier, -3);
-            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = '001';
-        }
-
-        $identifier = $prefix.$year.$newNumber;
+        $identifier = SchoolUserIdentifier::next($school->id, $prefix);
 
         $user = User::withoutGlobalScopes()->create([
             'name' => $request->name,

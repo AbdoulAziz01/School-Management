@@ -10,12 +10,13 @@ class AcademicYear extends Model
 {
     use BelongsToSchool, HasFactory;
 
-    protected $fillable = ['name', 'start_date', 'end_date', 'is_current', 'school_id'];
+    protected $fillable = ['name', 'start_date', 'end_date', 'is_current', 'is_closed', 'school_id'];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'is_current' => 'boolean',
+        'is_closed' => 'boolean',
     ];
 
     public function classes()
@@ -44,5 +45,22 @@ class AcademicYear extends Model
         }
 
         return "Depuis le {$start} (fin non fixée)";
+    }
+
+    public function isClosed(): bool
+    {
+        return (bool) $this->is_closed;
+    }
+
+    /** Année archivée : plus aucune modification (consultation seule). */
+    public function isReadOnly(): bool
+    {
+        return $this->isClosed() || ! $this->is_current;
+    }
+
+    /** Passage en classe supérieure autorisé uniquement sur une année terminée. */
+    public function allowsPromotion(): bool
+    {
+        return $this->isClosed();
     }
 }

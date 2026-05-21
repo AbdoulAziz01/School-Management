@@ -114,15 +114,148 @@
         font-weight: 500;
     }
 
+    .schedule-print-header {
+        display: none;
+    }
+
     @media print {
-        .no-print { display: none !important; }
-        .schedule-table { box-shadow: none; }
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+
+        body {
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .sidebar,
+        .sidebar-overlay,
+        .mobile-header,
+        .top-navbar,
+        .no-print,
+        .alert,
+        iframe,
+        [id*="botpress"],
+        [class*="bp-"] {
+            display: none !important;
+        }
+
+        .wrapper,
+        .main-content,
+        .content-area {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            min-height: auto !important;
+        }
+
+        .container-fluid {
+            max-width: 100% !important;
+            padding: 0 !important;
+        }
+
+        .schedule-print-header {
+            display: block !important;
+            text-align: center;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #d97706;
+        }
+
+        .schedule-print-header h2 {
+            font-size: 1.25rem;
+            margin-bottom: 4px;
+            color: #92400e;
+        }
+
+        .schedule-print-header p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #374151;
+        }
+
+        .schedule-mobile-view {
+            display: none !important;
+        }
+
+        .schedule-desktop-view {
+            display: block !important;
+        }
+
+        .schedule-desktop-view .card {
+            box-shadow: none !important;
+            border: 1px solid #e5e7eb !important;
+            transform: none !important;
+        }
+
+        .schedule-table {
+            width: 100% !important;
+            box-shadow: none !important;
+            font-size: 9pt;
+            page-break-inside: avoid;
+        }
+
+        .schedule-table th {
+            background: #d97706 !important;
+            color: white !important;
+            padding: 8px 4px !important;
+            font-size: 9pt;
+        }
+
+        .schedule-table td {
+            padding: 4px !important;
+            vertical-align: middle !important;
+        }
+
+        .schedule-cell {
+            transform: none !important;
+            min-height: auto !important;
+            padding: 6px !important;
+            font-size: 8pt;
+            page-break-inside: avoid;
+        }
+
+        .schedule-cell .details {
+            font-size: 7pt;
+        }
+
+        .time-column {
+            font-size: 8pt;
+            width: 60px !important;
+        }
+
+        .empty-cell {
+            padding: 8px !important;
+        }
+
+        .simulation-badge {
+            background: #f3f4f6 !important;
+            color: #374151 !important;
+            border: 1px solid #d1d5db;
+        }
+
+        h1.h3 {
+            font-size: 1.1rem !important;
+            margin-bottom: 8px !important;
+        }
     }
 </style>
 @endpush
 
 @section('content')
 <div class="container-fluid">
+    <div class="schedule-print-header">
+        <h2>{{ $schoolDisplayName ?? 'Mon établissement' }}</h2>
+        <p><strong>Emploi du temps</strong> — {{ Auth::user()->name }}</p>
+        @if(Auth::user()->schoolClass)
+            <p>Classe : {{ Auth::user()->schoolClass->name }}</p>
+        @endif
+        <p class="small">Imprimé le {{ now()->format('d/m/Y à H:i') }}</p>
+    </div>
+
     <!-- En-tête -->
     <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
@@ -139,7 +272,7 @@
     </div>
 
     <!-- Vue mobile - Accordéon par jour -->
-    <div class="d-block d-lg-none">
+    <div class="d-block d-lg-none schedule-mobile-view">
         <div class="accordion" id="mobileSchedule">
             @foreach($days as $dayNumber => $dayName)
                 <div class="accordion-item">
@@ -196,7 +329,7 @@
     </div>
 
     <!-- Vue desktop - Tableau complet -->
-    <div class="card shadow-sm d-none d-lg-block">
+    <div class="card shadow-sm d-none d-lg-block schedule-desktop-view">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered mb-0 schedule-table">

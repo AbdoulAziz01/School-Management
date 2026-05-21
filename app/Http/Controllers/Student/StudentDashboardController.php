@@ -3,50 +3,80 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\AcademicYear;
 use App\Models\Grade;
 use App\Models\Attendance;
+use App\Support\DashboardAcademicYearContext;
+use App\Support\StudentClassContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class StudentDashboardController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         try {
-            if (!Auth::check()) {
+            if (! Auth::check()) {
                 return redirect()->route('login');
             }
 
             $user = Auth::user();
-            
-            // Calculer la moyenne réelle des notes (la colonne est 'grade' pas 'value')
-            $grades = Grade::where('user_id', $user->id)->get();
-            $average = $grades->count() > 0 ? round($grades->avg('grade'), 2) : null;
-            
-            // Calculer le taux de présence réel
+            $selectedYear = DashboardAcademicYearContext::resolve($request, 'student');
+            $currentYear = AcademicYear::where('is_current', true)->first();
+            $academicYears = DashboardAcademicYearContext::allYears();
+            $isSelectedYearCurrent = $selectedYear && $currentYear
+                && (int) $selectedYear->id === (int) $currentYear->id;
+
+            $user->loadMissing(['schoolClass.level', 'schoolClass.academicYear']);
+            $studentClass = StudentClassContext::resolveForYear($user, $selectedYear);
+            $classLabel = StudentClassContext::labelForYear($user, $selectedYear);
+
+            $gradesQuery = Grade::where('user_id', $user->id)
+                ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id));
+
+            $average = (clone $gradesQuery)->count() > 0
+                ? round((clone $gradesQuery)->avg('grade'), 2)
+                : null;
+
             $attendancesQuery = Attendance::where('user_id', $user->id);
-            $totalAttendances = $attendancesQuery->count();
+            if ($selectedYear?->start_date) {
+                $attendancesQuery->whereDate('date', '>=', $selectedYear->start_date);
+            }
+            if ($selectedYear?->end_date) {
+                $attendancesQuery->whereDate('date', '<=', $selectedYear->end_date);
+            }
+
+            $totalAttendances = (clone $attendancesQuery)->count();
             $presentCount = (clone $attendancesQuery)->where('status', 'present')->count();
-            $attendanceRate = $totalAttendances > 0 ? round(($presentCount / $totalAttendances) * 100, 1) : null;
-            
-            // Récupérer les 5 dernières notes
+            $attendanceRate = $totalAttendances > 0
+                ? round(($presentCount / $totalAttendances) * 100, 1)
+                : null;
+
             $recentGrades = Grade::with('subject')
                 ->where('user_id', $user->id)
+                ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
                 ->orderBy('created_at', 'desc')
                 ->take(5)
                 ->get();
-            
+
             return view('student.dashboard', [
                 'user' => $user,
                 'average' => $average,
                 'attendanceRate' => $attendanceRate,
                 'upcomingCourses' => collect(),
-                'recentGrades' => $recentGrades
+                'recentGrades' => $recentGrades,
+                'selectedYear' => $selectedYear,
+                'currentYear' => $currentYear,
+                'academicYears' => $academicYears,
+                'isSelectedYearCurrent' => $isSelectedYearCurrent,
+                'studentClass' => $studentClass,
+                'classLabel' => $classLabel,
             ]);
-            
         } catch (\Exception $e) {
-            return response('Erreur: ' . $e->getMessage(), 500);
+            Log::error('Erreur tableau de bord élève', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'Impossible de charger le tableau de bord.');
         }
     }
 }

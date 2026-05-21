@@ -9,9 +9,12 @@ use App\Models\Level;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
+use App\Support\DashboardAcademicYearContext;
+use App\Support\StudentClassContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\StudentClassPromotionService;
 
 class StudentBulletinController extends Controller
 {
@@ -28,20 +31,18 @@ class StudentBulletinController extends Controller
 
         // Récupérer le semestre demandé (1 ou 2), par défaut le semestre actuel
         $semester = $request->query('semester', $this->getCurrentSemester());
-        
-        // Récupérer l'année académique en cours
-        $academicYear = AcademicYear::where('is_current', true)->first();
-        
-        if (!$academicYear) {
+
+        $academicYear = DashboardAcademicYearContext::resolve($request, 'student');
+
+        if (! $academicYear) {
             return view('student.bulletin-senegal', [
-                'error' => 'Aucune année académique en cours'
+                'error' => 'Aucune année académique sélectionnée',
             ]);
         }
 
-        // Informations sur la classe et le niveau
-        $class = $user->schoolClass;
-        $level = $class ? $class->level : null;
-        $serie = $level ? $level->serie : null;
+        $class = StudentClassContext::resolveForYear($user, $academicYear);
+        $level = $class?->level;
+        $serie = $level?->serie;
 
         // Récupérer les notes du semestre
         $grades = Grade::where('user_id', $user->id)
@@ -62,13 +63,13 @@ class StudentBulletinController extends Controller
         // Informations élève pour le bulletin
         $studentInfo = [
             'name' => $user->name,
-            'class' => $class ? $class->name : 'Non assigné',
+            'class' => StudentClassContext::labelForYear($user, $academicYear),
             'serie' => $serie,
             'identifier' => $user->identifier ?? '-',
             'academic_year' => $academicYear->name,
             'semester' => $semester,
             'date_of_birth' => $user->date_of_birth ? $user->date_of_birth->format('d/m/Y') : '-',
-            'level' => $level ? $level->name : '-',
+            'level' => $level?->name ?? '-',
         ];
 
         // Statistiques de classe
@@ -352,6 +353,15 @@ class StudentBulletinController extends Controller
 
         // Décision du conseil de classe
         $decision = $this->getDecision($moyenneAnnuelle);
+
+        $promotionResult = app(StudentClassPromotionService::class)->tryPromote($user, $academicYear);
+        if (($promotionResult['promoted'] ?? false) && ($promotionResult['status'] ?? '') === 'promoted') {
+            $decision['text'] = 'Admis(e) et affecté(e) en '.$user->fresh()->schoolClass?->name;
+            $decision['color'] = 'success';
+        } elseif (($promotionResult['status'] ?? '') === 'graduated') {
+            $decision['text'] = 'Diplômé(e) — fin de scolarité';
+            $decision['color'] = 'success';
+        }
 
         $studentInfo = [
             'name' => $user->name,

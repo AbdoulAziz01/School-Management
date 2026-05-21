@@ -75,6 +75,22 @@
 @endpush
 
 @section('content')
+<div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    @include('partials.dashboard-year-filter', [
+        'action' => route('student.dashboard'),
+        'academicYears' => $academicYears ?? collect(),
+        'selectedYear' => $selectedYear ?? null,
+    ])
+</div>
+
+@if(isset($selectedYear) && !($isSelectedYearCurrent ?? true))
+    <div class="alert alert-light border py-2 small mb-3">
+        <i class="fas fa-info-circle me-1 text-muted"></i>
+        Données de l'année <strong>{{ $selectedYear->name }}</strong>
+        @if($selectedYear->isClosed()) (terminée) @endif
+    </div>
+@endif
+
 <!-- Bannière de bienvenue -->
 <div class="welcome-banner">
     <div class="row align-items-center">
@@ -95,8 +111,35 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
+                        <h6 class="stat-label">Ma classe</h6>
+                        <h2 class="stat-value" style="font-size: 1.35rem;">{{ $classLabel ?? '—' }}</h2>
+                    </div>
+                    <div class="p-3 bg-warning bg-opacity-10 rounded-circle">
+                        <i class="fas fa-chalkboard text-warning fs-4"></i>
+                    </div>
+                </div>
+                @if($selectedYear ?? null)
+                    <div class="mt-2">
+                        <small class="text-muted">{{ $selectedYear->name }}</small>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
                         <h6 class="stat-label">Moyenne générale</h6>
-                        <h2 class="stat-value">{{ number_format($average ?? 0, 2) }}/20</h2>
+                        <h2 class="stat-value">
+                            @if($average !== null)
+                                {{ number_format($average, 2) }}/20
+                            @else
+                                —
+                            @endif
+                        </h2>
                     </div>
                     <div class="p-3 bg-primary bg-opacity-10 rounded-circle">
                         <i class="fas fa-chart-line text-primary fs-4"></i>
@@ -112,42 +155,16 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="stat-label">Taux de présence</h6>
-                        <h2 class="stat-value">{{ $attendanceRate ?? 0 }}%</h2>
+                        <h2 class="stat-value">
+                            @if($attendanceRate !== null)
+                                {{ $attendanceRate }}%
+                            @else
+                                —
+                            @endif
+                        </h2>
                     </div>
                     <div class="p-3 bg-success bg-opacity-10 rounded-circle">
                         <i class="fas fa-user-check text-success fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="stat-label">Cours prévus</h6>
-                        <h2 class="stat-value">{{ $upcomingCourses->count() ?? 0 }}</h2>
-                    </div>
-                    <div class="p-3 bg-info bg-opacity-10 rounded-circle">
-                        <i class="fas fa-book text-info fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="stat-label">Notes récentes</h6>
-                        <h2 class="stat-value">{{ $recentGrades->count() ?? 0 }}</h2>
-                    </div>
-                    <div class="p-3 bg-warning bg-opacity-10 rounded-circle">
-                        <i class="fas fa-star text-warning fs-4"></i>
                     </div>
                 </div>
             </div>
@@ -226,11 +243,16 @@
                                     <tr>
                                         <td>{{ $grade->subject->name ?? 'N/A' }}</td>
                                         <td>
-                                            <span class="grade-badge {{ $grade->value >= 16 ? 'grade-excellent' : ($grade->value >= 12 ? 'grade-good' : ($grade->value >= 10 ? 'grade-average' : 'grade-poor')) }}">
-                                                {{ $grade->value }}/20
-                                            </span>
+                                            @if($grade->grade !== null)
+                                                @php $note = (float) $grade->grade; @endphp
+                                                <span class="grade-badge {{ $note >= 16 ? 'grade-excellent' : ($note >= 12 ? 'grade-good' : ($note >= 10 ? 'grade-average' : 'grade-poor')) }}">
+                                                    {{ number_format($note, 2) }}/20
+                                                </span>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
                                         </td>
-                                        <td>{{ $grade->created_at->format('d/m/Y') }}</td>
+                                        <td>{{ ($grade->date ?? $grade->created_at)?->format('d/m/Y') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

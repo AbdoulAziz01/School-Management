@@ -5,10 +5,6 @@
         <h1 class="mb-0 h3">Inscriptions en Attente</h1>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
     <div class="card">
         <div class="card-body">
             @if($pendingUsers->isEmpty())

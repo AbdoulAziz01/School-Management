@@ -11,12 +11,6 @@
                     <h4 class="card-title">Mon Profil</h4>
                 </div>
                 <div class="card-body">
-                    @if (session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
-
                     <form method="POST" action="{{ route('admin.profile.update') }}">
                         @csrf
                         @method('PUT')

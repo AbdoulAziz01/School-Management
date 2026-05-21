@@ -8,13 +8,6 @@
         <h1 class="mb-0 h3">Élèves en attente d'approbation</h1>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     <div class="shadow-sm card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Liste des élèves en attente</h5>

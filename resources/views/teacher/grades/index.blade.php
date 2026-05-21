@@ -3,15 +3,41 @@
 @section('title', 'Notes - Enseignant')
 
 @section('content')
-<div class="mb-4 d-flex justify-content-between align-items-center">
+<div class="mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
     <div>
         <h1 class="mb-0 h3">Gestion des Notes</h1>
-        <p class="text-muted">Consultez et gérez les notes de vos élèves</p>
+        <p class="text-muted mb-0">Consultez les notes de vos élèves (consultation seule — les notes enregistrées ne peuvent pas être modifiées)</p>
     </div>
-    <a href="{{ route('teacher.grades.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus me-2"></i>Saisir des notes
-    </a>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        @include('partials.dashboard-year-filter', [
+            'action' => route('teacher.grades.index'),
+            'academicYears' => $academicYears ?? collect(),
+            'selectedYear' => $selectedYear ?? null,
+            'queryParams' => array_filter([
+                'class_id' => $selectedClassId ?? null,
+                'subject_id' => $selectedSubjectId ?? null,
+            ]),
+        ])
+        @unless($gradesLocked ?? false)
+            <a href="{{ route('teacher.grades.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Saisir des notes
+            </a>
+        @endunless
+    </div>
 </div>
+
+@if(isset($selectedYear) && !($isSelectedYearCurrent ?? true))
+    <div class="alert alert-light border py-2 small mb-3">
+        <i class="fas fa-info-circle me-1 text-muted"></i>
+        Consultation de l'année <strong>{{ $selectedYear->name }}</strong> — données filtrées pour cette période.
+    </div>
+@endif
+
+@if($gradesLocked ?? false)
+    <div class="alert alert-warning">
+        <i class="fas fa-lock me-2"></i>{{ $gradesLockedMessage ?? 'Saisie des notes bloquée.' }}
+    </div>
+@endif
 
 {{-- Filtres --}}
 <div class="card mb-4">
@@ -26,7 +52,7 @@
                     <option value="">-- Sélectionner une classe --</option>
                     @foreach($classes as $class)
                         <option value="{{ $class->id }}" {{ $selectedClassId == $class->id ? 'selected' : '' }}>
-                            {{ $class->name }}
+                            {{ $class->display_name }}
                         </option>
                     @endforeach
                 </select>
@@ -58,12 +84,14 @@
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">
                 <i class="fas fa-star me-2"></i>
-                Notes — {{ $classes->firstWhere('id', $selectedClassId)->name ?? '' }}
+                Notes — {{ optional($classes->firstWhere('id', $selectedClassId))->display_name ?? '' }}
                 / {{ $subjects->firstWhere('id', $selectedSubjectId)->name ?? '' }}
             </h5>
-            <a href="{{ route('teacher.grades.create', ['class_id' => $selectedClassId, 'subject_id' => $selectedSubjectId]) }}" class="btn btn-sm btn-primary">
-                <i class="fas fa-plus me-1"></i>Ajouter des notes
-            </a>
+            @unless($gradesLocked ?? false)
+                <a href="{{ route('teacher.grades.create', ['class_id' => $selectedClassId, 'subject_id' => $selectedSubjectId]) }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>Ajouter des notes
+                </a>
+            @endunless
         </div>
         <div class="card-body p-0">
             @if($students->count() > 0)
@@ -107,13 +135,10 @@
                                         @php $grade = $findGrade($col['semester'], $col['type']); @endphp
                                         <td class="text-center p-1">
                                             @if($grade)
-                                                <a href="{{ route('teacher.grades.edit', $grade->id) }}"
-                                                   class="text-decoration-none d-inline-block"
-                                                   title="Modifier — {{ $col['label'] }}">
-                                                    <span class="badge {{ $grade->grade >= 10 ? 'bg-success' : 'bg-danger' }}">
-                                                        {{ number_format($grade->grade, 1) }}
-                                                    </span>
-                                                </a>
+                                                <span class="badge {{ $grade->grade >= 10 ? 'bg-success' : 'bg-danger' }}"
+                                                      title="{{ $col['label'] }} — enregistrée">
+                                                    {{ number_format($grade->grade, 1) }}
+                                                </span>
                                             @else
                                                 <span class="text-muted small">—</span>
                                             @endif
@@ -134,6 +159,7 @@
                     </table>
                 </div>
                 <div class="px-3 py-2 border-top bg-light small text-muted">
+                    <span class="me-3"><i class="fas fa-lock me-1"></i>Les notes enregistrées sont définitives.</span>
                     <span class="me-3"><strong>S1 · D1</strong> = 1<sup>er</sup> devoir</span>
                     <span class="me-3"><strong>S1 · D2</strong> = 2<sup>e</sup> devoir</span>
                     <span class="me-3"><strong>S1 · Compo</strong> = composition</span>

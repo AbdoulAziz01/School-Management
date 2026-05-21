@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
+use App\Services\StudentClassPromotionService;
+use App\Support\AcademicYearProvisioner;
+use App\Support\DashboardAcademicYearContext;
 use App\Support\SchoolSubjectProvisioner;
 use App\Support\TenantSchool;
 use Illuminate\Http\Request;
@@ -38,20 +41,37 @@ class AcademicYearController extends Controller
         try {
             DB::beginTransaction();
 
+            $previousYear = ($request->has('is_current') && $request->is_current)
+                ? AcademicYear::where('is_current', true)->first()
+                : null;
+
             // Si on définit cette année comme année courante, on désactive les autres
             if ($request->has('is_current') && $request->is_current) {
                 AcademicYear::where('is_current', true)->update(['is_current' => false]);
             }
 
+            if ($previousYear && $request->has('is_current') && $request->is_current) {
+                $previousYear->update(['is_closed' => true]);
+            }
+
             $year = AcademicYear::create($validated);
 
+            if ($request->has('is_current') && $request->is_current) {
+                DashboardAcademicYearContext::select($year);
+            }
+
             SchoolSubjectProvisioner::ensureForSchool($year->school_id ?? TenantSchool::id());
+
+            $provisionSummary = AcademicYearProvisioner::provision($year, $previousYear);
+            $provisionMessage = $this->formatProvisionMessage($provisionSummary);
+
+            $transitionMessage = $this->runYearTransition($previousYear, $year);
             
             DB::commit();
             
             return redirect()
                 ->route('admin.academic-years.index')
-                ->with('success', 'Année scolaire créée avec succès.');
+                ->with('success', 'Année scolaire créée avec succès.'.$provisionMessage.$transitionMessage);
                 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -124,20 +144,43 @@ class AcademicYearController extends Controller
         try {
             DB::beginTransaction();
 
+            $previousYear = null;
+            if ($request->has('is_current') && $request->is_current && ! $academicYear->is_current) {
+                $previousYear = AcademicYear::where('is_current', true)
+                    ->where('id', '!=', $academicYear->id)
+                    ->first();
+            }
+
             // Si on définit cette année comme année courante, on désactive les autres
             if ($request->has('is_current') && $request->is_current) {
                 AcademicYear::where('is_current', true)
                     ->where('id', '!=', $academicYear->id)
                     ->update(['is_current' => false]);
+
+                if ($previousYear) {
+                    $previousYear->update(['is_closed' => true]);
+                }
             }
 
             $academicYear->update($validated);
+
+            if ($request->has('is_current') && $request->is_current) {
+                DashboardAcademicYearContext::select($academicYear->fresh());
+                $provisionSummary = AcademicYearProvisioner::provision($academicYear->fresh(), $previousYear);
+                $provisionMessage = $this->formatProvisionMessage($provisionSummary);
+            } else {
+                $provisionMessage = '';
+            }
+
+            $transitionMessage = ($request->has('is_current') && $request->is_current)
+                ? $this->runYearTransition($previousYear, $academicYear->fresh())
+                : '';
             
             DB::commit();
             
             return redirect()
                 ->route('admin.academic-years.index')
-                ->with('success', 'Année scolaire mise à jour avec succès.');
+                ->with('success', 'Année scolaire mise à jour avec succès.'.$provisionMessage.$transitionMessage);
                 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -184,24 +227,69 @@ class AcademicYearController extends Controller
         try {
             DB::beginTransaction();
 
+            $previousYear = AcademicYear::where('is_current', true)
+                ->where('id', '!=', $academicYear->id)
+                ->first();
+
             // Désactiver toutes les autres années
             AcademicYear::where('is_current', true)
                 ->where('id', '!=', $academicYear->id)
                 ->update(['is_current' => false]);
 
+            if ($previousYear) {
+                $previousYear->update(['is_closed' => true]);
+            }
+
             // Définir l'année sélectionnée comme année en cours
             $academicYear->update(['is_current' => true]);
+
+            DashboardAcademicYearContext::select($academicYear->fresh());
+            $provisionSummary = AcademicYearProvisioner::provision($academicYear->fresh(), $previousYear);
+            $provisionMessage = $this->formatProvisionMessage($provisionSummary);
+
+            $transitionMessage = $this->runYearTransition($previousYear, $academicYear->fresh());
             
             DB::commit();
             
             return back()
-                ->with('success', 'L\'année scolaire a été définie comme année en cours.');
+                ->with('success', 'L\'année scolaire a été définie comme année en cours.'.$provisionMessage.$transitionMessage);
                 
         } catch (\Exception $e) {
             DB::rollBack();
             return back()
                 ->with('error', 'Une erreur est survenue lors du changement d\'année en cours.');
         }
+    }
+
+    /**
+     * Marquer une année scolaire comme terminée (bloque la saisie des notes).
+     */
+    public function close(AcademicYear $academicYear)
+    {
+        if ($academicYear->is_closed) {
+            return back()->with('info', 'Cette année scolaire est déjà marquée comme terminée.');
+        }
+
+        $academicYear->update(['is_closed' => true]);
+
+        $message = 'L\'année scolaire « '.$academicYear->name.' » est marquée comme terminée.';
+        if ($academicYear->is_current) {
+            $message .= ' La saisie des notes est désormais bloquée pour tous les enseignants.';
+        } else {
+            $message .= ' Les passages en classe supérieure sont maintenant visibles.';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Rouvrir une année scolaire (annuler le statut terminée).
+     */
+    public function reopen(AcademicYear $academicYear)
+    {
+        $academicYear->update(['is_closed' => false]);
+
+        return back()->with('success', 'L\'année scolaire « '.$academicYear->name.' » n\'est plus marquée comme terminée.');
     }
 
     /** @return array<string, mixed> */
@@ -219,5 +307,70 @@ class AcademicYearController extends Controller
         }
 
         return $validated;
+    }
+
+    private function runYearTransition(?AcademicYear $previousYear, AcademicYear $newYear): string
+    {
+        if (! $previousYear || $previousYear->id === $newYear->id) {
+            return '';
+        }
+
+        $summary = app(StudentClassPromotionService::class)->processYearTransition($previousYear, $newYear);
+
+        if ($summary['promoted'] === 0 && $summary['graduated'] === 0 && $summary['repeated'] === 0) {
+            return '';
+        }
+
+        $parts = [];
+        if ($summary['promoted'] > 0) {
+            $parts[] = "{$summary['promoted']} passage(s) en classe supérieure";
+        }
+        if ($summary['graduated'] > 0) {
+            $parts[] = "{$summary['graduated']} diplômé(s) (Terminale)";
+        }
+        if ($summary['repeated'] > 0) {
+            $parts[] = "{$summary['repeated']} redoublant(s) maintenu(s) au même niveau";
+        }
+
+        return ' Passages automatiques : '.implode(', ', $parts).'.';
+    }
+
+    /**
+     * Génère classes / affectations pour une année vide (action manuelle).
+     */
+    public function provision(AcademicYear $academicYear)
+    {
+        $sourceYear = AcademicYear::withoutGlobalScopes()
+            ->where('school_id', $academicYear->school_id)
+            ->where('id', '!=', $academicYear->id)
+            ->whereHas('classes')
+            ->orderByDesc('start_date')
+            ->first();
+
+        $summary = AcademicYearProvisioner::provision($academicYear, $sourceYear);
+
+        if ($summary['skipped'] ?? false) {
+            return back()->with('warning', $summary['message']);
+        }
+
+        if (($summary['classes'] ?? 0) === 0) {
+            return back()->with('error', $summary['message'] ?: 'Impossible de générer les classes.');
+        }
+
+        return back()->with('success', 'Structure générée : '.$summary['message']);
+    }
+
+    /** @param  array<string, mixed>  $summary */
+    private function formatProvisionMessage(array $summary): string
+    {
+        if ($summary['skipped'] ?? false) {
+            return '';
+        }
+
+        if (($summary['classes'] ?? 0) === 0) {
+            return '';
+        }
+
+        return ' '.$summary['message'];
     }
 }
