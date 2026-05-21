@@ -32,6 +32,13 @@ class SchoolController extends Controller
                 $query->whereDoesntHave('users', fn ($q) => $q->where('role', User::ROLE_ADMIN));
             } elseif ($request->status === 'pending') {
                 $query->whereHas('users', fn ($q) => $q->where('status', User::STATUS_PENDING));
+            } elseif ($request->status === 'no_current_year') {
+                $schoolIdsWithCurrentYear = AcademicYear::withoutGlobalScopes()
+                    ->where('is_current', true)
+                    ->pluck('school_id');
+
+                $query->where('is_active', true)
+                    ->whereNotIn('id', $schoolIdsWithCurrentYear);
             }
         }
 

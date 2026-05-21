@@ -2,6 +2,32 @@
 
 @section('title', 'Tableau de bord — ' . $platformName)
 
+@push('styles')
+<style>
+    .platform-alert-link {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .platform-alert-link:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0.25rem 0.75rem rgba(15, 23, 42, 0.08);
+        color: inherit;
+    }
+    .platform-dashboard-table tbody tr[data-href] {
+        cursor: pointer;
+    }
+    .platform-dashboard-table tbody tr[data-href]:hover {
+        background-color: rgba(79, 70, 229, 0.05);
+    }
+    .platform-dashboard-table .table-actions {
+        position: relative;
+        z-index: 2;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="mb-0">
@@ -43,26 +69,29 @@
 <div class="row g-3 mb-4">
     @if($stats['schools_without_admin'] > 0)
         <div class="col-md-4">
-            <div class="alert alert-danger mb-0 d-flex align-items-center gap-2">
+            <a href="{{ route('platform.schools.index', ['status' => 'no_admin']) }}" class="platform-alert-link alert alert-danger mb-0 d-flex align-items-center gap-2">
                 <i class="fas fa-exclamation-triangle"></i>
                 <span><strong>{{ $stats['schools_without_admin'] }}</strong> établissement(s) sans administrateur.</span>
-            </div>
+                <i class="fas fa-arrow-right ms-auto small opacity-75"></i>
+            </a>
         </div>
     @endif
     @if($stats['schools_without_current_year'] > 0)
         <div class="col-md-4">
-            <div class="alert alert-warning mb-0 d-flex align-items-center gap-2">
+            <a href="{{ route('platform.schools.index', ['status' => 'no_current_year']) }}" class="platform-alert-link alert alert-warning mb-0 d-flex align-items-center gap-2">
                 <i class="fas fa-calendar-times"></i>
                 <span><strong>{{ $stats['schools_without_current_year'] }}</strong> établissement(s) actif(s) sans année scolaire courante.</span>
-            </div>
+                <i class="fas fa-arrow-right ms-auto small opacity-75"></i>
+            </a>
         </div>
     @endif
     @if($stats['unassigned_students'] > 0)
         <div class="col-md-4">
-            <div class="alert alert-info mb-0 d-flex align-items-center gap-2">
+            <a href="{{ route('platform.schools.index') }}" class="platform-alert-link alert alert-info mb-0 d-flex align-items-center gap-2">
                 <i class="fas fa-user-slash"></i>
                 <span><strong>{{ $stats['unassigned_students'] }}</strong> élève(s) sans classe (toutes écoles).</span>
-            </div>
+                <i class="fas fa-arrow-right ms-auto small opacity-75"></i>
+            </a>
         </div>
     @endif
 </div>
@@ -73,10 +102,10 @@
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Derniers établissements</h5>
-                <a href="{{ route('platform.schools.index') }}" class="small">Voir tout</a>
+                <a href="{{ route('platform.schools.index') }}" class="btn btn-sm btn-link text-decoration-none">Voir tout</a>
             </div>
             <div class="card-body p-0">
-                <table class="table table-hover table-sm mb-0">
+                <table class="table table-hover table-sm mb-0 platform-dashboard-table">
                     <thead class="table-light">
                         <tr>
                             <th>Nom</th>
@@ -89,7 +118,7 @@
                     </thead>
                     <tbody>
                         @forelse($recentSchools as $school)
-                            <tr>
+                            <tr data-href="{{ route('platform.schools.show', $school) }}">
                                 <td class="fw-semibold">{{ $school->name }}</td>
                                 <td>{{ $school->students_count }}</td>
                                 <td>{{ $school->teachers_count }}</td>
@@ -107,7 +136,7 @@
                                         <span class="badge bg-secondary">Inactif</span>
                                     @endif
                                 </td>
-                                <td class="text-end">
+                                <td class="text-end table-actions">
                                     <a href="{{ route('platform.schools.show', $school) }}" class="btn btn-sm btn-outline-primary">Voir</a>
                                 </td>
                             </tr>
@@ -126,7 +155,7 @@
                 <h5 class="mb-0">Établissements à surveiller</h5>
             </div>
             <div class="card-body p-0">
-                <table class="table table-hover table-sm mb-0">
+                <table class="table table-hover table-sm mb-0 platform-dashboard-table">
                     <thead class="table-light">
                         <tr>
                             <th>Nom</th>
@@ -151,14 +180,14 @@
                                     $issues[] = 'Sans année courante';
                                 }
                             @endphp
-                            <tr>
+                            <tr data-href="{{ route('platform.schools.show', $school) }}">
                                 <td>{{ $school->name }}</td>
                                 <td>
                                     @foreach($issues as $issue)
                                         <span class="badge bg-warning text-dark me-1">{{ $issue }}</span>
                                     @endforeach
                                 </td>
-                                <td class="text-end">
+                                <td class="text-end table-actions">
                                     <a href="{{ route('platform.schools.show', $school) }}" class="btn btn-sm btn-outline-secondary">Gérer</a>
                                 </td>
                             </tr>
@@ -176,3 +205,29 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.querySelectorAll('.platform-dashboard-table tbody tr[data-href]').forEach(function (row) {
+        row.addEventListener('click', function (event) {
+            if (event.target.closest('a, button')) {
+                return;
+            }
+
+            window.location.href = row.dataset.href;
+        });
+
+        row.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+            }
+
+            event.preventDefault();
+            window.location.href = row.dataset.href;
+        });
+
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('role', 'link');
+    });
+</script>
+@endpush
