@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Subject;
 use App\Models\Level;
+use App\Support\FormationLmdSettings;
 use App\Support\SchoolSubjectProvisioner;
+use App\Support\SenegalGradeSequence;
 use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -63,10 +65,13 @@ class SubjectController extends Controller
             SchoolSubjectProvisioner::ensureForSchool($schoolId);
         }
 
-        $levels = Level::orderBy('order')->orderBy('name')->get();
+        $levels = Level::orderedPedagogically()->get();
         $isFormationSchool = $school?->isFormation() ?? false;
+        $lmdSettings = $school?->usesLmdGrading() ? FormationLmdSettings::fromSchool($school) : null;
+        $gradeTypes = FormationLmdSettings::allSelectableGradeTypes();
+        $typeLabels = SenegalGradeSequence::LABELS;
 
-        return view('admin.subjects.create', compact('levels', 'isFormationSchool'));
+        return view('admin.subjects.create', compact('levels', 'isFormationSchool', 'lmdSettings', 'gradeTypes', 'typeLabels'));
     }
 
     /**
@@ -75,8 +80,10 @@ class SubjectController extends Controller
     public function store(Request $request)
     {
         $schoolId = auth()->user()->school_id;
+        $school = $schoolId ? \App\Models\School::find($schoolId) : null;
+        $isFormationSchool = $school?->isFormation() ?? false;
 
-        $validated = $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'code' => [
                 'required',
@@ -91,7 +98,20 @@ class SubjectController extends Controller
             'is_active' => ['boolean'],
             'levels' => ['nullable', 'array'],
             'levels.*' => ['exists:levels,id'],
-        ], $this->validationMessages());
+        ];
+
+        if ($school?->usesLmdGrading()) {
+            $rules = array_merge($rules, FormationLmdSettings::validationRules());
+        }
+
+        $validated = $request->validate($rules, $this->validationMessages());
+
+        if ($school?->usesLmdGrading()) {
+            $lmdError = $this->validateLmdWeightSum($validated);
+            if ($lmdError) {
+                return back()->withInput()->withErrors(['exam_weight_percent' => $lmdError]);
+            }
+        }
 
         try {
             $subject = Subject::create([
@@ -102,6 +122,9 @@ class SubjectController extends Controller
                 'hours_per_week' => $validated['hours_per_week'] ?? 0,
                 'is_core_subject' => $request->boolean('is_core_subject'),
                 'is_active' => $request->boolean('is_active', true),
+                'lmd_settings' => $school?->usesLmdGrading()
+                    ? FormationLmdSettings::fromValidated($validated)->toArray()
+                    : null,
                 'created_by' => auth()->id(),
             ]);
             
@@ -137,11 +160,14 @@ class SubjectController extends Controller
         $schoolId = TenantSchool::id() ?? auth()->user()?->school_id;
         $school = $schoolId ? \App\Models\School::find($schoolId) : null;
 
-        $levels = Level::orderBy('order')->orderBy('name')->get();
+        $levels = Level::orderedPedagogically()->get();
         $subject->load('levels');
         $isFormationSchool = $school?->isFormation() ?? false;
+        $lmdSettings = $school?->usesLmdGrading() ? FormationLmdSettings::fromSubject($subject) : null;
+        $gradeTypes = FormationLmdSettings::allSelectableGradeTypes();
+        $typeLabels = SenegalGradeSequence::LABELS;
 
-        return view('admin.subjects.edit', compact('subject', 'levels', 'isFormationSchool'));
+        return view('admin.subjects.edit', compact('subject', 'levels', 'isFormationSchool', 'lmdSettings', 'gradeTypes', 'typeLabels'));
     }
 
     /**
@@ -150,8 +176,10 @@ class SubjectController extends Controller
     public function update(Request $request, Subject $subject)
     {
         $schoolId = auth()->user()->school_id;
+        $school = $schoolId ? \App\Models\School::find($schoolId) : null;
+        $isFormationSchool = $school?->isFormation() ?? false;
 
-        $validated = $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'code' => [
                 'required',
@@ -168,7 +196,20 @@ class SubjectController extends Controller
             'is_active' => ['boolean'],
             'levels' => ['nullable', 'array'],
             'levels.*' => ['exists:levels,id'],
-        ], $this->validationMessages());
+        ];
+
+        if ($school?->usesLmdGrading()) {
+            $rules = array_merge($rules, FormationLmdSettings::validationRules());
+        }
+
+        $validated = $request->validate($rules, $this->validationMessages());
+
+        if ($school?->usesLmdGrading()) {
+            $lmdError = $this->validateLmdWeightSum($validated);
+            if ($lmdError) {
+                return back()->withInput()->withErrors(['exam_weight_percent' => $lmdError]);
+            }
+        }
 
         try {
             $subject->update([
@@ -179,6 +220,9 @@ class SubjectController extends Controller
                 'hours_per_week' => $validated['hours_per_week'] ?? 0,
                 'is_core_subject' => $request->boolean('is_core_subject'),
                 'is_active' => $request->boolean('is_active', true),
+                'lmd_settings' => $school?->usesLmdGrading()
+                    ? FormationLmdSettings::fromValidated($validated)->toArray()
+                    : null,
                 'updated_by' => auth()->id(),
             ]);
             
@@ -224,5 +268,18 @@ class SubjectController extends Controller
             'code.required' => 'Le code de la matière est obligatoire.',
             'name.required' => 'Le nom de la matière est obligatoire.',
         ];
+    }
+
+    /** @param  array<string, mixed>  $validated */
+    private function validateLmdWeightSum(array $validated): ?string
+    {
+        $cc = (int) $validated['cc_weight_percent'];
+        $exam = (int) $validated['exam_weight_percent'];
+
+        if ($cc + $exam !== 100) {
+            return 'La somme CC + Examen doit être égale à 100 %.';
+        }
+
+        return null;
     }
 }

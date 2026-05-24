@@ -29,6 +29,7 @@ class SchoolBrandingComposer
 
         $view->with('currentSchool', $school);
         $view->with('isFormationSchool', $school?->isFormation() ?? false);
+        $view->with('usesFormationLmd', $school?->usesLmdGrading() ?? false);
         $view->with('schoolDisplayName', $schoolName);
         $view->with('schoolLogoDataUri', $schoolLogoDataUri);
     }

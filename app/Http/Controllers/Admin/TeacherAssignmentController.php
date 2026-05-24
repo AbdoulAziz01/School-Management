@@ -125,8 +125,8 @@ class TeacherAssignmentController extends Controller
      */
     public function getClasses($academicYearId)
     {
-        $classes = SchoolClass::where('academic_year_id', $academicYearId)
-            ->orderBy('name')
+        $classes = SchoolClass::where(SchoolClass::column('academic_year_id'), $academicYearId)
+            ->orderedByLevel()
             ->get(['id', 'name']);
             
         return response()->json($classes);

@@ -8,14 +8,39 @@
     @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
 </div>
 <div class="col-md-4">
-    <label for="establishment_type" class="form-label">Type d'établissement</label>
-    <select id="establishment_type" name="establishment_type" class="form-select">
-        <option value="">— Choisir —</option>
+    <label for="establishment_type" class="form-label">Type d'établissement *</label>
+    <select id="establishment_type" name="establishment_type" class="form-select @error('establishment_type') is-invalid @enderror" required>
+        <option value="" disabled @selected(!old('establishment_type', $school->establishment_type))>— Choisir —</option>
         @foreach(\App\Models\School::ESTABLISHMENT_TYPES as $value => $label)
             <option value="{{ $value }}" @selected(old('establishment_type', $school->establishment_type) === $value)>{{ $label }}</option>
         @endforeach
     </select>
+    @error('establishment_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    <div class="form-text">Primaire, collège, lycée, mixte ou formation — définit les niveaux par défaut.</div>
 </div>
+<div class="col-md-8" id="formation-lmd-option" style="{{ old('establishment_type', $school->establishment_type) === \App\Models\School::TYPE_FORMATION ? '' : 'display:none' }}">
+    <div class="form-check form-switch mt-4">
+        <input type="hidden" name="formation_use_lmd" value="0">
+        <input class="form-check-input" type="checkbox" role="switch" id="formation_use_lmd" name="formation_use_lmd" value="1"
+               @checked(old('formation_use_lmd', $school->formation_use_lmd ?? true))>
+        <label class="form-check-label" for="formation_use_lmd">
+            Utiliser le système LMD (CC + examen par module)
+        </label>
+    </div>
+    <p class="text-muted small mb-0">
+        Décochez pour une formation professionnelle avec notes type école classique (devoirs + composition) et vos propres modules, sans LMD.
+    </p>
+</div>
+@push('scripts')
+<script>
+document.getElementById('establishment_type')?.addEventListener('change', function () {
+    const block = document.getElementById('formation-lmd-option');
+    if (block) {
+        block.style.display = this.value === '{{ \App\Models\School::TYPE_FORMATION }}' ? '' : 'none';
+    }
+});
+</script>
+@endpush
 <div class="col-md-6">
     <label for="motto" class="form-label">Devise / slogan</label>
     <input type="text" id="motto" name="motto" class="form-control" value="{{ old('motto', $school->motto) }}">

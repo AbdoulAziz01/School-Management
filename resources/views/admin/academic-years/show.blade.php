@@ -144,19 +144,36 @@
     <div class="p-0 card-body">
         @if($academicYear->classes->isEmpty())
             <div class="p-4 text-center">
-                <p class="text-muted mb-3">Aucune classe n'a été créée pour cette année scolaire.</p>
-                @if(empty($isFormationSchool) || !$isFormationSchool)
-                    <form action="{{ route('admin.academic-years.provision', $academicYear) }}" method="POST"
-                          onsubmit="return confirm('Générer automatiquement les classes, matières et affectations professeurs à partir de l\'année précédente ?');">
-                        @csrf
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-magic me-1"></i> Générer la structure automatiquement
-                        </button>
-                    </form>
-                    <p class="small text-muted mt-2 mb-0">
+                <p class="text-muted mb-3">
+                    @if(!empty($isFormationSchool) && $isFormationSchool)
+                        Aucune promotion ni groupe pour cette année scolaire.
+                    @else
+                        Aucune classe n'a été créée pour cette année scolaire.
+                    @endif
+                </p>
+                <form action="{{ route('admin.academic-years.provision', $academicYear) }}" method="POST"
+                      @if(!empty($isFormationSchool) && $isFormationSchool)
+                          onsubmit="return confirm('Générer les promotions et groupes (année suivante, ex. L1 vers L2) à partir de l\'année précédente ? Les élèves ne seront pas déplacés automatiquement.');"
+                      @else
+                          onsubmit="return confirm('Générer automatiquement les classes, matières et affectations professeurs à partir de l\'année précédente ?');"
+                      @endif>
+                    @csrf
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-magic me-1"></i>
+                        @if(!empty($isFormationSchool) && $isFormationSchool)
+                            Générer les promotions (LMD)
+                        @else
+                            Générer la structure automatiquement
+                        @endif
+                    </button>
+                </form>
+                <p class="small text-muted mt-2 mb-0">
+                    @if(!empty($isFormationSchool) && $isFormationSchool)
+                        Recrée les promotions et groupes avec l'année de formation suivante (ex. Licence 1 → Licence 2).
+                    @else
                         Copie les classes, affectations professeurs et emplois du temps depuis la dernière année.
-                    </p>
-                @endif
+                    @endif
+                </p>
             </div>
         @else
             <div class="table-responsive">

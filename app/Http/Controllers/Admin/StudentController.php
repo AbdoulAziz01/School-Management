@@ -12,6 +12,8 @@ use App\Support\ClosedAcademicYearGuard;
 use App\Support\SchoolUserIdentifier;
 use App\Support\StudentSearch;
 use App\Support\StudentGradeEvolution;
+use App\Support\FormationLmdSettings;
+use App\Support\FormationModuleGradeCalculator;
 use App\Support\SenegalGradeSequence;
 use App\Support\TenantSchool;
 use Illuminate\Http\Request;
@@ -61,7 +63,7 @@ class StudentController extends Controller
                 ->withCount(['students' => function($query) {
                     $query->whereIn('role', ['student', 'eleve']);
                 }])
-                ->orderBy('name')
+                ->orderedByLevel()
                 ->get();
 
             // Grouper les étudiants par classe pour l'onglet "Par classe"
@@ -162,7 +164,7 @@ class StudentController extends Controller
         
         // Récupérer toutes les classes avec leurs relations
         $classes = SchoolClass::with(['level', 'academicYear'])
-            ->orderBy('name')
+            ->orderedByLevel()
             ->get();
         
         // Journalisation pour le débogage
@@ -347,7 +349,7 @@ class StudentController extends Controller
     public function create()
     {
         $classes = SchoolClass::with('academicYear')
-            ->orderBy('name')
+            ->orderedByLevel()
             ->get()
             ->groupBy(function($class) {
                 return $class->academicYear->name;
@@ -421,7 +423,7 @@ class StudentController extends Controller
         $student->load(['school']);
 
         $classes = SchoolClass::with('academicYear')
-            ->orderBy('name')
+            ->orderedByLevel()
             ->get()
             ->groupBy(function($class) {
                 return $class->academicYear->name;
@@ -690,11 +692,28 @@ public function pending()
             }
         }
 
+        $useLmdGrading = (bool) $student->school?->usesLmdGrading();
+        $lmdSettings = FormationLmdSettings::fromSchool($student->school);
+        $passingGradeMin = $useLmdGrading
+            ? $lmdSettings->passingGradeMin
+            : (float) config('school.passing_grade_min', 10);
+
+        $classYearId = $student->class?->academic_year_id;
+        $gradesForDisplay = $classYearId
+            ? $student->grades->where('academic_year_id', $classYearId)
+            : $student->grades;
+
         // Notes groupées par matière avec une note par colonne d'évaluation
-        $gradesBySubject = $student->grades->groupBy('subject.name')->map(function ($subjectGrades) {
+        $gradesBySubject = $gradesForDisplay->groupBy('subject.name')->map(function ($subjectGrades) use ($useLmdGrading, $lmdSettings, $passingGradeMin) {
             $official = $subjectGrades
                 ->whereIn('type', SenegalGradeSequence::ORDER)
                 ->whereIn('semester', [1, 2]);
+
+            $subjectModel = $subjectGrades->first()?->subject;
+            $moduleSettings = ($useLmdGrading && $subjectModel)
+                ? FormationLmdSettings::fromSubject($subjectModel)
+                : $lmdSettings;
+            $modulePassingMin = $moduleSettings->passingGradeMin;
 
             $slots = [];
             foreach ([1, 2] as $semester) {
@@ -706,19 +725,32 @@ public function pending()
                 }
             }
 
-            $average = $official->isNotEmpty()
-                ? round((float) $official->avg('grade'), 2)
-                : null;
+            if ($useLmdGrading) {
+                $summary = FormationModuleGradeCalculator::summarize($official, $moduleSettings);
+                $average = $summary['average'];
+                $lmdValidated = $summary['validated'];
+                $lmdMode = $summary['mode'];
+            } else {
+                $average = $official->isNotEmpty()
+                    ? round((float) $official->avg('grade'), 2)
+                    : null;
+                $lmdValidated = $average !== null && $average >= $passingGradeMin;
+                $lmdMode = null;
+            }
 
             return [
                 'subject'     => $subjectGrades->first()->subject->name ?? 'Inconnu',
                 'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,
                 'slots'       => $slots,
                 'average'     => $average,
+                'lmd_validated' => $lmdValidated,
+                'lmd_mode'    => FormationModuleGradeCalculator::modeLabel($lmdMode, $moduleSettings),
+                'lmd_formula' => $useLmdGrading ? $moduleSettings->shortLabel() : null,
+                'passing_min' => $useLmdGrading ? $modulePassingMin : $passingGradeMin,
             ];
         })->sortKeys();
 
-        // Moyenne générale pondérée (sur D1, D2, Compo uniquement)
+        // Moyenne générale pondérée
         $gradedSubjects = $gradesBySubject->filter(fn ($g) => $g['average'] !== null);
         $totalCoef = $gradedSubjects->sum('coefficient');
         $weightedSum = $gradedSubjects->sum(fn ($g) => $g['average'] * $g['coefficient']);
@@ -764,6 +796,9 @@ public function pending()
             'pendingCredentials' => $pendingCredentials,
             'canViewPassword' => $canViewPassword,
             'schoolCode' => $schoolCode,
+            'useLmdGrading' => $useLmdGrading,
+            'lmdFormulaLabel' => $useLmdGrading ? 'Pondération CC / Examen définie par module' : null,
+            'passingGradeMin' => $passingGradeMin,
         ]);
     }
 

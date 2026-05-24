@@ -22,6 +22,9 @@
 
 @section('content')
 @php $schoolLogo = \App\Support\SchoolLogoStorage::dataUri($school); @endphp
+
+@include('platform.schools._staff-credentials-alert')
+
 <p class="text-muted small mb-3">
     <a href="{{ route('platform.schools.index') }}" class="text-decoration-none">
         <i class="fas fa-arrow-left me-1"></i> Retour aux établissements
@@ -37,8 +40,30 @@
             @endif
         </div>
         <div>
-            <h1 class="h3 mb-1">{{ $school->name }}</h1>
-            <p class="text-muted mb-0">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                <h1 class="h3 mb-0">{{ $school->name }}</h1>
+                @if($school->hasEstablishmentType())
+                    <span class="badge {{ $school->establishmentTypeBadgeClass() }}">
+                        {{ $school->establishmentTypeLabel() }}
+                    </span>
+                    @if($school->isFormation() && ! $school->usesLmdGrading())
+                        <span class="badge bg-light text-dark border">Sans LMD</span>
+                    @endif
+                @else
+                    <span class="badge bg-danger">Type non défini</span>
+                @endif
+            </div>
+            @if($school->establishmentTypeDescription())
+                <p class="text-muted small mb-1">{{ $school->establishmentTypeDescription() }}</p>
+            @elseif(! $school->hasEstablishmentType())
+                <p class="text-warning small mb-1">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Renseignez le type d'établissement via
+                    <a href="{{ route('platform.schools.edit', $school) }}">Modifier</a>
+                    pour activer les bons niveaux et classes par défaut.
+                </p>
+            @endif
+            <p class="text-muted mb-0 small">
                 ID <code>{{ $school->id }}</code> · Slug <code>{{ $school->slug }}</code>
                 · Créé le {{ $school->created_at?->format('d/m/Y à H:i') }}
                 @if($school->updated_at)
@@ -159,7 +184,14 @@
 @if($school->isFormation())
     <div class="alert alert-info border-0 shadow-sm mb-4">
         <strong><i class="fas fa-graduation-cap me-1"></i> École de formation professionnelle</strong>
-        <p class="mb-0 small">Structure : <strong>Promotions</strong> (filière, année, groupes) → <strong>Modules</strong>.</p>
+        <p class="mb-0 small">
+            Structure : <strong>Promotions</strong> (filière, année, groupes) → <strong>Modules</strong>.
+            @if($school->usesLmdGrading())
+                Calcul des moyennes : <strong>LMD</strong> (CC + examen).
+            @else
+                Calcul des moyennes : <strong>classique</strong> (devoirs + composition), sans LMD.
+            @endif
+        </p>
     </div>
 @endif
 
@@ -204,8 +236,24 @@
             <div class="card-header bg-white"><h6 class="mb-0">Identité & direction</h6></div>
             <div class="card-body small">
                 <dl class="mb-0">
-                    <dt class="text-muted">Type</dt>
-                    <dd>{{ $school->establishmentTypeLabel() ?? '—' }}</dd>
+                    <dt class="text-muted">Type d'établissement</dt>
+                    <dd class="mb-2">
+                        @if($school->hasEstablishmentType())
+                            <span class="badge {{ $school->establishmentTypeBadgeClass() }}">
+                                {{ $school->establishmentTypeLabel() }}
+                            </span>
+                            @if($school->isFormation() && ! $school->usesLmdGrading())
+                                <span class="badge bg-light text-dark border ms-1">Formation sans LMD</span>
+                            @endif
+                        @else
+                            <span class="text-danger">Non défini</span>
+                            <a href="{{ route('platform.schools.edit', $school) }}" class="small ms-1">Définir</a>
+                        @endif
+                    </dd>
+                    @if($school->establishmentTypeDescription())
+                        <dt class="text-muted">Parcours scolaire</dt>
+                        <dd class="mb-0">{{ $school->establishmentTypeDescription() }}</dd>
+                    @endif
                     @if($school->motto)
                         <dt class="text-muted">Devise</dt>
                         <dd class="fst-italic">« {{ $school->motto }} »</dd>
@@ -417,12 +465,13 @@
                             <th>Nom</th>
                             <th>Email</th>
                             <th>Rôle</th>
+                            <th class="text-end" style="min-width: 200px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($staffMembers as $member)
                             <tr>
-                                <td><code>{{ $member->identifier }}</code></td>
+                                <td><code class="user-select-all">{{ $member->identifier }}</code></td>
                                 <td>{{ $member->name }}</td>
                                 <td><small>{{ $member->email }}</small></td>
                                 <td>
@@ -432,34 +481,36 @@
                                         <span class="badge bg-info text-dark">Surveillant</span>
                                     @endif
                                 </td>
+                                <td class="text-end">
+                                    <form method="POST"
+                                          action="{{ route('platform.schools.admins.reset-password', [$school, $member]) }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Générer un nouveau mot de passe pour {{ $member->name }} ?\n\nL\'ancien mot de passe ne fonctionnera plus.');">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Nouveau mot de passe à 6 chiffres">
+                                            <i class="fas fa-sync-alt me-1"></i> Régénérer le mot de passe
+                                        </button>
+                                    </form>
+                                    @if($member->invitation_email_sent_at)
+                                        <div class="small text-muted mt-1">
+                                            Dernier envoi : {{ $member->invitation_email_sent_at->format('d/m/Y H:i') }}
+                                        </div>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="text-muted text-center py-3">Aucun compte.</td></tr>
+                            <tr><td colspan="5" class="text-muted text-center py-3">Aucun compte.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            <ul class="list-group list-group-flush">
-                @foreach($staffMembers as $member)
-                    <li class="list-group-item">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div>
-                                <small class="text-muted">Code OTP — {{ $member->identifier }}</small>
-                                @if($member->invitation_email_sent_at)
-                                    <div class="small text-muted">Dernier envoi : {{ $member->invitation_email_sent_at->format('d/m/Y à H:i') }}</div>
-                                @endif
-                            </div>
-                            <form method="POST" action="{{ route('platform.schools.admins.reset-password', [$school, $member]) }}">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-sm btn-outline-primary">
-                                    {{ $member->invitation_email_sent_at ? 'Renvoyer le code OTP' : 'Envoyer le code OTP' }}
-                                </button>
-                            </form>
-                        </div>
-                    </li>
-                @endforeach
-            </ul>
+            @if($staffMembers->isNotEmpty())
+                <div class="card-footer bg-white small text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    « Régénérer le mot de passe » affiche le nouveau code en haut de page pour le transmettre à l'admin ou au surveillant (email envoyé si la messagerie est configurée).
+                </div>
+            @endif
         </div>
     </div>
     <div class="col-lg-5">
@@ -482,7 +533,7 @@
                     <div class="mb-3">
                         <label class="form-label">Email</label>
                         <input type="email" name="admin_email" class="form-control" required>
-                        <div class="form-text">Un code OTP de connexion sera envoyé par email.</div>
+                        <div class="form-text">L’identifiant et le mot de passe s’afficheront ici après la création du compte.</div>
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Créer le compte</button>
                 </form>
@@ -491,12 +542,4 @@
     </div>
 </div>
 
-@if(session('new_admin_login'))
-<div class="alert alert-success mt-4">
-    Compte créé : {{ session('new_admin_login.email') }} · identifiant <code>{{ session('new_admin_login.identifier') }}</code>
-    @if(session('new_admin_login.otp_sent'))
-        · code OTP envoyé par email
-    @endif
-</div>
-@endif
 @endsection

@@ -42,6 +42,7 @@
             <thead class="table-light">
                 <tr>
                     <th>Établissement</th>
+                    <th>Type</th>
                     <th>Ville</th>
                     <th>Code</th>
                     <th>Élèves</th>
@@ -60,6 +61,15 @@
                         <td>
                             <div class="fw-semibold">{{ $school->name }}</div>
                             <small class="text-muted">Créé {{ $school->created_at?->format('d/m/Y') }}</small>
+                        </td>
+                        <td>
+                            @if($school->hasEstablishmentType())
+                                <span class="badge {{ $school->establishmentTypeBadgeClass() }}">
+                                    {{ $school->establishmentTypeLabel() }}
+                                </span>
+                            @else
+                                <span class="text-muted small">—</span>
+                            @endif
                         </td>
                         <td>{{ $school->city ?? '—' }}</td>
                         <td><code>{{ $school->code }}</code></td>
@@ -101,7 +111,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="11" class="text-center text-muted py-5">Aucun établissement trouvé.</td>
+                        <td colspan="12" class="text-center text-muted py-5">Aucun établissement trouvé.</td>
                     </tr>
                 @endforelse
             </tbody>

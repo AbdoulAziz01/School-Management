@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\PlatformMetrics;
 use App\Support\SchoolLogoStorage;
 use App\Support\SchoolProfile;
+use App\Support\SchoolLevelProvisioner;
 use App\Support\SchoolSubjectProvisioner;
 use App\Support\StaffOtpMailer;
 use App\Models\AcademicYear;
@@ -109,21 +110,33 @@ class SchoolController extends Controller
 
         $admin = $this->createSchoolStaff($school, $validated, User::ROLE_ADMIN);
 
+        if (! $school->isFormation()) {
+            SchoolLevelProvisioner::syncLevelsForSchool($school);
+        }
+
         SchoolSubjectProvisioner::ensureForSchool($school->id);
 
         $otpResult = StaffOtpMailer::send($admin, StaffOtpMailer::accountLabelFor($admin));
 
         $redirect = redirect()
             ->route('platform.schools.show', $school)
-            ->with('success', "École « {$school->name} » créée. Code d'inscription : {$school->code}")
-            ->with('new_admin_login', [
-                'email' => $admin->email,
-                'identifier' => $admin->identifier,
-                'otp_sent' => $otpResult === true,
-            ]);
+            ->with('success', "École « {$school->name} » créée.");
 
-        if (is_string($otpResult)) {
-            $redirect->with('error', "Compte admin créé, mais l'email OTP n'a pas pu être envoyé : {$otpResult}");
+        if (! ($otpResult['ok'] ?? false)) {
+            $fallback = StaffOtpMailer::assignCodeWithoutMail($admin);
+            $otpResult = $fallback['ok'] ? $fallback : $otpResult;
+        }
+
+        if ($otpResult['ok'] ?? false) {
+            $redirect->with('staff_credentials', $this->staffCredentialsPayload(
+                $admin,
+                $otpResult['code'] ?? '',
+                $school,
+                'Compte administrateur de l\'établissement',
+                $otpResult
+            ));
+        } else {
+            $redirect->with('error', $otpResult['message'] ?? 'Impossible de générer les identifiants de connexion.');
         }
 
         return $redirect;
@@ -250,6 +263,10 @@ class SchoolController extends Controller
             ]
         ));
 
+        if (! $school->isFormation()) {
+            SchoolLevelProvisioner::syncLevelsForSchool($school->fresh());
+        }
+
         if ($request->boolean('remove_logo')) {
             SchoolLogoStorage::clear($school);
         } elseif ($request->hasFile('logo')) {
@@ -296,10 +313,23 @@ class SchoolController extends Controller
         $label = $staff->role === User::ROLE_SURVEILLANT ? 'Surveillant' : 'Administrateur';
         $otpResult = StaffOtpMailer::send($staff, StaffOtpMailer::accountLabelFor($staff));
 
-        $redirect = back()->with('success', "{$label} créé — identifiant : {$staff->identifier}. Un code OTP a été envoyé à {$staff->email}.");
+        if (! ($otpResult['ok'] ?? false)) {
+            $fallback = StaffOtpMailer::assignCodeWithoutMail($staff);
+            $otpResult = $fallback['ok'] ? $fallback : $otpResult;
+        }
 
-        if (is_string($otpResult)) {
-            $redirect->with('error', "Compte créé, mais l'email OTP n'a pas pu être envoyé : {$otpResult}");
+        $redirect = back()->with('success', "{$label} créé avec succès.");
+
+        if ($otpResult['ok'] ?? false) {
+            $redirect->with('staff_credentials', $this->staffCredentialsPayload(
+                $staff,
+                $otpResult['code'] ?? '',
+                $school,
+                "Compte {$label}",
+                $otpResult
+            ));
+        } else {
+            $redirect->with('error', $otpResult['message'] ?? 'Impossible de générer les identifiants.');
         }
 
         return $redirect;
@@ -313,11 +343,26 @@ class SchoolController extends Controller
 
         $otpResult = StaffOtpMailer::send($user, StaffOtpMailer::accountLabelFor($user));
 
-        if ($otpResult === true) {
-            return back()->with('success', "Un nouveau code OTP a été envoyé à {$user->email} ({$user->identifier}).");
+        if (! ($otpResult['ok'] ?? false)) {
+            $fallback = StaffOtpMailer::assignCodeWithoutMail($user);
+            $otpResult = $fallback['ok'] ? $fallback : $otpResult;
         }
 
-        return back()->with('error', $otpResult);
+        if ($otpResult['ok'] ?? false) {
+            $roleLabel = $user->role === User::ROLE_SURVEILLANT ? 'surveillant' : 'administrateur';
+
+            return back()
+                ->with('success', "Nouveau mot de passe généré pour {$user->name}.")
+                ->with('staff_credentials', $this->staffCredentialsPayload(
+                    $user,
+                    $otpResult['code'] ?? '',
+                    $school,
+                    "Nouveau mot de passe — {$roleLabel}",
+                    $otpResult
+                ));
+        }
+
+        return back()->with('error', $otpResult['message'] ?? 'Échec de la régénération du mot de passe.');
     }
 
     public function destroy(School $school): RedirectResponse
@@ -364,5 +409,29 @@ class SchoolController extends Controller
         $num = $last ? ((int) substr($last, strlen($prefix)) + 1) : 1;
 
         return $prefix.str_pad((string) $num, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * @param  array{ok?: bool, code?: string, mailed?: bool, message?: string}  $otpResult
+     * @return array<string, mixed>
+     */
+    private function staffCredentialsPayload(
+        User $user,
+        string $password,
+        School $school,
+        string $title,
+        array $otpResult
+    ): array {
+        return [
+            'title' => $title,
+            'school_name' => $school->name,
+            'school_code' => $school->code,
+            'name' => $user->name,
+            'email' => $user->email,
+            'identifier' => $user->identifier,
+            'password' => $password,
+            'email_sent' => (bool) ($otpResult['mailed'] ?? false),
+            'mail_error' => ($otpResult['mailed'] ?? false) ? null : ($otpResult['message'] ?? null),
+        ];
     }
 }

@@ -82,6 +82,10 @@ class SchoolSubjectProvisioner
 
         SchoolLevelProvisioner::ensureForSchool($schoolId);
 
+        if ($school?->isPrimaireEstablishment()) {
+            return;
+        }
+
         self::ensureSubjectsExist($schoolId);
         self::syncLevelSubjectLinks($schoolId);
     }

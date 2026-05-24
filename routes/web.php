@@ -187,6 +187,11 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::put('/school-settings', [\App\Http\Controllers\Admin\SchoolSettingsController::class, 'update'])
         ->name('admin.school.settings.update');
 
+    Route::get('/formation/lmd-settings', [\App\Http\Controllers\Admin\FormationLmdSettingsController::class, 'edit'])
+        ->name('admin.formation.lmd-settings.edit');
+    Route::put('/formation/lmd-settings', [\App\Http\Controllers\Admin\FormationLmdSettingsController::class, 'update'])
+        ->name('admin.formation.lmd-settings.update');
+
     // Gestion des inscriptions en attente
     Route::get('/pending', [PendingRegistrationController::class, 'pending'])
         ->name('admin.pending');
@@ -248,6 +253,8 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         ->parameters(['cycles' => 'level']);
 
     // Gestion des classes
+    Route::get('/classes/count-by-level', [\App\Http\Controllers\Admin\ClassController::class, 'countByLevel'])
+        ->name('admin.classes.count-by-level');
     Route::resource('classes', 'App\Http\Controllers\Admin\ClassController')->names('admin.classes');
     
     // Routes supplémentaires pour les classes

@@ -66,6 +66,10 @@
                             </div>
                         </div>
                         
+                        @if(!empty($usesFormationLmd) && $usesFormationLmd)
+                            @include('admin.subjects._lmd-settings', ['lmdSettings' => $lmdSettings])
+                        @endif
+
                         <div class="mb-3">
                             <label for="description" class="form-label">Description</label>
                             <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3">{{ old('description', $subject->description) }}</textarea>
@@ -74,7 +78,7 @@
                             @enderror
                         </div>
                         
-                        @if($levels->count() > 0 && empty($isFormationSchool))
+                        @if($levels->count() > 0 && (empty($isFormationSchool) || empty($usesFormationLmd)))
                         <div class="mb-3">
                             <label class="form-label">Niveaux associés</label>
                             <div class="row">

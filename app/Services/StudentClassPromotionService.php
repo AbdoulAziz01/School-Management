@@ -24,8 +24,11 @@ class StudentClassPromotionService
 
     public function appliesToSchool(?School $school): bool
     {
-        return $school !== null && ! $school->isFormation();
+        return $school !== null && $school->supportsAutomaticClassPromotion();
     }
+
+    /** @var list<string> */
+    private const PROMOTION_CYCLES = ['primaire', 'college', 'lycee'];
 
     /**
      * @return array<string, mixed>
@@ -66,7 +69,7 @@ class StudentClassPromotionService
         if (! $this->appliesToSchool($school)) {
             return array_merge($base, [
                 'status' => 'skipped',
-                'message' => 'Passage automatique réservé aux établissements scolaires (6ème → Terminale).',
+                'message' => 'Passage automatique non disponible pour cet établissement (formation LMD).',
             ]);
         }
 
@@ -76,7 +79,7 @@ class StudentClassPromotionService
         }
 
         $level = $class->level;
-        if (! $level || ! in_array($level->cycle, ['college', 'lycee'], true)) {
+        if (! $level || ! in_array($level->cycle, self::PROMOTION_CYCLES, true)) {
             return array_merge($base, ['message' => 'Niveau scolaire non pris en charge pour le passage automatique.']);
         }
 
@@ -105,16 +108,20 @@ class StudentClassPromotionService
             ]);
         }
 
-        if ((int) $level->order >= self::TERMINALE_LEVEL_ORDER) {
+        if ($this->isGraduationLevel($school, $level)) {
+            $graduateMessage = $level->cycle === 'primaire'
+                ? 'Fin du cycle primaire (CM2).'
+                : 'Diplômé(e) — fin de scolarité (Terminale).';
+
             return array_merge($base, [
                 'eligible' => true,
                 'status' => 'graduate',
-                'message' => 'Diplômé(e) — fin de scolarité (Terminale).',
+                'message' => $graduateMessage,
                 'target_class_name' => 'Diplômé — fin de scolarité',
             ]);
         }
 
-        $targetClass = $this->findTargetClass($student, $class, $level, $academicYear);
+        $targetClass = $this->findTargetClass($student, $class, $level, $academicYear, $school);
         if (! $targetClass) {
             return array_merge($base, [
                 'eligible' => true,
@@ -275,7 +282,7 @@ class StudentClassPromotionService
             ->get();
 
         foreach ($classes as $class) {
-            if ($class->level && ! in_array($class->level->cycle, ['college', 'lycee'], true)) {
+            if ($class->level && ! in_array($class->level->cycle, self::PROMOTION_CYCLES, true)) {
                 continue;
             }
 
@@ -358,7 +365,7 @@ class StudentClassPromotionService
         }
 
         $level = $class->level;
-        if (! $level || ! in_array($level->cycle, ['college', 'lycee'], true)) {
+        if (! $level || ! in_array($level->cycle, self::PROMOTION_CYCLES, true)) {
             return $preview;
         }
 
@@ -486,7 +493,7 @@ class StudentClassPromotionService
             ->get();
 
         foreach ($classes as $class) {
-            if ($class->level && ! in_array($class->level->cycle, ['college', 'lycee'], true)) {
+            if ($class->level && ! in_array($class->level->cycle, self::PROMOTION_CYCLES, true)) {
                 continue;
             }
 
@@ -633,7 +640,7 @@ class StudentClassPromotionService
             ->get();
 
         foreach ($classes as $class) {
-            if ($class->level && ! in_array($class->level->cycle, ['college', 'lycee'], true)) {
+            if ($class->level && ! in_array($class->level->cycle, self::PROMOTION_CYCLES, true)) {
                 continue;
             }
 
@@ -708,13 +715,10 @@ class StudentClassPromotionService
         User $student,
         SchoolClass $currentClass,
         Level $currentLevel,
-        AcademicYear $academicYear
+        AcademicYear $academicYear,
+        School $school
     ): ?SchoolClass {
-        $nextLevel = Level::withoutGlobalScopes()
-            ->where('school_id', $currentClass->school_id)
-            ->whereIn('cycle', ['college', 'lycee'])
-            ->where('order', (int) $currentLevel->order + 1)
-            ->first();
+        $nextLevel = $this->findNextLevel($school, $currentLevel);
 
         if (! $nextLevel) {
             return null;
@@ -729,6 +733,74 @@ class StudentClassPromotionService
         $targetYearId = $nextYear?->id ?? $academicYear->id;
 
         return $this->findClassAtLevel($currentClass, $nextLevel, AcademicYear::withoutGlobalScopes()->find($targetYearId) ?? $academicYear);
+    }
+
+    private function findNextLevel(School $school, Level $currentLevel): ?Level
+    {
+        $next = Level::withoutGlobalScopes()
+            ->where('school_id', $school->id)
+            ->where('cycle', $currentLevel->cycle)
+            ->where('order', (int) $currentLevel->order + 1)
+            ->first();
+
+        if ($next) {
+            return $next;
+        }
+
+        if ($school->isMixte() && $currentLevel->cycle === 'primaire' && $this->levelIsCm2($currentLevel)) {
+            return Level::withoutGlobalScopes()
+                ->where('school_id', $school->id)
+                ->where('cycle', 'college')
+                ->where(function ($q) {
+                    $q->where('name', '6ème')->orWhere('name', '6eme');
+                })
+                ->orderBy('order')
+                ->first();
+        }
+
+        if ($currentLevel->cycle === 'college' && $this->levelIs3eme($currentLevel)) {
+            return Level::withoutGlobalScopes()
+                ->where('school_id', $school->id)
+                ->where('cycle', 'lycee')
+                ->where(function ($q) {
+                    $q->where('name', 'like', 'Seconde%')
+                        ->orWhere('order', 1);
+                })
+                ->orderBy('order')
+                ->first();
+        }
+
+        return null;
+    }
+
+    private function isGraduationLevel(School $school, Level $level): bool
+    {
+        if ($level->cycle === 'lycee' && preg_match('/terminale/i', $level->name)) {
+            return true;
+        }
+
+        if ($school->isPrimaireEstablishment()
+            && $level->cycle === 'primaire'
+            && $this->levelIsCm2($level)) {
+            return true;
+        }
+
+        if (in_array($level->cycle, ['college', 'lycee'], true)
+            && (int) $level->order >= self::TERMINALE_LEVEL_ORDER) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function levelIsCm2(Level $level): bool
+    {
+        return preg_match('/^CM\s*2$/iu', trim($level->name)) === 1;
+    }
+
+    private function levelIs3eme(Level $level): bool
+    {
+        return preg_match('/^3\s*(?:ème|eme)$/iu', trim($level->name)) === 1;
     }
 
     private function findClassAtLevel(

@@ -15,7 +15,7 @@ class ProcessStudentPromotions extends Command
                             {--class= : ID d\'une classe}
                             {--year= : ID de l\'année scolaire}';
 
-    protected $description = 'Passe en classe supérieure les élèves admis (6ème → Terminale, moyenne ≥ seuil, notes complètes)';
+    protected $description = 'Passe en classe supérieure les élèves admis (CI → CM2, CM2 → 6ème en mixte, collège → lycée, moyenne ≥ seuil)';
 
     public function handle(StudentClassPromotionService $service): int
     {
@@ -29,7 +29,7 @@ class ProcessStudentPromotions extends Command
             return self::FAILURE;
         }
 
-        $schoolQuery = School::query()->where('establishment_type', '!=', School::TYPE_FORMATION);
+        $schoolQuery = School::query();
         if ($this->option('school')) {
             $schoolQuery->where('id', $this->option('school'));
         }
@@ -53,7 +53,7 @@ class ProcessStudentPromotions extends Command
             $classes = $classQuery->get();
 
             foreach ($classes as $class) {
-                if ($class->level && ! in_array($class->level->cycle, ['college', 'lycee'], true)) {
+                if ($class->level && ! in_array($class->level->cycle, ['primaire', 'college', 'lycee'], true)) {
                     continue;
                 }
 

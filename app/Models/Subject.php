@@ -17,6 +17,7 @@ class Subject extends Model
         'code',
         'school_id',
         'coefficient',
+        'lmd_settings',
         'description',
         'is_active',
         'department',
@@ -31,6 +32,7 @@ class Subject extends Model
         'is_core_subject' => 'boolean',
         'hours_per_week' => 'float',
         'coefficient' => 'float',
+        'lmd_settings' => 'array',
     ];
 
     /**

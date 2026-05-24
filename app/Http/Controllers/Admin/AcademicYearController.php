@@ -87,6 +87,7 @@ class AcademicYearController extends Controller
     public function show(AcademicYear $academicYear)
     {
         $academicYear->load([
+            'classes' => fn ($q) => $q->orderedByLevel(),
             'classes.level',
             'classes.students',
             'classes.teachers',

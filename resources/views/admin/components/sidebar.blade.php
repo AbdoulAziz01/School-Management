@@ -443,6 +443,15 @@
                 <span>Mon établissement</span>
             </a>
         </li>
+
+        @if(!empty($isFormationSchool) && $isFormationSchool && !empty($usesFormationLmd) && $usesFormationLmd)
+            <li class="nav-item">
+                <a href="{{ route('admin.formation.lmd-settings.edit') }}" class="nav-link {{ request()->routeIs('admin.formation.lmd-settings.*') ? 'active' : '' }}">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Modèle LMD</span>
+                </a>
+            </li>
+        @endif
     </ul>
     
     <div class="menu-separator"></div>

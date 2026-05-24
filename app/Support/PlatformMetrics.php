@@ -128,9 +128,9 @@ class PlatformMetrics
 
         return SchoolClass::withoutGlobalScopes()
             ->with(['level', 'academicYear'])
-            ->where('school_id', $schoolId)
-            ->where('academic_year_id', $currentYear->id)
-            ->orderBy('name')
+            ->where(SchoolClass::column('school_id'), $schoolId)
+            ->where(SchoolClass::column('academic_year_id'), $currentYear->id)
+            ->orderedByLevel()
             ->get();
     }
 

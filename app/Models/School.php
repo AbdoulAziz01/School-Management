@@ -65,11 +65,19 @@ class School extends Model
         'logo_path',
         'logo_data',
         'logo_mime',
+        'formation_lmd_settings',
+        'formation_use_lmd',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'default_academic_year_id' => 'integer',
+        'formation_lmd_settings' => 'array',
+        'formation_use_lmd' => 'boolean',
+    ];
+
+    protected $attributes = [
+        'formation_use_lmd' => true,
     ];
 
     public static function generateUniqueCode(): string
@@ -138,6 +146,48 @@ class School extends Model
         return self::ESTABLISHMENT_TYPES[$this->establishment_type] ?? null;
     }
 
+    public function hasEstablishmentType(): bool
+    {
+        return $this->establishment_type !== null && $this->establishment_type !== '';
+    }
+
+    /** Classes Bootstrap pour badge d’affichage plateforme. */
+    public function establishmentTypeBadgeClass(): string
+    {
+        return match ($this->establishment_type) {
+            self::TYPE_PRIMAIRE  => 'bg-info text-dark',
+            self::TYPE_COLLEGE   => 'bg-primary',
+            self::TYPE_LYCEE     => 'bg-success',
+            self::TYPE_MIXTE     => 'bg-warning text-dark',
+            self::TYPE_FORMATION => 'bg-secondary',
+            default              => 'bg-light text-dark border',
+        };
+    }
+
+    /** Résumé des niveaux / parcours gérés selon le type. */
+    public function establishmentTypeDescription(): ?string
+    {
+        if (! $this->hasEstablishmentType()) {
+            return null;
+        }
+
+        if ($this->isFormation()) {
+            $base = 'École de formation professionnelle — promotions et modules personnalisés.';
+
+            return $this->usesLmdGrading()
+                ? $base.' Système LMD (CC + examen).'
+                : $base.' Notes type école classique (sans LMD).';
+        }
+
+        return match ($this->establishment_type) {
+            self::TYPE_PRIMAIRE => 'Primaire : classes CI, CP, CE1, CE2, CM1, CM2.',
+            self::TYPE_COLLEGE => 'Collège : 6ème, 5ème, 4ème, 3ème.',
+            self::TYPE_LYCEE => 'Lycée : Seconde, Première, Terminale.',
+            self::TYPE_MIXTE => 'Mixte : primaire (CI → CM2) + collège + lycée. Passage CM2 → 6ème possible.',
+            default => null,
+        };
+    }
+
     public function isFormation(): bool
     {
         return $this->establishment_type === self::TYPE_FORMATION;
@@ -146,5 +196,33 @@ class School extends Model
     public function isClassic(): bool
     {
         return ! $this->isFormation();
+    }
+
+    public function isMixte(): bool
+    {
+        return $this->establishment_type === self::TYPE_MIXTE;
+    }
+
+    public function isPrimaireEstablishment(): bool
+    {
+        return $this->establishment_type === self::TYPE_PRIMAIRE;
+    }
+
+    /** Formation pro avec calcul des moyennes LMD (CC + examen par module). */
+    public function usesLmdGrading(): bool
+    {
+        return $this->isFormation() && ($this->formation_use_lmd ?? true);
+    }
+
+    /** Établissement scolaire classique ou formation sans LMD (notes type devoirs + composition). */
+    public function usesClassicGrading(): bool
+    {
+        return ! $this->usesLmdGrading();
+    }
+
+    /** Passage automatique de classe (primaire, collège, lycée). */
+    public function supportsAutomaticClassPromotion(): bool
+    {
+        return $this->usesClassicGrading();
     }
 }

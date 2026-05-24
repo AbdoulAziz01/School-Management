@@ -45,7 +45,7 @@
             <label class="form-label">Email admin *</label>
             <input type="email" name="admin_email" class="form-control @error('admin_email') is-invalid @enderror" value="{{ old('admin_email') }}" required>
             @error('admin_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            <div class="form-text">Un code OTP de connexion sera envoyé à cette adresse.</div>
+            <div class="form-text">Après la création, l’identifiant et le mot de passe s’afficheront sur la fiche établissement pour que vous puissiez les transmettre à l’admin (un email sera aussi envoyé si la messagerie est configurée).</div>
         </div>
     </div>
 

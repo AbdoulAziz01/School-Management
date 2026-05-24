@@ -236,9 +236,15 @@
                                        class="form-control @error('name') is-invalid @enderror" 
                                        id="name" 
                                        name="name" 
-                                       value="{{ old('name', $class->name) }}" 
-                                       placeholder="{{ !empty($isFormationSchool) && $isFormationSchool ? 'Ex. : Promotion A — Année 1' : '' }}"
+                                       value="{{ old('name', $class->exists ? $class->getRawOriginal('name') : $class->name) }}" 
+                                       placeholder="{{ !empty($isFormationSchool) && $isFormationSchool ? 'Ex. : Promotion A — Année 1' : 'Ex. : CE1, ou CE1 A / CE1 B' }}"
                                        required>
+                                @if(empty($isFormationSchool) || !$isFormationSchool)
+                                    <div class="form-text">
+                                        1<sup>re</sup> classe du niveau : nom du niveau seul (<strong>CE1</strong>, <strong>CM2</strong>…).
+                                        Sections supplémentaires : <strong>CE1 A</strong>, <strong>CE1 B</strong>, etc.
+                                    </div>
+                                @endif
                                 <div class="invalid-feedback">
                                     Veuillez saisir un nom de classe.
                                 </div>
@@ -273,7 +279,8 @@
                                         {{ !empty($isFormationSchool) && $isFormationSchool ? 'Sélectionner un cycle' : 'Sélectionner un niveau' }}
                                     </option>
                                     @foreach($levels as $level)
-                                        <option value="{{ $level->id }}" 
+                                        <option value="{{ $level->id }}"
+                                                data-level-name="{{ $level->name }}"
                                                 {{ (old('level_id', $class->level_id) == $level->id) ? 'selected' : '' }}>
                                             {{ $level->name }}@if($level->serie) — {{ $level->serie }}@endif
                                             @if(!$level->isFormationCycle())

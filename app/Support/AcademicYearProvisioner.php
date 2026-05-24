@@ -36,30 +36,43 @@ class AcademicYearProvisioner
 
         $school = School::find($schoolId);
         if ($school?->isFormation()) {
-            $summary['message'] = 'Provisionnement automatique réservé aux établissements scolaires.';
-
-            return $summary;
-        }
-
-        if (SchoolClass::withoutGlobalScopes()->where('academic_year_id', $year->id)->exists()) {
-            $summary['skipped'] = true;
-            $summary['message'] = 'Des classes existent déjà pour cette année.';
-
-            return $summary;
+            return FormationAcademicYearProvisioner::provision($year, $sourceYear);
         }
 
         SchoolSubjectProvisioner::ensureForSchool($schoolId);
 
         $sourceYear ??= self::resolveSourceYear($year);
 
+        $yearHasClasses = SchoolClass::withoutGlobalScopes()
+            ->where('academic_year_id', $year->id)
+            ->exists();
+
+        if ($yearHasClasses && ! $sourceYear) {
+            $added = SchoolClassProvisioner::createDefaultsForYear($year, $school);
+            if ($added > 0) {
+                $summary['classes'] = $added;
+                $summary['message'] = "{$added} classe(s) par défaut ajoutée(s) pour les niveaux manquants.";
+            } else {
+                $summary['skipped'] = true;
+                $summary['message'] = 'Des classes existent déjà pour tous les niveaux de cette année.';
+            }
+
+            return $summary;
+        }
+
+        if ($yearHasClasses && $sourceYear) {
+            $summary['skipped'] = true;
+            $summary['message'] = 'Des classes existent déjà pour cette année.';
+
+            return $summary;
+        }
+
         DB::transaction(function () use ($year, $sourceYear, $schoolId, &$summary) {
             $classMap = self::replicateClasses($year, $sourceYear, $schoolId, $summary);
 
-            if ($classMap === []) {
-                return;
+            if ($classMap !== []) {
+                self::replicateClassRelations($sourceYear, $classMap, $summary);
             }
-
-            self::replicateClassRelations($sourceYear, $classMap, $summary);
         });
 
         if ($summary['classes'] === 0) {
@@ -126,27 +139,9 @@ class AcademicYearProvisioner
                 $classMap[$sourceClass->id] = $newClass->id;
                 $summary['classes']++;
             }
-
-            return $classMap;
         }
 
-        $levels = Level::withoutGlobalScopes()
-            ->where('school_id', $schoolId)
-            ->whereIn('cycle', ['college', 'lycee'])
-            ->orderBy('order')
-            ->get();
-
-        foreach ($levels as $level) {
-            $newClass = SchoolClass::withoutGlobalScopes()->create([
-                'name' => $level->name.' 1',
-                'level_id' => $level->id,
-                'academic_year_id' => $year->id,
-                'school_id' => $schoolId,
-                'capacity' => 40,
-            ]);
-
-            $summary['classes']++;
-        }
+        $summary['classes'] += SchoolClassProvisioner::createDefaultsForYear($year, School::find($schoolId));
 
         return $classMap;
     }

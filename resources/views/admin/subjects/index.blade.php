@@ -32,7 +32,8 @@
                 <div class="card-body">
                     @if(!empty($isFormationSchool) && $isFormationSchool)
                         <p class="text-muted small mb-3">
-                            Les modules sont propres à votre établissement. Associez-les aux promotions via les affectations enseignants.
+                            Chaque module a sa propre pondération CC / Examen (fiche module).
+                            Le menu « Modèle LMD par défaut » sert uniquement aux nouveaux modules.
                         </p>
                     @else
                         <p class="text-muted small mb-3">
@@ -56,6 +57,9 @@
                                     <tr>
                                         <th>Code</th>
                                         <th>Nom</th>
+                                        @if(!empty($usesFormationLmd) && $usesFormationLmd)
+                                            <th>CC / Examen</th>
+                                        @endif
                                         <th>Professeurs</th>
                                         <th style="min-width: 150px;">Actions</th>
                                     </tr>
@@ -65,6 +69,12 @@
                                         <tr>
                                             <td><code>{{ $subject->code }}</code></td>
                                             <td>{{ $subject->name }}</td>
+                                            @if(!empty($usesFormationLmd) && $usesFormationLmd)
+                                                <td>
+                                                    @php $lmd = \App\Support\FormationLmdSettings::fromSubject($subject); @endphp
+                                                    <span class="badge bg-light text-dark border">{{ $lmd->shortLabel() }}</span>
+                                                </td>
+                                            @endif
                                             <td>
                                                 <span class="badge mb-1" style="background-color: #fd7e14;">{{ $subject->teachers->count() }} professeur(s)</span>
                                                 @if($subject->teachers->count() > 0)

@@ -15,7 +15,8 @@ class SchoolProfile
     {
         return [
             'name'                 => ['required', 'string', 'max:255'],
-            'establishment_type'   => ['nullable', Rule::in(array_keys(School::ESTABLISHMENT_TYPES))],
+            'establishment_type'   => ['required', Rule::in(array_keys(School::ESTABLISHMENT_TYPES))],
+            'formation_use_lmd'    => ['sometimes', 'boolean'],
             'motto'                => ['nullable', 'string', 'max:255'],
             'authorization_number' => ['nullable', 'string', 'max:100'],
             'director_name'        => ['nullable', 'string', 'max:255'],
@@ -75,7 +76,7 @@ class SchoolProfile
      */
     public static function officialAttributes(array $validated): array
     {
-        return [
+        $attributes = [
             'name'                     => $validated['name'],
             'establishment_type'       => $validated['establishment_type'] ?? null,
             'motto'                    => $validated['motto'] ?? null,
@@ -88,6 +89,12 @@ class SchoolProfile
             'locale'                   => $validated['locale'],
             'default_academic_year_id' => $validated['default_academic_year_id'] ?? null,
         ];
+
+        if (($validated['establishment_type'] ?? null) === School::TYPE_FORMATION) {
+            $attributes['formation_use_lmd'] = (bool) ($validated['formation_use_lmd'] ?? true);
+        }
+
+        return $attributes;
     }
 
     /**

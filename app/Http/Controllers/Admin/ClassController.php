@@ -25,6 +25,24 @@ use Illuminate\Validation\Rule;
 class ClassController extends Controller
 {
     /**
+     * Nombre de classes déjà créées pour un niveau et une année (suggestion CE1, CE1 A…).
+     */
+    public function countByLevel(Request $request)
+    {
+        $validated = $request->validate([
+            'level_id' => ['required', 'integer', 'exists:levels,id'],
+            'academic_year_id' => ['required', 'integer', 'exists:academic_years,id'],
+        ]);
+
+        $count = SchoolClass::query()
+            ->where(SchoolClass::column('level_id'), $validated['level_id'])
+            ->where(SchoolClass::column('academic_year_id'), $validated['academic_year_id'])
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
+
+    /**
      * Affiche la liste des classes
      */
     public function index()
@@ -42,8 +60,8 @@ class ClassController extends Controller
             'teachers.subjects',
         ])
             ->withCount('students')
-            ->orderBy('academic_year_id', 'desc')
-            ->orderBy('name')
+            ->orderByDesc(SchoolClass::column('academic_year_id'))
+            ->orderedByLevel()
             ->paginate(15);
 
         $promotionService = app(StudentClassPromotionService::class);
@@ -53,7 +71,7 @@ class ClassController extends Controller
             ->get()
             ->first(fn (AcademicYear $year) => $promotionService->countPendingBulkPromotions($year) > 0);
 
-        $canProcessPromotions = ! $isFormationSchool && $promotionYear !== null;
+        $canProcessPromotions = ($school?->supportsAutomaticClassPromotion() ?? false) && $promotionYear !== null;
 
         $cohortCounts = $promotionService->cohortCountsForClasses($classes);
 
@@ -79,7 +97,7 @@ class ClassController extends Controller
         }
 
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
-        $levels = Level::orderBy('order')->orderBy('name')->get();
+        $levels = Level::orderedPedagogically()->get();
         $isFormationSchool = $school?->isFormation() ?? false;
 
         if ($academicYears->isEmpty()) {
@@ -700,7 +718,7 @@ class ClassController extends Controller
         }
 
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
-        $levels = Level::orderBy('order')->orderBy('name')->get();
+        $levels = Level::orderedPedagogically()->get();
         $isFormationSchool = $school?->isFormation() ?? false;
         $selectedAcademicYear = $class->academicYear;
         $formationDiplomas = SenegalFormationDiplomas::types();

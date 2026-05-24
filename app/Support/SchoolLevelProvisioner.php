@@ -7,8 +7,21 @@ use App\Models\School;
 
 class SchoolLevelProvisioner
 {
-    /** Niveaux type collège → lycée (programme sénégalais courant). */
-    public static function defaultDefinitions(): array
+  /** @return list<array{name: string, order: int, cycle: string, serie: null}> */
+    public static function primaireDefinitions(): array
+    {
+        return [
+            ['name' => 'CI', 'order' => 1, 'cycle' => 'primaire', 'serie' => null],
+            ['name' => 'CP', 'order' => 2, 'cycle' => 'primaire', 'serie' => null],
+            ['name' => 'CE1', 'order' => 3, 'cycle' => 'primaire', 'serie' => null],
+            ['name' => 'CE2', 'order' => 4, 'cycle' => 'primaire', 'serie' => null],
+            ['name' => 'CM1', 'order' => 5, 'cycle' => 'primaire', 'serie' => null],
+            ['name' => 'CM2', 'order' => 6, 'cycle' => 'primaire', 'serie' => null],
+        ];
+    }
+
+    /** Niveaux collège → lycée (programme sénégalais courant). */
+    public static function collegeLyceeDefinitions(): array
     {
         return [
             ['name' => '6ème', 'order' => 1, 'cycle' => 'college', 'serie' => null],
@@ -21,6 +34,27 @@ class SchoolLevelProvisioner
         ];
     }
 
+    /** @return list<array{name: string, order: int, cycle: string, serie: null}> */
+    public static function definitionsForSchool(School $school): array
+    {
+        return match ($school->establishment_type) {
+            School::TYPE_PRIMAIRE => self::primaireDefinitions(),
+            School::TYPE_COLLEGE => array_values(array_filter(
+                self::collegeLyceeDefinitions(),
+                fn (array $d) => $d['cycle'] === 'college'
+            )),
+            School::TYPE_LYCEE => array_values(array_filter(
+                self::collegeLyceeDefinitions(),
+                fn (array $d) => $d['cycle'] === 'lycee'
+            )),
+            School::TYPE_MIXTE => array_merge(
+                self::primaireDefinitions(),
+                self::collegeLyceeDefinitions()
+            ),
+            default => self::collegeLyceeDefinitions(),
+        };
+    }
+
     /**
      * Crée les niveaux par défaut pour l'établissement s'ils n'existent pas encore.
      */
@@ -31,7 +65,7 @@ class SchoolLevelProvisioner
         }
 
         $school = School::find($schoolId);
-        if ($school?->isFormation()) {
+        if (! $school || $school->isFormation()) {
             return;
         }
 
@@ -40,14 +74,46 @@ class SchoolLevelProvisioner
             ->exists();
 
         if ($exists) {
+            self::syncLevelsForSchool($school);
+
             return;
         }
 
-        foreach (self::defaultDefinitions() as $definition) {
+        foreach (self::definitionsForSchool($school) as $definition) {
             Level::withoutGlobalScopes()->create([
                 ...$definition,
                 'school_id' => $schoolId,
             ]);
         }
+    }
+
+    /**
+     * Ajoute les niveaux manquants (ex. primaire pour une école mixte déjà créée).
+     */
+    public static function syncLevelsForSchool(School $school): void
+    {
+        if ($school->isFormation()) {
+            return;
+        }
+
+        foreach (self::definitionsForSchool($school) as $definition) {
+            Level::withoutGlobalScopes()->firstOrCreate(
+                [
+                    'school_id' => $school->id,
+                    'name' => $definition['name'],
+                    'cycle' => $definition['cycle'],
+                ],
+                [
+                    'order' => $definition['order'],
+                    'serie' => $definition['serie'],
+                ]
+            );
+        }
+    }
+
+    /** @deprecated Use collegeLyceeDefinitions() */
+    public static function defaultDefinitions(): array
+    {
+        return self::collegeLyceeDefinitions();
     }
 }

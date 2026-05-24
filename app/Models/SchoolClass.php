@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToSchool;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -48,6 +49,30 @@ class SchoolClass extends Model
     public function level(): BelongsTo
     {
         return $this->belongsTo(Level::class);
+    }
+
+    public static function column(string $name): string
+    {
+        return (new static)->getTable().'.'.$name;
+    }
+
+    /**
+     * CI → CP → … → CM2 → 6ème → … → Terminale, puis nom de classe (A, B…).
+     * Tri par sous-requête (évite l’ambiguïté school_id avec un JOIN sur levels).
+     */
+    public function scopeOrderedByLevel(Builder $query): Builder
+    {
+        $table = $query->getModel()->getTable();
+        $cycleSql = Level::cycleOrderSql('l.cycle');
+
+        return $query
+            ->orderByRaw(
+                "(SELECT {$cycleSql} FROM levels AS l WHERE l.id = {$table}.level_id LIMIT 1) ASC"
+            )
+            ->orderByRaw(
+                "(SELECT l.order FROM levels AS l WHERE l.id = {$table}.level_id LIMIT 1) ASC"
+            )
+            ->orderBy("{$table}.name");
     }
 
     public function students(): HasMany
@@ -138,30 +163,42 @@ class SchoolClass extends Model
     }
 
     /**
-     * Convertit les chiffres en lettres pour les noms de classe
-     * Exemple : "6eme 1" devient "6ème A"
+     * Affichage du nom : conserve CI, CE1, CM2… ; convertit seulement les sections « 6ème 1 » → « 6ème A ».
      */
     public function getNameAttribute($value)
     {
-        if (empty($value)) {
+        if (empty($value) || $this->isFormationGroup()) {
             return $value;
         }
 
-        if ($this->isFormationGroup()) {
-            return $value;
+        $raw = trim((string) $value);
+
+        if (preg_match('/^(CI|CP|CE1|CE2|CM1|CM2)$/iu', $raw)) {
+            return $this->applyClassNameSpelling($raw);
         }
 
-        // Remplacer les chiffres par des lettres (1 -> A, 2 -> B, etc.)
-        $value = preg_replace_callback('/(\d+)(\s|-|$)/', function($matches) {
-            $number = (int)$matches[1];
-            if ($number >= 1 && $number <= 26) {
-                $letter = chr(64 + $number); // 65 = 'A' en ASCII
-                return $letter . (isset($matches[2]) ? $matches[2] : '');
-            }
-            return $matches[0]; // Ne pas modifier si le nombre n'est pas entre 1 et 26
-        }, $value);
+        if (preg_match('/^(CI|CP|CE1|CE2|CM1|CM2)\s+[A-Z]$/iu', $raw)) {
+            return $this->applyClassNameSpelling($raw);
+        }
 
-        // Remplacer les abréviations par leur équivalent en toutes lettres
+        $withSections = preg_replace_callback(
+            '/\s+(\d+)$/',
+            static function (array $matches): string {
+                $number = (int) $matches[1];
+                if ($number >= 1 && $number <= 26) {
+                    return ' '.chr(64 + $number);
+                }
+
+                return $matches[0];
+            },
+            $raw
+        );
+
+        return $this->applyClassNameSpelling($withSections ?? $raw);
+    }
+
+    private function applyClassNameSpelling(string $value): string
+    {
         $replacements = [
             '/\b6eme\b/i' => '6ème',
             '/\b5eme\b/i' => '5ème',
@@ -170,7 +207,7 @@ class SchoolClass extends Model
             '/\b2nde\b/i' => 'Seconde',
             '/\b1ere\b/i' => 'Première',
             '/\bTle\b/i'  => 'Terminale',
-            '/\bTerm\b/i' => 'Terminale'
+            '/\bTerm\b/i' => 'Terminale',
         ];
 
         return preg_replace(array_keys($replacements), array_values($replacements), $value);

@@ -177,6 +177,13 @@
                     <h5 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Notes par matière</h5>
                 </div>
                 <div class="card-body">
+                    @if(!empty($useLmdGrading) && $useLmdGrading)
+                        <div class="alert alert-light border small mb-3">
+                            <i class="fas fa-sliders-h me-1"></i>
+                            <strong>LMD :</strong> {{ $lmdFormulaLabel }}.
+                            <a href="{{ route('admin.subjects.index') }}">Configurer par module</a>
+                        </div>
+                    @endif
                     @if($gradesBySubject->isEmpty())
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>Aucune note enregistrée pour cet élève.
@@ -216,9 +223,15 @@
                                             @endforeach
                                             <td class="text-center avg-col">
                                                 @if($data['average'] !== null)
-                                                    <span class="fw-bold {{ $data['average'] >= 10 ? 'text-success' : 'text-danger' }}">
+                                                    <span class="fw-bold {{ ($data['average'] ?? 0) >= ($data['passing_min'] ?? $passingGradeMin ?? 10) ? 'text-success' : 'text-danger' }}">
                                                         {{ number_format($data['average'], 2, ',', ' ') }}/20
                                                     </span>
+                                                    @if(!empty($useLmdGrading))
+                                                        <br><span class="text-muted" style="font-size:0.7rem;">{{ $data['lmd_formula'] ?? '' }}</span>
+                                                        @if(!empty($data['lmd_mode']))
+                                                            <br><span class="text-muted" style="font-size:0.7rem;">{{ $data['lmd_mode'] }}</span>
+                                                        @endif
+                                                    @endif
                                                 @else
                                                     <span class="text-muted">—</span>
                                                 @endif
@@ -245,7 +258,7 @@
                                     <tr>
                                         <th colspan="{{ 2 + count($evaluationColumns) }}">Moyenne Générale Pondérée</th>
                                         <th colspan="2" class="text-center">
-                                            <span class="fs-5 {{ $generalAverage >= 10 ? 'text-success' : 'text-danger' }}">
+                                            <span class="fs-5 {{ $generalAverage >= ($passingGradeMin ?? 10) ? 'text-success' : 'text-danger' }}">
                                                 {{ number_format($generalAverage, 2, ',', ' ') }}/20
                                             </span>
                                             @if($generalAverage >= 16)

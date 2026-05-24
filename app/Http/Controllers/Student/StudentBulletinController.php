@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
 use App\Models\Grade;
 use App\Models\Level;
+use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
+use App\Support\FormationLmdSettings;
+use App\Support\FormationModuleGradeCalculator;
 use App\Support\DashboardAcademicYearContext;
 use App\Support\StudentClassContext;
 use Illuminate\Http\Request;
@@ -52,7 +55,7 @@ class StudentBulletinController extends Controller
             ->get();
 
         // Grouper les notes par matière et calculer les moyennes
-        $bulletinData = $this->calculateBulletinData($grades, $level);
+        $bulletinData = $this->calculateBulletinData($grades, $level, $user->school);
 
         // Calculer la moyenne générale pondérée
         $generalAverage = $this->calculateWeightedAverage($bulletinData);
@@ -114,8 +117,12 @@ class StudentBulletinController extends Controller
      * @param  mixed  $level  Niveau (Level ou null)
      * @param  array<int,int|float>|null  $coefficients  Coefficients pré-calculés (optionnel)
      */
-    private function calculateBulletinData($grades, $level, ?array $coefficients = null)
+    private function calculateBulletinData($grades, $level, ?School $school = null, ?array $coefficients = null)
     {
+        if ($school?->usesLmdGrading()) {
+            return $this->calculateFormationBulletinData($grades, $school);
+        }
+
         $coefficients ??= $this->fetchLevelCoefficients($level);
 
         $bulletinData    = [];
@@ -172,6 +179,60 @@ class StudentBulletinController extends Controller
     }
 
     /**
+     * Bulletin formation : moyenne module LMD (30 % CC + 70 % examen, ou 100 % si une seule famille).
+     *
+     * @param  \Illuminate\Support\Collection  $grades
+     * @return list<array<string, mixed>>
+     */
+    private function calculateFormationBulletinData($grades, School $school): array
+    {
+        $bulletinData = [];
+
+        foreach ($grades->groupBy('subject_id') as $subjectId => $subjectGrades) {
+            $subject = $subjectGrades->first()->subject ?? null;
+            if (! $subject) {
+                continue;
+            }
+
+            $settings = FormationLmdSettings::fromSubject($subject);
+            $coefficient = (float) ($subject->coefficient ?? 1);
+            $devoir1 = $subjectGrades->where('type', 'devoir1')->first();
+            $devoir2 = $subjectGrades->where('type', 'devoir2')->first();
+            $composition = $subjectGrades->where('type', 'composition')->first();
+
+            $ccGrades = $subjectGrades->filter(
+                fn ($g) => in_array((string) $g->type, $settings->ccGradeTypes, true)
+            );
+            $moyenneDevoirs = $ccGrades->isNotEmpty()
+                ? round((float) $ccGrades->avg('grade'), 2)
+                : null;
+
+            $summary = FormationModuleGradeCalculator::summarize($subjectGrades, $settings);
+            $moyenneMatiere = $summary['average'];
+
+            $bulletinData[] = [
+                'subject'         => $subject->name,
+                'subject_code'    => $subject->code,
+                'coefficient'     => $coefficient,
+                'devoir1'         => $devoir1 ? round((float) $devoir1->grade, 2) : null,
+                'devoir2'         => $devoir2 ? round((float) $devoir2->grade, 2) : null,
+                'composition'     => $composition ? round((float) $composition->grade, 2) : null,
+                'moyenne_devoirs' => $moyenneDevoirs,
+                'moyenne_exam'    => $summary['exam_average'],
+                'moyenne_matiere' => $moyenneMatiere,
+                'lmd_mode'        => $summary['mode'],
+                'points'          => $moyenneMatiere !== null ? round($moyenneMatiere * $coefficient, 2) : null,
+                'appreciation'    => $this->getAppreciation($moyenneMatiere),
+                'validated'       => $summary['validated'],
+            ];
+        }
+
+        usort($bulletinData, fn ($a, $b) => $b['coefficient'] <=> $a['coefficient']);
+
+        return $bulletinData;
+    }
+
+    /**
      * Calcule en UNE requête les moyennes pondérées de tous les élèves d'une classe.
      * Remplace les boucles N+1 dans calculateRank() et calculateClassStats().
      *
@@ -208,7 +269,7 @@ class StudentBulletinController extends Controller
         $averages = [];
         foreach ($studentIds as $studentId) {
             $studentGrades = $gradesByStudent->get($studentId, collect());
-            $bulletinData  = $this->calculateBulletinData($studentGrades, $class->level, $coefficients);
+            $bulletinData  = $this->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients);
             $averages[$studentId] = $this->calculateWeightedAverage($bulletinData);
         }
 
@@ -394,7 +455,7 @@ class StudentBulletinController extends Controller
             ->with('subject')
             ->get();
 
-        $bulletinData = $this->calculateBulletinData($grades, $level);
+        $bulletinData = $this->calculateBulletinData($grades, $level, $user->school);
         $moyenne = $this->calculateWeightedAverage($bulletinData);
 
         return [
