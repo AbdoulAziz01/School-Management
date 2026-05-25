@@ -67,6 +67,7 @@ class School extends Model
         'logo_mime',
         'formation_lmd_settings',
         'formation_use_lmd',
+        'login_credentials_snapshot',
     ];
 
     protected $casts = [
@@ -74,6 +75,7 @@ class School extends Model
         'default_academic_year_id' => 'integer',
         'formation_lmd_settings' => 'array',
         'formation_use_lmd' => 'boolean',
+        'login_credentials_snapshot' => 'array',
     ];
 
     protected $attributes = [

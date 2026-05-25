@@ -24,6 +24,7 @@
 @php $schoolLogo = \App\Support\SchoolLogoStorage::dataUri($school); @endphp
 
 @include('platform.schools._staff-credentials-alert')
+@include('platform.schools._school-login-credentials', ['loginCredentials' => $loginCredentials ?? null, 'school' => $school])
 
 <p class="text-muted small mb-3">
     <a href="{{ route('platform.schools.index') }}" class="text-decoration-none">
@@ -465,6 +466,7 @@
                             <th>Nom</th>
                             <th>Email</th>
                             <th>Rôle</th>
+                            <th>Mot de passe</th>
                             <th class="text-end" style="min-width: 200px;">Actions</th>
                         </tr>
                     </thead>
@@ -479,6 +481,18 @@
                                         <span class="badge bg-primary">Admin</span>
                                     @else
                                         <span class="badge bg-info text-dark">Surveillant</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @php
+                                        $knownPassword = collect(($loginCredentials ?? [])['staff'] ?? [])->firstWhere('email', $member->email)['password'] ?? null;
+                                    @endphp
+                                    @if($knownPassword)
+                                        <code class="user-select-all text-primary fw-semibold">{{ $knownPassword }}</code>
+                                        <a href="#school-login-credentials" class="small d-block text-muted">Voir détail</a>
+                                    @else
+                                        <span class="text-muted small">—</span>
+                                        <span class="d-block text-muted" style="font-size:0.7rem;">Régénérer pour afficher</span>
                                     @endif
                                 </td>
                                 <td class="text-end">
@@ -500,7 +514,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-muted text-center py-3">Aucun compte.</td></tr>
+                            <tr><td colspan="6" class="text-muted text-center py-3">Aucun compte.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

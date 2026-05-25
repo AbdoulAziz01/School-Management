@@ -10,6 +10,7 @@ use App\Support\SchoolLogoStorage;
 use App\Support\SchoolProfile;
 use App\Support\SchoolLevelProvisioner;
 use App\Support\SchoolSubjectProvisioner;
+use App\Support\SchoolLoginCredentials;
 use App\Support\StaffOtpMailer;
 use App\Models\AcademicYear;
 use App\Models\SchoolClass;
@@ -184,6 +185,7 @@ class SchoolController extends Controller
 
         $assignableClasses = PlatformMetrics::assignableClassesForSchool($school->id);
         $academicYears = PlatformMetrics::academicYearsForSchool($school->id);
+        $loginCredentials = SchoolLoginCredentials::displayFor($school);
 
         return view('platform.schools.show', compact(
             'school',
@@ -194,6 +196,7 @@ class SchoolController extends Controller
             'unassignedStudents',
             'assignableClasses',
             'academicYears',
+            'loginCredentials',
         ));
     }
 
@@ -422,6 +425,10 @@ class SchoolController extends Controller
         string $title,
         array $otpResult
     ): array {
+        if ($password !== '') {
+            SchoolLoginCredentials::recordStaffPassword($school, $user, $password);
+        }
+
         return [
             'title' => $title,
             'school_name' => $school->name,

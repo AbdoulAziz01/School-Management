@@ -1,8 +1,9 @@
 <?php
 
 return [
-    'default_name' => env('DEFAULT_SCHOOL_NAME', 'Établissement principal'),
+    /** Mot de passe des comptes créés par SenegalTenSchoolsLoadTestSeeder. */
+    'load_test_default_password' => env('LOAD_TEST_DEFAULT_PASSWORD', 'password'),
 
-    /** Moyenne annuelle minimale pour le passage en classe supérieure (6ème → Terminale). */
-    'passing_grade_min' => (float) env('SCHOOL_PASSING_GRADE_MIN', 10),
+    /** Email admin des établissements du jeu de données charge. */
+    'load_test_admin_email_pattern' => '/^admin@[a-z0-9\-]+\.edu\.sn$/i',
 ];
