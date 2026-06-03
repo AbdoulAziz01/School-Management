@@ -22,11 +22,15 @@
             --bg-dark: #1c1917;
         }
         
+        html { margin: 0; overflow-x: hidden; }
+
         body {
+            margin: 0;
             background: linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fef3c7 100%);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             min-height: 100vh;
-            padding-top: 0;
+            padding: 0;
+            overflow-x: hidden;
         }
         
         .wrapper {
@@ -39,18 +43,26 @@
             height: 100vh;
             background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%);
             color: #fef3c7;
-            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3);
+            box-shadow: none;
             z-index: 1050;
             position: fixed;
             left: 0;
             top: 0;
-            border-right: none;
+            border-right: 1px solid rgba(251, 191, 36, 0.12);
             padding: 0;
             width: var(--sidebar-width);
             overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            display: none;
+            width: 0;
         }
         
         .sidebar .nav-link {
@@ -101,35 +113,6 @@
             box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
         }
         
-        /* Mobile Header */
-        .mobile-header {
-            display: none;
-            background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
-            color: #fbbf24;
-            padding: 15px 20px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-        
-        .mobile-header .menu-toggle {
-            background: none;
-            border: none;
-            color: #fbbf24;
-            font-size: 1.5rem;
-            padding: 0;
-            cursor: pointer;
-        }
-        
-        .mobile-header h5 {
-            margin: 0;
-            font-size: 1.1rem;
-            color: #fbbf24;
-        }
-        
         /* Sidebar Overlay */
         .sidebar-overlay {
             display: none;
@@ -147,15 +130,21 @@
         }
         
         .main-content {
-            padding: 25px;
+            padding: 0;
             padding-bottom: 50px;
             flex: 1;
+            min-width: 0;
             background: linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fef3c7 100%);
             min-height: 100vh;
-            width: calc(100% - var(--sidebar-width));
-            overflow-x: auto;
-            overflow-y: visible;
+            width: calc(100vw - var(--sidebar-width));
+            max-width: calc(100vw - var(--sidebar-width));
             margin-left: var(--sidebar-width);
+            overflow-x: hidden;
+            overflow-y: visible;
+        }
+
+        .portal-page-body {
+            padding: 1.5rem 1.5rem 0;
         }
         
         .card {
@@ -301,18 +290,16 @@
                 transform: translateX(0);
             }
             
-            .mobile-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            
             .main-content {
                 margin-left: 0;
                 width: 100%;
-                padding: 15px;
-                padding-top: 80px;
+                max-width: 100%;
+                padding: 0;
                 padding-bottom: 50px;
+            }
+
+            .portal-page-body {
+                padding: 1rem 0.85rem 0;
             }
         }
         
@@ -340,18 +327,10 @@
             h3, .h3 { font-size: 1.15rem; }
         }
     </style>
+    @include('partials.portal-top-navbar-styles')
     @stack('styles')
 </head>
 <body>
-    <!-- Mobile Header -->
-    <div class="mobile-header">
-        <button class="menu-toggle" id="sidebarToggle">
-            <i class="fas fa-bars"></i>
-        </button>
-        <h5><i class="fas fa-chalkboard-teacher me-2"></i>Espace Enseignant</h5>
-        <div style="width: 24px;"></div>
-    </div>
-    
     <!-- Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     
@@ -369,6 +348,14 @@
 
         <!-- Main content -->
         <main class="main-content">
+            @include('partials.portal-top-navbar', [
+                'portalScope' => 'teacher',
+                'portalProfileRoute' => route('teacher.profile.index'),
+                'portalRoleLabel' => 'Enseignant',
+                'portalShowMenuToggle' => true,
+            ])
+
+            <div class="portal-page-body">
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
@@ -391,6 +378,7 @@
             @endif
 
             @yield('content')
+            </div>
         </main>
     </div>
     
@@ -399,11 +387,12 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Sidebar Toggle
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
+        function toggleTeacherSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
             document.getElementById('sidebarOverlay').classList.toggle('active');
-        });
+        }
+
+        document.getElementById('portalSidebarToggle')?.addEventListener('click', toggleTeacherSidebar);
         
         document.getElementById('sidebarOverlay').addEventListener('click', function() {
             document.getElementById('sidebar').classList.remove('active');
@@ -454,7 +443,7 @@
         });
     </script>
     
-    @include('partials.botpress-webchat')
+    @include('partials.ai-agent-widget')
     <script src="{{ asset('js/form-draft-autosave.js') }}"></script>
     @stack('scripts')
 </body>

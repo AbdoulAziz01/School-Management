@@ -74,25 +74,8 @@
 @endpush
 
 @section('content')
-<div class="mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+<div class="mb-4">
     <h1 class="mb-0 h3">Tableau de bord</h1>
-    @if($academicYears->isNotEmpty())
-        <form method="GET" action="{{ route('admin.dashboard') }}" class="d-flex align-items-center gap-2">
-            <span class="text-muted small d-none d-sm-inline"><i class="fas fa-calendar-alt me-1"></i>Année :</span>
-            <select name="academic_year_id" class="form-select form-select-sm" style="min-width: 11rem;" onchange="this.form.submit()" aria-label="Choisir l'année scolaire">
-                @foreach($academicYears as $year)
-                    <option value="{{ $year->id }}" @selected($selectedYear?->id === $year->id)>
-                        {{ $year->name }}
-                        @if($year->is_current) — courante @endif
-                        @if($year->isClosed()) — terminée @endif
-                    </option>
-                @endforeach
-            </select>
-            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Actualiser">
-                <i class="fas fa-sync-alt"></i>
-            </button>
-        </form>
-    @endif
 </div>
 
 @if($selectedYear && !$isSelectedYearCurrent)

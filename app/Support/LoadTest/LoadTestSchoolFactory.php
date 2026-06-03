@@ -16,6 +16,7 @@ use App\Models\TeacherAssignment;
 use App\Models\User;
 use App\Support\FormationLevelResolver;
 use App\Support\FormationLmdSettings;
+use App\Support\AcademicYearProvisioner;
 use App\Support\PrimaryClassTeacherProvisioner;
 use App\Support\SchoolLoginCredentials;
 use App\Support\SchoolLevelProvisioner;
@@ -30,6 +31,10 @@ use Illuminate\Support\Str;
 class LoadTestSchoolFactory
 {
     public const STUDENTS_PER_CLASS = 50;
+
+    private int $studentsPerClass = self::STUDENTS_PER_CLASS;
+
+    private bool $fullTeacherCoverage = false;
 
     private const CLOSED_YEAR = '2024-2025';
 
@@ -64,6 +69,26 @@ class LoadTestSchoolFactory
         return $this;
     }
 
+    public function setStudentsPerClass(int $count): self
+    {
+        $this->studentsPerClass = max(1, min(55, $count));
+
+        return $this;
+    }
+
+    /** Assigne un professeur à chaque matière de chaque classe (suivi notes / EDT). */
+    public function setFullTeacherCoverage(bool $full = true): self
+    {
+        $this->fullTeacherCoverage = $full;
+
+        return $this;
+    }
+
+    private function classCapacity(): int
+    {
+        return max($this->studentsPerClass + 5, 20);
+    }
+
     /**
      * @param  array{slug: string, name: string, type: string, city: string, address?: string, admin_email: string, formation_use_lmd?: bool}  $config
      */
@@ -85,7 +110,9 @@ class LoadTestSchoolFactory
             $this->mapPrimaryTeacherToSubjectNames();
         }
 
-        $closedYear = $this->createYears($school);
+        $years = $this->createYears($school);
+        $closedYear = $years['closed'];
+        $currentYear = $years['current'];
         $this->createSchoolAdmin($config['admin_email'], $config['name']);
         $this->createSurveillant();
         $this->createTeachersForSchool($school);
@@ -102,7 +129,7 @@ class LoadTestSchoolFactory
                 'name' => $level->name,
                 'academic_year_id' => $closedYear->id,
                 'level_id' => $level->id,
-                'capacity' => 55,
+                'capacity' => $this->classCapacity(),
             ]);
             $this->classOrderById[end($classes)->id] = $level->order;
         }
@@ -122,6 +149,8 @@ class LoadTestSchoolFactory
         $this->bulkGrades($allStudents, $closedYear);
         $this->bulkAttendances($allStudents);
 
+        $this->provisionCurrentYearFromClosed($school, $closedYear, $currentYear);
+
         $this->line("  ✓ {$school->name} — ".count($classes).' classes, '.count($allStudents).' élèves');
 
         return $school;
@@ -138,7 +167,9 @@ class LoadTestSchoolFactory
 
         $school = $this->createSchool($config);
         $this->schoolId = $school->id;
-        $closedYear = $this->createYears($school);
+        $years = $this->createYears($school);
+        $closedYear = $years['closed'];
+        $currentYear = $years['current'];
         $this->createSchoolAdmin($config['admin_email'], $config['name']);
         $this->createSurveillant();
 
@@ -160,21 +191,22 @@ class LoadTestSchoolFactory
                 'name' => $def['name'],
                 'filiere' => $def['filiere'],
                 'formation_year' => $def['year'],
-                'capacity' => 55,
+                'capacity' => $this->classCapacity(),
             ]);
             $class->subjects()->sync(collect($modules)->pluck('id'));
             $teacher = $teachers[$i % 2];
             if ($teacher) {
                 $class->teachers()->syncWithoutDetaching([$teacher->id]);
                 foreach ($modules as $subject) {
-                    if (random_int(1, 100) > 12) {
-                        TeacherAssignment::withoutGlobalScopes()->firstOrCreate([
-                            'teacher_id' => $teacher->id,
-                            'class_id' => $class->id,
-                            'subject_id' => $subject->id,
-                            'academic_year_id' => $closedYear->id,
-                        ], ['school_id' => $this->schoolId]);
+                    if (! $this->fullTeacherCoverage && random_int(1, 100) > 12) {
+                        continue;
                     }
+                    TeacherAssignment::withoutGlobalScopes()->firstOrCreate([
+                        'teacher_id' => $teacher->id,
+                        'class_id' => $class->id,
+                        'subject_id' => $subject->id,
+                        'academic_year_id' => $closedYear->id,
+                    ], ['school_id' => $this->schoolId]);
                 }
             }
             $allStudents = array_merge($allStudents, $this->seedStudentsForClass($class, $closedYear));
@@ -183,6 +215,7 @@ class LoadTestSchoolFactory
 
         $this->bulkGradesClassicTypes($allStudents, $modules, $closedYear);
         $this->bulkAttendances($allStudents);
+        $this->provisionCurrentYearFromClosed($school, $closedYear, $currentYear);
         $this->line("  ✓ {$school->name} (formation sans LMD) — ".count($allStudents).' étudiants');
 
         return $school;
@@ -202,7 +235,9 @@ class LoadTestSchoolFactory
         $this->schoolId = $school->id;
         FormationLmdSettings::defaults()->persistToSchool($school);
 
-        $closedYear = $this->createYears($school);
+        $years = $this->createYears($school);
+        $closedYear = $years['closed'];
+        $currentYear = $years['current'];
         $this->createSchoolAdmin($config['admin_email'], $config['name']);
 
         $dept = FormationDepartment::withoutGlobalScopes()->create([
@@ -243,7 +278,7 @@ class LoadTestSchoolFactory
                 'diploma_type' => 'licence',
                 'formation_year' => $promo->formation_year,
                 'level_id' => $level->id,
-                'capacity' => 55,
+                'capacity' => $this->classCapacity(),
             ]);
 
             $class->subjects()->sync(collect($modules)->pluck('id'));
@@ -266,33 +301,16 @@ class LoadTestSchoolFactory
 
         $this->bulkGradesLmd($allStudents, $modules, $closedYear);
         $this->bulkAttendances($allStudents);
+        $this->provisionCurrentYearFromClosed($school, $closedYear, $currentYear);
         $this->line("  ✓ {$school->name} (LMD) — ".count($allStudents).' étudiants');
 
         return $school;
     }
 
     /**
-     * @param  array{slug: string, name: string, type: string, city: string, address?: string, admin_email: string, formation_use_lmd?: bool}  $config
+     * @return array{closed: AcademicYear, current: AcademicYear}
      */
-    private function createSchool(array $config): School
-    {
-        return School::withoutGlobalScopes()->create([
-            'name' => $config['name'],
-            'slug' => $config['slug'],
-            'code' => School::generateUniqueCode(),
-            'establishment_type' => $config['type'],
-            'formation_use_lmd' => $config['formation_use_lmd'] ?? true,
-            'is_active' => true,
-            'email' => 'contact@'.$config['slug'].'.edu.sn',
-            'secretariat_email' => 'secretariat@'.$config['slug'].'.edu.sn',
-            'city' => $config['city'],
-            'address' => $config['address'] ?? $config['city'],
-            'timezone' => 'Africa/Dakar',
-            'locale' => 'fr',
-        ]);
-    }
-
-    private function createYears(School $school): AcademicYear
+    private function createYears(School $school): array
     {
         $closed = AcademicYear::withoutGlobalScopes()->create([
             'school_id' => $school->id,
@@ -314,7 +332,42 @@ class LoadTestSchoolFactory
 
         $school->update(['default_academic_year_id' => $current->id]);
 
-        return $closed;
+        return ['closed' => $closed, 'current' => $current];
+    }
+
+    /** Classes + profs + EDT pour l'année courante (sans élèves) — permet le passage depuis l'année clôturée. */
+    private function provisionCurrentYearFromClosed(School $school, AcademicYear $closed, AcademicYear $current): void
+    {
+        if (SchoolClass::withoutGlobalScopes()->where('academic_year_id', $current->id)->exists()) {
+            return;
+        }
+
+        $result = AcademicYearProvisioner::provision($current, $closed);
+
+        if (($result['classes'] ?? 0) > 0) {
+            $this->line("  → {$current->name} : {$result['classes']} classe(s) prêtes (élèves via passage depuis {$closed->name})");
+        }
+    }
+
+    /**
+     * @param  array{slug: string, name: string, type: string, city: string, address?: string, admin_email: string, formation_use_lmd?: bool}  $config
+     */
+    private function createSchool(array $config): School
+    {
+        return School::withoutGlobalScopes()->create([
+            'name' => $config['name'],
+            'slug' => $config['slug'],
+            'code' => School::generateUniqueCode(),
+            'establishment_type' => $config['type'],
+            'formation_use_lmd' => $config['formation_use_lmd'] ?? true,
+            'is_active' => true,
+            'email' => 'contact@'.$config['slug'].'.edu.sn',
+            'secretariat_email' => 'secretariat@'.$config['slug'].'.edu.sn',
+            'city' => $config['city'],
+            'address' => $config['address'] ?? $config['city'],
+            'timezone' => 'Africa/Dakar',
+            'locale' => 'fr',
+        ]);
     }
 
     private function createSchoolAdmin(string $email, string $schoolName): void
@@ -500,7 +553,7 @@ class LoadTestSchoolFactory
         $students = [];
         $slug = School::find($this->schoolId)?->slug ?? 'ecole';
 
-        for ($i = 0; $i < self::STUDENTS_PER_CLASS; $i++) {
+        for ($i = 0; $i < $this->studentsPerClass; $i++) {
             $gender = random_int(0, 1) === 1 ? 'M' : 'F';
             $fn = $gender === 'M'
                 ? $this->firstNamesMale[array_rand($this->firstNamesMale)]
@@ -541,7 +594,7 @@ class LoadTestSchoolFactory
         }
 
         foreach ($level->subjects as $subject) {
-            if (random_int(1, 100) <= 16) {
+            if (! $this->fullTeacherCoverage && random_int(1, 100) <= 16) {
                 continue;
             }
 

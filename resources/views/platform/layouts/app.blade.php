@@ -203,6 +203,7 @@
         });
     </script>
     <script src="{{ asset('js/form-draft-autosave.js') }}"></script>
+    @include('partials.ai-agent-widget')
     @stack('scripts')
 </body>
 </html>

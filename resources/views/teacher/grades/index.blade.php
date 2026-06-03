@@ -9,15 +9,6 @@
         <p class="text-muted mb-0">Consultez les notes de vos élèves (consultation seule — les notes enregistrées ne peuvent pas être modifiées)</p>
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
-        @include('partials.dashboard-year-filter', [
-            'action' => route('teacher.grades.index'),
-            'academicYears' => $academicYears ?? collect(),
-            'selectedYear' => $selectedYear ?? null,
-            'queryParams' => array_filter([
-                'class_id' => $selectedClassId ?? null,
-                'subject_id' => $selectedSubjectId ?? null,
-            ]),
-        ])
         @unless($gradesLocked ?? false)
             <a href="{{ route('teacher.grades.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-2"></i>Saisir des notes

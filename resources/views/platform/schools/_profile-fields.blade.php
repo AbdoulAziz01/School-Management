@@ -16,7 +16,9 @@
         @endforeach
     </select>
     @error('establishment_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    <div class="form-text">Primaire, collège, lycée, mixte ou formation — définit les niveaux par défaut.</div>
+    <div class="form-text" id="establishment-type-levels-hint">
+        {{ \App\Support\SchoolLevelProvisioner::defaultLevelsHintForType(old('establishment_type', $school->establishment_type)) }}
+    </div>
 </div>
 <div class="col-md-8" id="formation-lmd-option" style="{{ old('establishment_type', $school->establishment_type) === \App\Models\School::TYPE_FORMATION ? '' : 'display:none' }}">
     <div class="form-check form-switch mt-4">
@@ -33,12 +35,28 @@
 </div>
 @push('scripts')
 <script>
-document.getElementById('establishment_type')?.addEventListener('change', function () {
-    const block = document.getElementById('formation-lmd-option');
-    if (block) {
-        block.style.display = this.value === '{{ \App\Models\School::TYPE_FORMATION }}' ? '' : 'none';
+(function () {
+    const levelHints = @json(\App\Support\SchoolLevelProvisioner::defaultLevelsHintsByType());
+    const formationType = @json(\App\Models\School::TYPE_FORMATION);
+    const defaultHint = @json(\App\Support\SchoolLevelProvisioner::defaultLevelsHintForType(null));
+
+    function onEstablishmentTypeChange() {
+        const select = document.getElementById('establishment_type');
+        if (!select) return;
+
+        const block = document.getElementById('formation-lmd-option');
+        if (block) {
+            block.style.display = select.value === formationType ? '' : 'none';
+        }
+
+        const hint = document.getElementById('establishment-type-levels-hint');
+        if (hint) {
+            hint.textContent = levelHints[select.value] || defaultHint;
+        }
     }
-});
+
+    document.getElementById('establishment_type')?.addEventListener('change', onEstablishmentTypeChange);
+})();
 </script>
 @endpush
 <div class="col-md-6">

@@ -8,8 +8,13 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h5 class="mb-0">Liste des enseignants</h5>
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h5 class="mb-0">Liste des enseignants</h5>
+                        <a href="{{ route('admin.teachers.create') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i> Ajouter un enseignant
+                        </a>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
                         <form action="{{ route('admin.teachers.index') }}" method="GET" class="d-flex gap-2">
                             <input type="text" name="search" class="form-control form-control-sm" placeholder="Rechercher..." value="{{ request('search') }}" style="min-width: 200px;">
                             <select name="status" class="form-select form-select-sm" style="min-width: 120px;">
@@ -125,11 +130,6 @@
                             </div>
                         </div>
                     @endif
-                </div>
-                <div class="card-footer">
-                    <a href="{{ route('admin.teachers.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i> Ajouter un enseignant
-                    </a>
                 </div>
             </div>
         </div>

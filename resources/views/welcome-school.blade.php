@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Management - Accueil</title>
+    <title>EduManagerAccueil</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         /* Thème ambre */
@@ -56,15 +56,13 @@
     <nav class="py-3 bg-transparent navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand fw-bold fs-4" href="/">
-                🎓 School Management
+                EduManager
             </a>
             <div class="ms-auto">
                 @auth
                     <a href="{{ route('dashboard') }}" class="btn btn-light btn-sm me-2">Dashboard</a>
                 @else
-                    <a href="{{ route('login') }}" class="btn btn-outline-light btn-sm me-2">Se connecter</a>
-                    <a href="{{ route('register') }}" class="btn btn-light btn-sm">S'inscrire</a>
-                @endauth
+                    <a href="{{ route('login') }}" class="btn btn-outline-light btn-sm me-2">Se connecter</a>                @endauth
             </div>
         </div>
     </nav>
@@ -79,9 +77,6 @@
                     <div class="gap-3 d-grid d-md-flex justify-content-md-center">
                         <a href="{{ route('login') }}" class="btn btn-primary btn-custom">
                             Se connecter
-                        </a>
-                        <a href="{{ route('register') }}" class="btn btn-outline-primary btn-custom">
-                            Créer un compte
                         </a>
                     </div>
                     
@@ -116,6 +111,5 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    @include('partials.botpress-webchat')
 </body>
 </html>

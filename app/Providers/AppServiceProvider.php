@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\View\Composers\PortalNavbarComposer;
 use App\Http\View\Composers\PlatformBrandingComposer;
 use App\Http\View\Composers\SchoolBrandingComposer;
 use App\Http\View\Composers\StudentSidebarComposer;
@@ -52,6 +53,8 @@ class AppServiceProvider extends ServiceProvider
             'layouts.student',
             'student.*',
         ], StudentSidebarComposer::class);
+
+        View::composer('partials.portal-top-navbar', PortalNavbarComposer::class);
 
         View::composer([
             'admin.layouts.app',

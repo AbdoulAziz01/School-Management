@@ -4,7 +4,8 @@
         #sidebar {
             background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%) !important;
             border-right: none !important;
-            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3) !important;
+            box-shadow: none !important;
+            border-right: 1px solid rgba(251, 191, 36, 0.12) !important;
         }
         
         .sidebar-logo {
@@ -247,17 +248,6 @@
                 <h5>{{ $schoolDisplayName ?? 'Mon établissement' }}</h5>
                 <small>via {{ $platformName }} · Enseignant</small>
             </div>
-        </div>
-    </div>
-    
-    <!-- User Card -->
-    <div class="user-card">
-        <div class="user-avatar">
-            {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
-        </div>
-        <div class="user-info">
-            <h6>{{ Auth::user()->name }}</h6>
-            <span class="badge-role"><i class="fas fa-user-tie"></i> Enseignant</span>
         </div>
     </div>
     

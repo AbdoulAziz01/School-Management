@@ -137,8 +137,8 @@
         .no-print,
         .alert,
         iframe,
-        [id*="botpress"],
-        [class*="bp-"] {
+        #ai-agent-widget,
+        .ai-agent-root {
             display: none !important;
         }
 

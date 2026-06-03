@@ -152,7 +152,7 @@ class StudentBulletinController extends Controller
             }
 
             if ($moyenneDevoirs !== null && $composition) {
-                $moyenneMatiere = ($moyenneDevoirs * 0.4) + ($composition->grade * 0.6);
+                $moyenneMatiere = ($moyenneDevoirs * 0.5) + ($composition->grade * 0.5);
             } elseif ($composition) {
                 $moyenneMatiere = $composition->grade;
             } elseif ($moyenneDevoirs !== null) {
@@ -375,7 +375,7 @@ class StudentBulletinController extends Controller
         if ($average >= 14) return 'Bien';
         if ($average >= 12) return 'Assez Bien';
         if ($average >= 10) return 'Passable';
-        if ($average >= 8) return 'Insuffisant';
+        if ($average >= 8) return 'Insatisfaisant';
         return 'Très Insuffisant';
     }
 

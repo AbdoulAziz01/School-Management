@@ -22,16 +22,24 @@
             --bg-dark: #1c1917;
         }
         
+        html {
+            margin: 0;
+            overflow-x: hidden;
+        }
+
         body {
+            margin: 0;
             background: linear-gradient(135deg, #fefce8 0%, #fffbeb 50%, #fef3c7 100%);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             min-height: 100vh;
-            padding-top: 0;
+            padding: 0;
+            overflow-x: hidden;
         }
         
         .wrapper {
             display: flex;
             min-height: 100vh;
+            width: 100%;
         }
         
         .sidebar {
@@ -39,18 +47,26 @@
             height: 100vh;
             background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%);
             color: #fef3c7;
-            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3);
+            box-shadow: none;
             z-index: 1050;
             position: fixed;
             left: 0;
             top: 0;
-            border-right: none;
+            border-right: 1px solid rgba(251, 191, 36, 0.12);
             padding: 0;
             width: var(--sidebar-width);
             overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            display: none;
+            width: 0;
         }
         
         .sidebar .nav-link {
@@ -146,17 +162,23 @@
         }
         
         .main-content {
-            padding: 25px;
+            padding: 0;
             padding-bottom: 50px;
             flex: 1;
+            min-width: 0;
             background: linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fef3c7 100%);
             min-height: 100vh;
-            width: calc(100% - var(--sidebar-width));
-            overflow-x: auto;
-            overflow-y: visible;
+            width: calc(100vw - var(--sidebar-width));
+            max-width: calc(100vw - var(--sidebar-width));
             margin-left: var(--sidebar-width);
+            overflow-x: hidden;
+            overflow-y: visible;
         }
-        
+
+        .admin-page-body {
+            padding: 1.5rem 1.5rem 0;
+        }
+
         .card {
             border: none;
             border-radius: 16px;
@@ -314,17 +336,26 @@
             .main-content {
                 margin-left: 0;
                 width: 100%;
-                padding: 15px;
-                padding-top: 80px;
+                padding: 0;
+                padding-top: 56px;
                 padding-bottom: 50px;
             }
+
+            .admin-page-body {
+                padding: 1rem 0.85rem 0;
+            }
+
         }
         
         @media (max-width: 576px) {
             .main-content {
-                padding: 10px;
-                padding-top: 75px;
+                padding: 0;
+                padding-top: 56px;
                 padding-bottom: 40px;
+            }
+
+            .admin-page-body {
+                padding: 0.75rem 0.65rem 0;
             }
             
             .card-body {
@@ -449,6 +480,7 @@
             color: #b45309;
         }
     </style>
+    @include('partials.portal-top-navbar-styles')
     @stack('styles')
 </head>
 <body>
@@ -478,6 +510,9 @@
 
         <!-- Main content -->
         <main class="main-content">
+            @include('admin.components.navbar')
+
+            <div class="admin-page-body">
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
@@ -507,6 +542,7 @@
             @endif
 
             @yield('content')
+            </div>
         </main>
     </div>
     
@@ -571,7 +607,7 @@
         });
     </script>
     
-    @include('partials.botpress-webchat')
+    @include('partials.ai-agent-widget')
     <script src="{{ asset('js/form-draft-autosave.js') }}"></script>
     @stack('scripts')
 </body>

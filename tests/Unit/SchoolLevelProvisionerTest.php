@@ -31,4 +31,36 @@ class SchoolLevelProvisionerTest extends TestCase
         $this->assertSame('primaire', $definitions[0]['cycle']);
         $this->assertSame('CM2', $definitions[5]['name']);
     }
+
+    public function test_college_definitions_only_college_levels(): void
+    {
+        $definitions = SchoolLevelProvisioner::definitionsForType(School::TYPE_COLLEGE);
+        $names = array_column($definitions, 'name');
+
+        $this->assertCount(4, $definitions);
+        $this->assertSame(['6ème', '5ème', '4ème', '3ème'], $names);
+    }
+
+    public function test_lycee_definitions_only_lycee_levels(): void
+    {
+        $definitions = SchoolLevelProvisioner::definitionsForType(School::TYPE_LYCEE);
+        $names = array_column($definitions, 'name');
+
+        $this->assertCount(3, $definitions);
+        $this->assertSame(['Seconde', 'Première', 'Terminale'], $names);
+    }
+
+    public function test_formation_has_no_default_levels(): void
+    {
+        $this->assertSame([], SchoolLevelProvisioner::definitionsForType(School::TYPE_FORMATION));
+    }
+
+    public function test_default_levels_hint_lists_levels_for_primaire(): void
+    {
+        $hint = SchoolLevelProvisioner::defaultLevelsHintForType(School::TYPE_PRIMAIRE);
+
+        $this->assertStringContainsString('CI', $hint);
+        $this->assertStringContainsString('CM2', $hint);
+        $this->assertStringNotContainsString('6ème', $hint);
+    }
 }

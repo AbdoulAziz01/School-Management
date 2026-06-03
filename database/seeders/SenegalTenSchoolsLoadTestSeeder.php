@@ -141,8 +141,8 @@ class SenegalTenSchoolsLoadTestSeeder extends Seeder
         $this->command->line("  Élèves / étudiants : {$studentCount}");
         $this->command->line("  Enseignants : {$teacherCount}");
         $this->command->line("  Notes : {$gradeCount}");
-        $this->command->line('  Année complète (notes) : 2024-2025 (clôturée)');
-        $this->command->line('  Année courante (vide) : 2025-2026');
+        $this->command->line('  Année complète (notes + élèves) : 2024-2025 (clôturée)');
+        $this->command->line('  Année courante : 2025-2026 (classes + profs, élèves via « Passages en classe supérieure »)');
         $this->command->newLine();
         $this->command->info('  Super admin : '.env('SUPER_ADMIN_EMAIL').' / (mot de passe .env)');
         $this->command->info('  Admins établissement & élèves : mot de passe `password`');

@@ -3,8 +3,8 @@
         /* ===== DESIGN SIDEBAR AMBRE & CUIVRE ===== */
         #sidebar {
             background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%) !important;
-            border-right: none !important;
-            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3) !important;
+            border-right: 1px solid rgba(251, 191, 36, 0.12) !important;
+            box-shadow: none !important;
         }
         
         /* Logo avec effet néon */
@@ -346,23 +346,6 @@
         </div>
     </div>
     
-    <!-- User Card - Format Horizontal Compact -->
-    <div class="user-card ">
-        <div class="user-avatar">
-            {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
-        </div>
-        <div class="user-info">
-            <h6>{{ Auth::user()->name }}</h6>
-            <span class="badge-admin">
-                @if(Auth::user()->isSurveillant())
-                    <span class="cown-icon">🛡️</span> Surveillant
-                @else
-                    Admin
-                @endif
-            </span>
-        </div>
-    </div>
-    
     <div class="menu-section">
         <i class="fas fa-th-large me-1"></i> Menu Principal
     </div>
@@ -433,6 +416,14 @@
             <a href="{{ route('admin.academic-years.index') }}" class="nav-link {{ request()->routeIs('admin.academic-years.*') ? 'active' : '' }}">
                 <i class="fas fa-calendar-check"></i>
                 <span>Années scolaires</span>
+            </a>
+        </li>
+
+        <!-- Rapports et exports -->
+        <li class="nav-item">
+            <a href="{{ route('admin.reports.index') }}" class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+                <i class="fas fa-file-export"></i>
+                <span>Rapports</span>
             </a>
         </li>
 

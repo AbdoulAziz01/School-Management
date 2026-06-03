@@ -75,14 +75,6 @@
 @endpush
 
 @section('content')
-<div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-    @include('partials.dashboard-year-filter', [
-        'action' => route('student.dashboard'),
-        'academicYears' => $academicYears ?? collect(),
-        'selectedYear' => $selectedYear ?? null,
-    ])
-</div>
-
 @if(isset($selectedYear) && !($isSelectedYearCurrent ?? true))
     <div class="alert alert-light border py-2 small mb-3">
         <i class="fas fa-info-circle me-1 text-muted"></i>

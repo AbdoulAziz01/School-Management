@@ -3,16 +3,9 @@
 @section('title', 'Tableau de bord - Enseignant')
 
 @section('content')
-<div class="mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-    <div>
-        <h1 class="mb-0 h3">Tableau de bord</h1>
-        <p class="text-muted mb-0">Bienvenue, {{ $teacher->name }}</p>
-    </div>
-    @include('partials.dashboard-year-filter', [
-        'action' => route('teacher.dashboard'),
-        'academicYears' => $academicYears ?? collect(),
-        'selectedYear' => $selectedYear ?? null,
-    ])
+<div class="mb-4">
+    <h1 class="mb-0 h3">Tableau de bord</h1>
+    <p class="text-muted mb-0">Bienvenue, {{ $teacher->name }}</p>
 </div>
 
 @if($gradesLocked ?? false)

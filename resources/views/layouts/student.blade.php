@@ -60,7 +60,15 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3);
+            box-shadow: none;
+            border-right: 1px solid rgba(251, 191, 36, 0.12);
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            display: none;
+            width: 0;
         }
         
         .sidebar-header {
@@ -335,71 +343,14 @@
         /* Main Content */
         .main-content {
             margin-left: var(--sidebar-width);
-            width: calc(100% - var(--sidebar-width));
+            width: calc(100vw - var(--sidebar-width));
+            max-width: calc(100vw - var(--sidebar-width));
             min-height: 100vh;
+            overflow-x: hidden;
         }
-        
-        /* Top Navbar */
-        .top-navbar {
-            background: white;
-            padding: 15px 25px;
-            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 999;
-            border-bottom: 1px solid #fde68a;
-        }
-        
-        .top-navbar .page-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #92400e;
-            margin: 0;
-        }
-        
-        .top-navbar .navbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .user-dropdown .dropdown-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 8px;
-            transition: background 0.2s;
-            color: #92400e;
-        }
-        
-        .user-dropdown .dropdown-toggle:hover {
-            background: #fef3c7;
-        }
-        
-        .user-dropdown .user-avatar-sm {
-            width: 35px;
-            height: 35px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: #1c1917;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        /* Content Area */
-        .content-area {
-            padding: 25px;
-            padding-bottom: 50px;
+
+        .portal-page-body {
+            padding: 1.5rem 1.5rem 2rem;
         }
         
         /* Cards */
@@ -486,35 +437,6 @@
             color: #b45309;
         }
         
-        /* Mobile Header */
-        .mobile-header {
-            display: none;
-            background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
-            color: #fbbf24;
-            padding: 15px 20px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-        
-        .mobile-header .menu-toggle {
-            background: none;
-            border: none;
-            color: #fbbf24;
-            font-size: 1.5rem;
-            padding: 0;
-            cursor: pointer;
-        }
-        
-        .mobile-header h5 {
-            margin: 0;
-            font-size: 1.1rem;
-            color: #fbbf24;
-        }
-        
         /* Responsive */
         @media (max-width: 991.98px) {
             .sidebar {
@@ -525,52 +447,21 @@
                 transform: translateX(0);
             }
             
-            .mobile-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            
             .main-content {
                 margin-left: 0;
                 width: 100%;
-            }
-            
-            .top-navbar {
-                display: none;
-            }
-            
-            .content-area {
-                padding: 15px;
-                padding-top: 80px;
-                padding-bottom: 50px;
-            }
-            
-            .sidebar-toggle {
-                display: block !important;
+                max-width: 100%;
+                padding-top: 0;
             }
 
-            .sidebar-user {
-                margin: 8px 10px;
-                padding: 8px 10px;
-            }
-
-            .user-avatar {
-                width: 34px;
-                height: 34px;
-                font-size: 0.85rem;
-            }
-
-            .sidebar-user h6 {
-                font-size: 0.8rem;
+            .portal-page-body {
+                padding: 1rem 0.85rem 1.5rem;
             }
         }
         
         @media (max-width: 576px) {
-            .content-area {
-                padding: 10px;
-                padding-top: 75px;
-                padding-bottom: 40px;
+            .portal-page-body {
+                padding: 0.75rem 0.65rem 1.25rem;
             }
             
             .card-body {
@@ -584,15 +475,6 @@
             h1, .h1 { font-size: 1.5rem; }
             h2, .h2 { font-size: 1.3rem; }
             h3, .h3 { font-size: 1.15rem; }
-        }
-        
-        .sidebar-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.25rem;
-            color: #92400e;
-            cursor: pointer;
         }
         
         /* Overlay for mobile */
@@ -611,17 +493,9 @@
             display: block;
         }
     </style>
+    @include('partials.portal-top-navbar-styles')
 </head>
 <body>
-    <!-- Mobile Header -->
-    <div class="mobile-header">
-        <button class="menu-toggle" id="sidebarToggleMobile">
-            <i class="fas fa-bars"></i>
-        </button>
-        <h5><i class="fas fa-graduation-cap me-2"></i>Espace Élève</h5>
-        <div style="width: 24px;"></div>
-    </div>
-    
     <div class="wrapper">
         <!-- Sidebar Overlay (Mobile) -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -639,29 +513,6 @@
                 <div class="logo-text">
                     <h3>{{ $schoolDisplayName ?? 'Mon établissement' }}</h3>
                     <small>via {{ $platformName }} · Élève</small>
-                </div>
-            </div>
-            
-            <div class="sidebar-user">
-                <div class="user-avatar">
-                    {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
-                </div>
-                <div class="user-info">
-                    <h6>{{ Auth::user()->name ?? 'Utilisateur' }}</h6>
-                    <div class="sidebar-user-meta">
-                        <small class="role-badge"><i class="fas fa-user-graduate"></i> Élève</small>
-                        @if(($studentSidebarClassLabel ?? 'Non assigné') !== 'Non assigné')
-                            <span class="sidebar-user-class-tag">{{ $studentSidebarClassLabel }}</span>
-                        @endif
-                    </div>
-                    @if($studentSidebarYear ?? null)
-                        @php
-                            $yearShort = $studentSidebarYear->start_date
-                                ? $studentSidebarYear->start_date->format('Y').'/'.($studentSidebarYear->end_date?->format('Y') ?? '…')
-                                : $studentSidebarYear->name;
-                        @endphp
-                        <span class="sidebar-user-year">{{ $yearShort }}</span>
-                    @endif
                 </div>
             </div>
             
@@ -707,39 +558,14 @@
         
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Top Navbar -->
-            <div class="top-navbar">
-                <div class="d-flex align-items-center">
-                    <button class="sidebar-toggle me-3" id="sidebarToggle">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <h1 class="page-title">@yield('title', 'Tableau de bord')</h1>
-                </div>
-                
-                <div class="navbar-actions">
-                    <div class="dropdown user-dropdown">
-                        <button class="dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <div class="user-avatar-sm">
-                                {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
-                            </div>
-                            <span class="d-none d-md-inline">{{ Auth::user()->name ?? 'Utilisateur' }}</span>
-                            <i class="fas fa-chevron-down ms-1" style="font-size: 0.7rem;"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="{{ route('student.profile.index') }}"><i class="fas fa-user me-2"></i>Mon profil</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a href="{{ route('logout.get') }}" class="dropdown-item text-danger">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Content Area -->
-            <div class="content-area">
+            @include('partials.portal-top-navbar', [
+                'portalScope' => 'student',
+                'portalProfileRoute' => route('student.profile.index'),
+                'portalRoleLabel' => 'Élève',
+                'portalShowMenuToggle' => true,
+            ])
+
+            <div class="portal-page-body">
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
@@ -776,16 +602,14 @@
     
     <script>
         // Sidebar Toggle for Mobile
-        var sidebarToggle = document.getElementById('sidebarToggle');
-        var sidebarToggleMobile = document.getElementById('sidebarToggleMobile');
-        
+        var portalSidebarToggle = document.getElementById('portalSidebarToggle');
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
             document.getElementById('sidebarOverlay').classList.toggle('active');
         }
-        
-        if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
-        if (sidebarToggleMobile) sidebarToggleMobile.addEventListener('click', toggleSidebar);
+
+        if (portalSidebarToggle) portalSidebarToggle.addEventListener('click', toggleSidebar);
         
         document.getElementById('sidebarOverlay')?.addEventListener('click', function() {
             document.getElementById('sidebar').classList.remove('active');
@@ -810,7 +634,7 @@
         });
     </script>
     
-    @include('partials.botpress-webchat')
+    @include('partials.ai-agent-widget')
     <script src="{{ asset('js/form-draft-autosave.js') }}"></script>
     @stack('scripts')
 </body>

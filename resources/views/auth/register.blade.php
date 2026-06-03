@@ -296,6 +296,5 @@
         }
     });
     </script>
-    @include('partials.botpress-webchat')
 </body>
 </html>

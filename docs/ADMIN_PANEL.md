@@ -110,7 +110,7 @@ public function store(Request $request)
 
 #### Clôture
 - Archivage des données de l'année
-- Génération des rapports de fin d'année
+- **Rapports** : menu Admin → **Rapports** (`/admin/reports`) — bulletins PDF par classe, rapport de fin d'année PDF, exports CSV (synthèse, notes)
 
 ## 🔄 Workflow d'Inscription
 

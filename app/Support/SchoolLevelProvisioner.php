@@ -37,7 +37,13 @@ class SchoolLevelProvisioner
     /** @return list<array{name: string, order: int, cycle: string, serie: null}> */
     public static function definitionsForSchool(School $school): array
     {
-        return match ($school->establishment_type) {
+        return self::definitionsForType($school->establishment_type);
+    }
+
+    /** @return list<array{name: string, order: int, cycle: string, serie: null}> */
+    public static function definitionsForType(?string $establishmentType): array
+    {
+        return match ($establishmentType) {
             School::TYPE_PRIMAIRE => self::primaireDefinitions(),
             School::TYPE_COLLEGE => array_values(array_filter(
                 self::collegeLyceeDefinitions(),
@@ -51,8 +57,36 @@ class SchoolLevelProvisioner
                 self::primaireDefinitions(),
                 self::collegeLyceeDefinitions()
             ),
+            School::TYPE_FORMATION => [],
             default => self::collegeLyceeDefinitions(),
         };
+    }
+
+    /** Texte d'aide formulaire : niveaux créés à l'enregistrement. */
+    public static function defaultLevelsHintForType(?string $establishmentType): string
+    {
+        if (! $establishmentType) {
+            return 'Choisissez un type pour afficher les niveaux par défaut.';
+        }
+
+        if ($establishmentType === School::TYPE_FORMATION) {
+            return 'Formation professionnelle : promotions et modules personnalisés (pas de niveaux CI–Terminale automatiques).';
+        }
+
+        $names = array_column(self::definitionsForType($establishmentType), 'name');
+
+        return 'Niveaux créés automatiquement : '.implode(', ', $names).'.';
+    }
+
+    /** @return array<string, string> type d'établissement => aide */
+    public static function defaultLevelsHintsByType(): array
+    {
+        $hints = [];
+        foreach (array_keys(School::ESTABLISHMENT_TYPES) as $type) {
+            $hints[$type] = self::defaultLevelsHintForType($type);
+        }
+
+        return $hints;
     }
 
     /**

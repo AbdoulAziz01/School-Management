@@ -23,7 +23,7 @@ use App\Http\Controllers\Teacher\TeacherGradesController;
 use App\Http\Controllers\Teacher\TeacherAttendanceController;
 use App\Http\Controllers\Teacher\TeacherScheduleController;
 use App\Http\Controllers\Teacher\TeacherProfileController;
-use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Admin\ReportController;
 
 // Page d'accueil
 Route::get('/', function () {
@@ -290,21 +290,14 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         ->name('admin.schedules.store');
     Route::delete('/schedules/{schedule}', [\App\Http\Controllers\Admin\ScheduleController::class, 'destroy'])
         ->name('admin.schedules.destroy');
-});
 
-// Routes du Chatbot IA - Protégées par authentification
-Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
-    // Page du chat
-    Route::get('/', [ChatController::class, 'index'])->name('index');
-    
-    // Envoyer un message
-    Route::post('/send', [ChatController::class, 'sendMessage'])->name('send');
-    
-    // Vérification de l'état du service
-    Route::get('/health', [ChatController::class, 'healthCheck'])->name('health');
-    
-    // Schéma de la BDD (admin uniquement)
-    Route::get('/schema', [ChatController::class, 'getSchema'])->name('schema');
+    // Rapports admin : PDF bulletins, fin d'année, exports CSV
+    Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
+    Route::get('/reports/semester-pdf', [ReportController::class, 'semesterBulletinsPdf'])->name('admin.reports.semester-pdf');
+    Route::get('/reports/annual-pdf', [ReportController::class, 'annualReportPdf'])->name('admin.reports.annual-pdf');
+    Route::get('/reports/semester-csv', [ReportController::class, 'semesterSummaryCsv'])->name('admin.reports.semester-csv');
+    Route::get('/reports/annual-csv', [ReportController::class, 'annualSummaryCsv'])->name('admin.reports.annual-csv');
+    Route::get('/reports/grades-csv', [ReportController::class, 'gradesCsv'])->name('admin.reports.grades-csv');
 });
 
 // En cas de route non trouvée

@@ -101,11 +101,6 @@
             @endif
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            @include('partials.dashboard-year-filter', [
-                'action' => route('student.grades'),
-                'academicYears' => $academicYears ?? collect(),
-                'selectedYear' => $selectedYear ?? null,
-            ])
             @if($grades->isNotEmpty())
                 <a href="{{ route('student.bulletin', ['academic_year_id' => $selectedYear?->id]) }}" class="btn btn-primary bulletin-btn">
                     <i class="fas fa-file-alt me-2"></i>Voir mon bulletin
