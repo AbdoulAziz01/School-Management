@@ -79,7 +79,7 @@
 </div>
 
 @if($selectedYear && !$isSelectedYearCurrent)
-    <div class="mb-3 alert alert-light border py-2 small mb-4">
+    <div class="mb-3 alert alert-light border py-2 small">
         <i class="fas fa-info-circle me-1 text-muted"></i>
         Statistiques affichées pour <strong>{{ $selectedYear->name }}</strong>.
         L'année courante est <strong>{{ $currentYear?->name ?? '—' }}</strong>.
