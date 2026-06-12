@@ -42,10 +42,10 @@
                             Le menu « Modèle LMD par défaut » sert uniquement aux nouveaux modules.
                         </p>
                     @else
-                        <p class="text-muted small mb-3">
+                        <!-- <p class="text-muted small mb-3">
                             Le catalogue standard (Français, Maths, SVT, etc.) est installé automatiquement pour votre établissement.
                             Ajustez le coefficient et les niveaux sur chaque matière ; utilisez « Ajouter » seulement pour une matière optionnelle.
-                        </p>
+                        </p> -->
                     @endif
                     
                     @if($subjects->isEmpty())
