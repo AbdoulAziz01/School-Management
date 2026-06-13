@@ -8,16 +8,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
 {
+    private const CDN_JSDELIVR   = 'https://cdn.jsdelivr.net';
+    private const CDN_CLOUDFLARE = 'https://cdnjs.cloudflare.com';
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
 
         $csp = implode('; ', [
             "default-src 'self'",
-            "script-src 'self'",
-            "style-src 'self'",
-            "img-src 'self' data:",
-            "font-src 'self'",
+            // CDN JS autorisés (Bootstrap, Chart.js, Select2, FullCalendar, Axios)
+            "script-src 'self' 'unsafe-inline' " . self::CDN_JSDELIVR,
+            // CDN CSS + inline <style> autorisés (layouts utilisent des blocs <style>)
+            "style-src 'self' 'unsafe-inline' " . self::CDN_JSDELIVR . ' ' . self::CDN_CLOUDFLARE,
+            // Font Awesome (woff2 servis depuis cdnjs)
+            "font-src 'self' " . self::CDN_CLOUDFLARE . ' data:',
+            "img-src 'self' data: blob:",
             "connect-src 'self'",
             "media-src 'none'",
             "object-src 'none'",
@@ -25,7 +31,6 @@ class SecurityHeaders
             "frame-ancestors 'none'",
             "form-action 'self'",
             "base-uri 'self'",
-            "upgrade-insecure-requests",
             "block-all-mixed-content",
         ]);
 

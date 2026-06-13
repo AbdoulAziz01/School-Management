@@ -110,10 +110,13 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
+        'email_verified_at'        => 'datetime',
         'invitation_email_sent_at' => 'datetime',
-        'password' => 'hashed',
-        'date_of_birth' => 'date',
+        'password'                 => 'hashed',
+        'date_of_birth'            => 'date',
+        'phone'                    => 'encrypted',
+        'address'                  => 'encrypted',
+        'guardian_phone'           => 'encrypted',
     ];
 
     // Relations
