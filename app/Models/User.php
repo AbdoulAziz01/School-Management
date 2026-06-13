@@ -46,18 +46,15 @@ class User extends Authenticatable
         'email',
         'password',
         'identifier',
-        'role',
-        'status',
         'class_id',
         'last_promotion_academic_year_id',
         'promotion_source_class_id',
         'date_of_birth',
         'phone',
         'address',
-        'email_verified_at',
         'invitation_email_sent_at',
-        'desired_class', // ← AJOUTÉ pour la classe souhaitée
-        'profile_photo_path', // ← AJOUTÉ pour la photo de profil
+        'desired_class',
+        'profile_photo_path',
         'city',
         'postal_code',
         'country',
@@ -65,7 +62,6 @@ class User extends Authenticatable
         'guardian_phone',
         'conduct_evaluation',
         'assiduity_comment',
-        'school_id',
     ];
     
     /**

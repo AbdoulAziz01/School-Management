@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
+use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class PendingRegistrationController extends Controller
 {
@@ -54,16 +56,16 @@ public function index()
         );
 
         $request->validate([
-            'class_id' => 'required|exists:classes,id',
+            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', TenantSchool::id())],
         ]);
 
         try {
             DB::beginTransaction();
             
-            $user->update([
+            $user->forceFill([
                 'status' => 'approved',
-                'class_id' => $request->class_id
-            ]);
+                'class_id' => $request->class_id,
+            ])->save();
             
             // Envoyer une notification à l'utilisateur
             // Mail::to($user->email)->send(new RegistrationApproved($user));

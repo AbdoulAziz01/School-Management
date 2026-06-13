@@ -106,6 +106,7 @@ class SchoolController extends Controller
         ));
 
         if ($request->hasFile('logo')) {
+            $request->validate(['logo' => 'image|mimes:jpeg,png,jpg|max:2048']);
             SchoolLogoStorage::store($school, $request->file('logo'));
         }
 
@@ -273,6 +274,7 @@ class SchoolController extends Controller
         if ($request->boolean('remove_logo')) {
             SchoolLogoStorage::clear($school);
         } elseif ($request->hasFile('logo')) {
+            $request->validate(['logo' => 'image|mimes:jpeg,png,jpg|max:2048']);
             SchoolLogoStorage::store($school, $request->file('logo'));
         }
 
@@ -385,7 +387,7 @@ class SchoolController extends Controller
     {
         $identifier = $this->nextStaffIdentifier($school->id, $role);
 
-        return User::withoutGlobalScopes()->create([
+        $staff = (new User)->forceFill([
             'name' => $data['admin_name'],
             'email' => $data['admin_email'],
             'password' => Hash::make(Str::random(32)),
@@ -396,6 +398,9 @@ class SchoolController extends Controller
             'school_id' => $school->id,
             'email_verified_at' => now(),
         ]);
+        $staff->save();
+
+        return $staff;
     }
 
     private function nextStaffIdentifier(int $schoolId, string $role): string

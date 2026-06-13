@@ -102,7 +102,7 @@ class PrimaryClassTeacherProvisioner
 
         $fn = 'Aminata';
         $ln = 'Diop';
-        $teacher = User::withoutGlobalScopes()->create([
+        $teacher = (new User)->forceFill([
             'school_id' => $school->id,
             'name' => 'Instituteur·trice — '.$fn.' '.$ln,
             'email' => $email,
@@ -113,6 +113,7 @@ class PrimaryClassTeacherProvisioner
             'status' => User::STATUS_APPROVED,
             'email_verified_at' => now(),
         ]);
+        $teacher->save();
 
         self::attachAllPrimaireSubjects($school, $teacher);
 

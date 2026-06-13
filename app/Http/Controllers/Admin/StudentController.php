@@ -252,10 +252,10 @@ class StudentController extends Controller
             $student = User::whereIn('role', User::ROLE_STUDENT_ALIASES)
                 ->findOrFail($request->student_id);
 
-            $student->update([
+            $student->forceFill([
                 'class_id' => $request->class_id,
                 'status'   => User::STATUS_APPROVED,
-            ]);
+            ])->save();
 
             DB::commit();
 
@@ -297,10 +297,10 @@ class StudentController extends Controller
         try {
             DB::beginTransaction();
 
-            $student->update([
+            $student->forceFill([
                 'class_id' => $request->class_id,
                 'status'   => User::STATUS_APPROVED,
-            ]);
+            ])->save();
 
             DB::commit();
 
@@ -381,9 +381,9 @@ class StudentController extends Controller
             }
 
             $identifier = SchoolUserIdentifier::next($schoolId, 'E');
-            $plainPassword = 'password';
+            $plainPassword = Str::password(10, symbols: false);
 
-            $student = User::withoutGlobalScopes()->create([
+            $student = (new User)->forceFill([
                 'name' => $validated['name'],
                 'email' => $validated['email'] ?? null,
                 'identifier' => $identifier,
@@ -394,6 +394,7 @@ class StudentController extends Controller
                 'class_id' => $validated['class_id'] ?? null,
                 'school_id' => $schoolId,
             ]);
+            $student->save();
 
             $student->setAdminVisiblePassword($plainPassword);
 
@@ -460,13 +461,13 @@ class StudentController extends Controller
         try {
             DB::beginTransaction();
 
-            $student->update([
+            $student->forceFill([
                 'name' => $validated['name'],
                 'email' => $validated['email'] ?? null,
                 'status' => $validated['status'],
                 'date_of_birth' => $validated['date_of_birth'],
                 'class_id' => $validated['class_id'] ?? null,
-            ]);
+            ])->save();
 
             DB::commit();
 
@@ -567,7 +568,7 @@ public function pending()
             return back()->with('error', 'Action non autorisée.');
         }
 
-        $student->update(['status' => User::STATUS_APPROVED]);
+        $student->forceFill(['status' => User::STATUS_APPROVED])->save();
 
         return back()->with('success', 'Élève approuvé avec succès.');
     }

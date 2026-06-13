@@ -94,7 +94,7 @@ class TeacherController extends Controller
 
             $identifier = SchoolUserIdentifier::next($schoolId, 'P');
 
-            $teacher = User::withoutGlobalScopes()->create([
+            $teacher = (new User)->forceFill([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'identifier' => $identifier,
@@ -107,6 +107,7 @@ class TeacherController extends Controller
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
                 'email_verified_at' => now(),
             ]);
+            $teacher->save();
 
             $this->syncTeacherTeaching(
                 $teacher,

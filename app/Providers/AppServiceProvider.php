@@ -7,8 +7,14 @@ use App\Http\View\Composers\PlatformBrandingComposer;
 use App\Http\View\Composers\SchoolBrandingComposer;
 use App\Http\View\Composers\StudentSidebarComposer;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -27,6 +33,29 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->isProduction()) {
+            URL::forceScheme('https');
+        }
+
+        Model::shouldBeStrict(! $this->app->isProduction());
+
+        DB::prohibitDestructiveCommands($this->app->isProduction());
+
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinute(5)
+                ->by($request->string('email')->lower().'|'.$request->ip())
+                ->response(fn () => response()->json(
+                    ['message' => 'Trop de tentatives. Réessayez dans quelques minutes.'],
+                    429
+                ));
+        });
+
+        RateLimiter::for('api', function (Request $request) {
+            return $request->user()
+                ? Limit::perMinute(100)->by($request->user()->id)
+                : Limit::perMinute(10)->by($request->ip());
+        });
+
         ResetPassword::toMailUsing(function (object $notifiable, string $token) {
             $url = url(route('password.reset', [
                 'token' => $token,

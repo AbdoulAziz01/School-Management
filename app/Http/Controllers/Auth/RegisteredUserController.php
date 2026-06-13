@@ -79,7 +79,7 @@ class RegisteredUserController extends Controller
 
         $identifier = SchoolUserIdentifier::next($school->id, $prefix);
 
-        $user = User::withoutGlobalScopes()->create([
+        $user = (new User)->forceFill([
             'name' => $request->name,
             'email' => $request->filled('email') ? $request->email : null,
             'password' => Hash::make($request->password),
@@ -91,6 +91,7 @@ class RegisteredUserController extends Controller
             'school_id' => $school->id,
             'email_verified_at' => now(),
         ]);
+        $user->save();
 
         if ($request->role === 'teacher' && $request->has('subjects')) {
             $user->subjects()->attach($request->subjects);
