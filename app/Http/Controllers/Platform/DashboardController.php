@@ -21,11 +21,14 @@ class DashboardController extends Controller
 
         $watchlist = PlatformMetrics::watchlistSchools(8);
 
+        $schoolGrowth = PlatformMetrics::schoolGrowthLast6Months();
+
         return view('platform.dashboard', compact(
             'stats',
             'recentSchools',
             'currentYears',
             'watchlist',
+            'schoolGrowth',
         ));
     }
 }

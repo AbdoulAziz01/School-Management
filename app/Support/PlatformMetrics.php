@@ -134,6 +134,45 @@ class PlatformMetrics
             ->get();
     }
 
+    /** Nombre cumulatif d'établissements créés sur les 6 derniers mois. */
+    public static function schoolGrowthLast6Months(): array
+    {
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $months[] = now()->startOfMonth()->subMonths($i);
+        }
+
+        $driver = \Illuminate\Support\Facades\DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            $yearExpr  = 'EXTRACT(YEAR  FROM created_at)::int';
+            $monthExpr = 'EXTRACT(MONTH FROM created_at)::int';
+        } else {
+            $yearExpr  = 'YEAR(created_at)';
+            $monthExpr = 'MONTH(created_at)';
+        }
+
+        $counts = School::selectRaw("$yearExpr as y, $monthExpr as m, COUNT(*) as total")
+            ->where('created_at', '>=', $months[0])
+            ->groupByRaw("$yearExpr, $monthExpr")
+            ->get()
+            ->keyBy(fn ($r) => $r->y . '-' . $r->m);
+
+        $cumulative = 0;
+        $baseBefore = School::where('created_at', '<', $months[0])->count();
+        $cumulative = $baseBefore;
+
+        $result = ['labels' => [], 'data' => []];
+        foreach ($months as $month) {
+            $key = $month->year . '-' . $month->month;
+            $cumulative += $counts->get($key)?->total ?? 0;
+            $result['labels'][] = $month->locale('fr')->translatedFormat('M Y');
+            $result['data'][]   = $cumulative;
+        }
+
+        return $result;
+    }
+
     public static function watchlistSchools(int $limit = 8): array
     {
         $schoolIdsWithCurrentYear = AcademicYear::withoutGlobalScopes()

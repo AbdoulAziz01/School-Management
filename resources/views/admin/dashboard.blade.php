@@ -114,7 +114,7 @@
                         <div>
                             <h6 class="stat-label">
                                 Total des classes
-                                @if($selectedYear)                                  git add .
+                                @if($selectedYear)                                  
                                     <span class="text-muted fw-normal">({{ $selectedYear->name }})</span>
                                 @endif
                             </h6>

@@ -43,6 +43,8 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
         'identifier',
@@ -55,6 +57,7 @@ class User extends Authenticatable
         'invitation_email_sent_at',
         'desired_class',
         'profile_photo_path',
+        'birth_certificate_path',
         'city',
         'postal_code',
         'country',

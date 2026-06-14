@@ -134,11 +134,11 @@ class SchoolClass extends Model
      */
     public function getDisplayNameAttribute(): string
     {
-        $this->loadMissing('level');
-
         $formatted = (string) $this->name;
         $rawName = trim((string) $this->getRawOriginal('name'));
-        $levelName = trim((string) ($this->level?->name ?? ''));
+        $levelName = $this->relationLoaded('level')
+            ? trim((string) ($this->level?->name ?? ''))
+            : '';
 
         if ($levelName === '') {
             return $formatted;

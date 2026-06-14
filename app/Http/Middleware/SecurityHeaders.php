@@ -8,8 +8,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
 {
-    private const CDN_JSDELIVR   = 'https://cdn.jsdelivr.net';
-    private const CDN_CLOUDFLARE = 'https://cdnjs.cloudflare.com';
+    private const CDN_JSDELIVR    = 'https://cdn.jsdelivr.net';
+    private const CDN_CLOUDFLARE  = 'https://cdnjs.cloudflare.com';
+    private const CDN_GOOGLE_FONT = 'https://fonts.googleapis.com';
+    private const CDN_GSTATIC     = 'https://fonts.gstatic.com';
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -19,12 +21,13 @@ class SecurityHeaders
             "default-src 'self'",
             // CDN JS autorisés (Bootstrap, Chart.js, Select2, FullCalendar, Axios)
             "script-src 'self' 'unsafe-inline' " . self::CDN_JSDELIVR,
-            // CDN CSS + inline <style> autorisés (layouts utilisent des blocs <style>)
-            "style-src 'self' 'unsafe-inline' " . self::CDN_JSDELIVR . ' ' . self::CDN_CLOUDFLARE,
-            // Font Awesome (woff2 servis depuis cdnjs)
-            "font-src 'self' " . self::CDN_CLOUDFLARE . ' data:',
+            // CDN CSS + inline <style> autorisés + Google Fonts
+            "style-src 'self' 'unsafe-inline' " . self::CDN_JSDELIVR . ' ' . self::CDN_CLOUDFLARE . ' ' . self::CDN_GOOGLE_FONT,
+            // Font Awesome (cdnjs) + Google Fonts (gstatic)
+            "font-src 'self' " . self::CDN_CLOUDFLARE . ' ' . self::CDN_GSTATIC . ' data:',
             "img-src 'self' data: blob:",
-            "connect-src 'self'",
+            // jsDelivr nécessaire pour le chargement des source maps Bootstrap
+            "connect-src 'self' " . self::CDN_JSDELIVR,
             "media-src 'none'",
             "object-src 'none'",
             "frame-src 'none'",

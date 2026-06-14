@@ -348,7 +348,7 @@ class StudentController extends Controller
      */
     public function create()
     {
-        $classes = SchoolClass::with('academicYear')
+        $classes = SchoolClass::with(['academicYear', 'level'])
             ->orderedByLevel()
             ->get()
             ->groupBy(function($class) {
@@ -364,11 +364,14 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name'  => 'required|string|max:255',
             'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')],
             'date_of_birth' => 'required|date|before:today',
             'class_id' => 'nullable|exists:classes,id',
             'status' => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
+            'photo' => ['nullable', 'image', 'max:4096'],
+            'birth_certificate' => ['nullable', 'file', 'mimes:pdf', 'max:8192'],
         ]);
 
         try {
@@ -383,8 +386,22 @@ class StudentController extends Controller
             $identifier = SchoolUserIdentifier::next($schoolId, 'E');
             $plainPassword = Str::password(10, symbols: false);
 
+            $fullName = trim($validated['first_name'].' '.$validated['last_name']);
+
+            $photoPath = null;
+            if ($request->hasFile('photo')) {
+                $photoPath = $request->file('photo')->store('students/photos', 'public');
+            }
+
+            $birthCertPath = null;
+            if ($request->hasFile('birth_certificate')) {
+                $birthCertPath = $request->file('birth_certificate')->store('students/birth_certificates', 'public');
+            }
+
             $student = (new User)->forceFill([
-                'name' => $validated['name'],
+                'name'       => $fullName,
+                'first_name' => $validated['first_name'],
+                'last_name'  => $validated['last_name'],
                 'email' => $validated['email'] ?? null,
                 'identifier' => $identifier,
                 'password' => Hash::make($plainPassword),
@@ -393,6 +410,8 @@ class StudentController extends Controller
                 'date_of_birth' => $validated['date_of_birth'],
                 'class_id' => $validated['class_id'] ?? null,
                 'school_id' => $schoolId,
+                'profile_photo_path' => $photoPath,
+                'birth_certificate_path' => $birthCertPath,
             ]);
             $student->save();
 
@@ -423,7 +442,7 @@ class StudentController extends Controller
 
         $student->load(['school']);
 
-        $classes = SchoolClass::with('academicYear')
+        $classes = SchoolClass::with(['academicYear', 'level'])
             ->orderedByLevel()
             ->get()
             ->groupBy(function($class) {
@@ -445,7 +464,8 @@ class StudentController extends Controller
         abort_unless($student->isStudent(), 404);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name'  => 'required|string|max:255',
             'email' => [
                 'nullable',
                 'string',
@@ -456,18 +476,40 @@ class StudentController extends Controller
             'date_of_birth' => 'required|date|before:today',
             'class_id' => 'nullable|exists:classes,id',
             'status' => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
+            'photo' => ['nullable', 'image', 'max:4096'],
+            'birth_certificate' => ['nullable', 'file', 'mimes:pdf', 'max:8192'],
         ]);
 
         try {
             DB::beginTransaction();
 
-            $student->forceFill([
-                'name' => $validated['name'],
+            $fullName = trim($validated['first_name'].' '.$validated['last_name']);
+
+            $updates = [
+                'name'       => $fullName,
+                'first_name' => $validated['first_name'],
+                'last_name'  => $validated['last_name'],
                 'email' => $validated['email'] ?? null,
                 'status' => $validated['status'],
                 'date_of_birth' => $validated['date_of_birth'],
                 'class_id' => $validated['class_id'] ?? null,
-            ])->save();
+            ];
+
+            if ($request->hasFile('photo')) {
+                if ($student->profile_photo_path) {
+                    \Storage::disk('public')->delete($student->profile_photo_path);
+                }
+                $updates['profile_photo_path'] = $request->file('photo')->store('students/photos', 'public');
+            }
+
+            if ($request->hasFile('birth_certificate')) {
+                if ($student->birth_certificate_path) {
+                    \Storage::disk('public')->delete($student->birth_certificate_path);
+                }
+                $updates['birth_certificate_path'] = $request->file('birth_certificate')->store('students/birth_certificates', 'public');
+            }
+
+            $student->forceFill($updates)->save();
 
             DB::commit();
 
