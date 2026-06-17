@@ -5,10 +5,21 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Grade extends Model
 {
-    use BelongsToSchool;
+    use BelongsToSchool, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['user_id', 'subject_id', 'grade', 'type', 'semester', 'coefficient'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Note {$eventName}");
+    }
 
     /**
      * Les attributs qui sont assignables en masse.

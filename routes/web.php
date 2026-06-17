@@ -291,6 +291,14 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::delete('/schedules/{schedule}', [\App\Http\Controllers\Admin\ScheduleController::class, 'destroy'])
         ->name('admin.schedules.destroy');
 
+    // Export élèves (Excel / CSV)
+    Route::get('/students/export', [StudentController::class, 'export'])
+        ->name('admin.students.export');
+
+    // Journal d'activité (Audit Log)
+    Route::get('/audit-log', [\App\Http\Controllers\Admin\AuditLogController::class, 'index'])
+        ->name('admin.audit-log.index');
+
     // Rapports admin : PDF bulletins, fin d'année, exports CSV
     Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
     Route::get('/reports/semester-pdf', [ReportController::class, 'semesterBulletinsPdf'])->name('admin.reports.semester-pdf');

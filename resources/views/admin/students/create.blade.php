@@ -91,13 +91,13 @@
                         <div class="mb-3">
                             <label for="status" class="form-label">Statut *</label>
                             <select class="form-select @error('status') is-invalid @enderror" id="status" name="status" required>
-                                <option value="{{ App\Models\User::STATUS_PENDING }}" {{ old('status', 'pending') == App\Models\User::STATUS_PENDING ? 'selected' : '' }}>
+                                <option value="{{ App\Models\User::STATUS_PENDING }}" {{ old('status', 'approved') == App\Models\User::STATUS_PENDING ? 'selected' : '' }}>
                                     En attente
                                 </option>
-                                <option value="{{ App\Models\User::STATUS_APPROVED }}" {{ old('status') == App\Models\User::STATUS_APPROVED ? 'selected' : '' }}>
+                                <option value="{{ App\Models\User::STATUS_APPROVED }}" {{ old('status', 'approved') == App\Models\User::STATUS_APPROVED ? 'selected' : '' }}>
                                     Approuvé
                                 </option>
-                                <option value="{{ App\Models\User::STATUS_REJECTED }}" {{ old('status') == App\Models\User::STATUS_REJECTED ? 'selected' : '' }}>
+                                <option value="{{ App\Models\User::STATUS_REJECTED }}" {{ old('status', 'approved') == App\Models\User::STATUS_REJECTED ? 'selected' : '' }}>
                                     Rejeté
                                 </option>
                             </select>

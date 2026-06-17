@@ -89,6 +89,7 @@
     </div>
 @endif
 
+
 @if(isset($pendingUsers) && $pendingUsers->isNotEmpty())
 <div class="card">
     <div class="card-header">
@@ -145,11 +146,10 @@
                             </td>
                             <td class="text-end">
                                 <div class="d-flex justify-content-end">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-success me-2" 
-                                            data-bs-toggle="modal" 
+                                    <button type="button"
+                                            class="btn btn-sm btn-success me-2"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#approveModal{{ $user->id }}"
-                                            data-bs-toggle="tooltip"
                                             title="Approuver et affecter à une classe">
                                         <i class="fas fa-check me-1"></i>
                                         <span class="d-none d-md-inline">Approuver</span>
@@ -172,17 +172,17 @@
                                                             <label for="class_id" class="form-label">Classe</label>
                                                             <select class="form-select" id="class_id" name="class_id" required>
                                                                 <option value="">Sélectionnez une classe</option>
-                                                                @foreach(\App\Models\SchoolClass::with('academicYear')
-                                                                    ->whereHas('academicYear', function($query) {
-                                                                        $query->where('is_current', true);
-                                                                    })
-                                                                    ->orderBy('name')
-                                                                    ->get() as $class)
+                                                                @foreach($classes as $class)
                                                                     <option value="{{ $class->id }}">
-                                                                        {{ $class->name }} ({{ $class->academicYear->name ?? 'N/A' }})
+                                                                        {{ $class->name }}
                                                                     </option>
                                                                 @endforeach
                                                             </select>
+                                                            @if($classes->isEmpty())
+                                                                <div class="mt-1 text-warning small">
+                                                                    <i class="fas fa-exclamation-triangle me-1"></i>Aucune classe disponible pour l'année courante.
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     </div>
                                                     <div class="modal-footer">
@@ -247,11 +247,25 @@
 
 @push('scripts')
 <script>
-    // Activer les tooltips
+    // Données des classes passées depuis le serveur
+    var availableClasses = @json($classes->map(fn($c) => ['id' => $c->id, 'name' => $c->name]));
+
     document.addEventListener('DOMContentLoaded', function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+        // Peupler tous les selects de classe au moment où leur modal s'ouvre
+        document.querySelectorAll('.modal[id^="approveModal"]').forEach(function(modal) {
+            modal.addEventListener('show.bs.modal', function() {
+                var select = modal.querySelector('select[name="class_id"]');
+                if (!select) return;
+
+                // Vider et repeupler
+                select.innerHTML = '<option value="">Sélectionnez une classe</option>';
+                availableClasses.forEach(function(cls) {
+                    var opt = document.createElement('option');
+                    opt.value = cls.id;
+                    opt.textContent = cls.name;
+                    select.appendChild(opt);
+                });
+            });
         });
     });
 </script>

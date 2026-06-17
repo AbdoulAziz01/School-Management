@@ -427,6 +427,14 @@
             </a>
         </li>
 
+        <!-- Journal d'activité -->
+        <li class="nav-item">
+            <a href="{{ route('admin.audit-log.index') }}" class="nav-link {{ request()->routeIs('admin.audit-log.*') ? 'active' : '' }}">
+                <i class="fas fa-history"></i>
+                <span>Journal d'activité</span>
+            </a>
+        </li>
+
         <!-- Informations de l'établissement -->
         <li class="nav-item">
             <a href="{{ route('admin.school.settings.edit') }}" class="nav-link {{ request()->routeIs('admin.school.settings.*') ? 'active' : '' }}">

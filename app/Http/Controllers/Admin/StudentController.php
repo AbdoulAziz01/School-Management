@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\StudentsExport;
 use App\Http\Controllers\Controller;
 use App\Mail\StudentCredentialsMail;
 use App\Models\AcademicYear;
@@ -9,6 +10,7 @@ use App\Models\Level;
 use App\Models\SchoolClass;
 use App\Models\User;
 use App\Support\ClosedAcademicYearGuard;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Support\SchoolUserIdentifier;
 use App\Support\StudentSearch;
 use App\Support\StudentGradeEvolution;
@@ -55,6 +57,7 @@ class StudentController extends Controller
             // Récupérer les étudiants non affectés pour l'onglet d'affectation (tous statuts)
             $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
                 ->whereNull('class_id')
+                ->with('class')
                 ->orderBy('name')
                 ->get();
 
@@ -152,6 +155,7 @@ class StudentController extends Controller
         // Récupérer les élèves sans classe avec pagination (tous statuts)
         $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
             ->whereNull('class_id')
+            ->with('class')
             ->orderBy('name')
             ->paginate(15, ['*'], 'unassigned_page');
             
@@ -843,6 +847,19 @@ public function pending()
             'lmdFormulaLabel' => $useLmdGrading ? 'Pondération CC / Examen définie par module' : null,
             'passingGradeMin' => $passingGradeMin,
         ]);
+    }
+
+    /**
+     * Exporte la liste des élèves en Excel (.xlsx) ou CSV.
+     */
+    public function export(Request $request)
+    {
+        $classId = $request->integer('class_id') ?: null;
+        $format  = $request->input('format', 'xlsx');
+
+        $filename = 'eleves_' . now()->format('Ymd_His') . '.' . $format;
+
+        return Excel::download(new StudentsExport($classId), $filename);
     }
 
     private function assertCanManageStudentCredentials(): void

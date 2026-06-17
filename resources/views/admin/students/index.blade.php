@@ -141,9 +141,28 @@
 <div class="container-fluid">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <h2 class="h4 mb-0">Gestion des élèves</h2>
-        <a href="{{ route('admin.students.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i> Nouvel élève
-        </a>
+        <div class="d-flex gap-2 flex-wrap">
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-file-download me-1"></i> Exporter
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.students.export', ['format' => 'xlsx']) }}">
+                            <i class="fas fa-file-excel me-2 text-success"></i> Excel (.xlsx)
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.students.export', ['format' => 'csv']) }}">
+                            <i class="fas fa-file-csv me-2 text-warning"></i> CSV (.csv)
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <a href="{{ route('admin.students.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i> Nouvel élève
+            </a>
+        </div>
     </div>
 
     <div class="card mb-4 border-0 shadow-sm">

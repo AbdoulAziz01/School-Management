@@ -9,12 +9,23 @@ use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\BelongsToSchool;
 use App\Models\Concerns\HasAdminVisiblePassword;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use App\Models\SchoolClass;
 use App\Models\Grade;
 
 class User extends Authenticatable
 {
-    use BelongsToSchool, HasAdminVisiblePassword, HasFactory, Notifiable, HasRoles;
+    use BelongsToSchool, HasAdminVisiblePassword, HasFactory, Notifiable, HasRoles, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'first_name', 'last_name', 'email', 'role', 'status', 'class_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Élève {$eventName}");
+    }
 
     public const ROLE_SUPER_ADMIN = 'super_admin';
 

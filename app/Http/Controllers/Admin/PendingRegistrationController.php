@@ -29,7 +29,24 @@ public function pending()
         'count' => $students->count(),
     ]);
 
-    return view('admin.registrations.pending', ['pendingUsers' => $students]);
+    $classes = SchoolClass::with('academicYear')
+        ->whereHas('academicYear', function ($query) {
+            $query->where('is_current', true);
+        })
+        ->orderedByLevel()
+        ->get();
+
+    // Fallback : si aucune classe n'est liée à l'année courante, on prend toutes les classes de l'école
+    if ($classes->isEmpty()) {
+        $classes = SchoolClass::with('academicYear')
+            ->orderedByLevel()
+            ->get();
+    }
+
+    return view('admin.registrations.pending', [
+        'pendingUsers' => $students,
+        'classes' => $classes,
+    ]);
 }
 
 /**
@@ -55,9 +72,13 @@ public function index()
             'Inscription introuvable ou non éligible.'
         );
 
-        $request->validate([
-            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', TenantSchool::id())],
-        ]);
+        $schoolId = TenantSchool::id() ?? auth()->user()?->school_id;
+
+        $classRule = $schoolId
+            ? Rule::exists('classes', 'id')->where('school_id', $schoolId)
+            : 'exists:classes,id';
+
+        $request->validate(['class_id' => ['required', $classRule]]);
 
         try {
             DB::beginTransaction();
