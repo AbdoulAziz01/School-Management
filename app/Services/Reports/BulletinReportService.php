@@ -108,6 +108,7 @@ class BulletinReportService
         }
 
         return [
+            'student_id' => $student->id,
             'student' => [
                 'name' => $student->name,
                 'identifier' => $student->identifier ?? '-',

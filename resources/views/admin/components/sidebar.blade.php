@@ -359,18 +359,6 @@
             </a>
         </li>
         
-        <!-- Inscriptions en attente -->
-        <li class="nav-item">
-            <a href="{{ route('admin.registrations.pending') }}" class="nav-link {{ request()->routeIs('admin.registrations.pending') ? 'active' : '' }}">
-                <i class="fas fa-user-plus"></i>
-                <span>Inscriptions</span>
-                @php $pendingCount = \App\Models\User::where('status', 'pending')->count(); @endphp
-                @if($pendingCount > 0)
-                    <span class="badge-notif">{{ $pendingCount }}</span>
-                @endif
-            </a>
-        </li>
-        
         <!-- Gestion des élèves -->
         <li class="nav-item">
             <a href="{{ route('admin.students.index') }}" class="nav-link {{ request()->routeIs('admin.students.*') ? 'active' : '' }}">

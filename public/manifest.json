@@ -2,7 +2,7 @@
     "name": "EduManager",
     "short_name": "EduManager",
     "description": "Application de gestion scolaire",
-    "start_url": "/",
+    "start_url": "/admin",
     "display": "standalone",
     "background_color": "#1c1917",
     "theme_color": "#f59e0b",

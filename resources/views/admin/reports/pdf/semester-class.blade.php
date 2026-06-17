@@ -22,6 +22,9 @@
         .summary strong { color: #1a5f2a; }
         .stats { font-size: 9px; color: #444; margin-top: 6px; }
         .footer-note { font-size: 8px; color: #666; text-align: center; margin-top: 12px; }
+        .qr-block { position: absolute; right: 16px; top: 16px; text-align: center; }
+        .qr-block img { width: 80px; height: 80px; }
+        .qr-block p { font-size: 6px; color: #888; margin: 2px 0 0; }
     </style>
 </head>
 <body>
@@ -36,7 +39,15 @@
         $totalCoef = collect($data)->sum('coefficient');
         $totalPoints = collect($data)->sum('points');
     @endphp
-    <div class="page">
+    <div class="page" style="position:relative;">
+        {{-- QR Code d'authentification --}}
+        @if(!empty($bulletin['qrCode']))
+        <div class="qr-block">
+            <img src="data:image/png;base64,{{ $bulletin['qrCode'] }}" alt="QR Vérification">
+            <p>Scan pour vérifier</p>
+        </div>
+        @endif
+
         <div class="header">
             <h1>{{ $schoolName }}</h1>
             <p>BULLETIN SEMESTRIEL — Semestre {{ $semester }} — {{ $academicYear->name }}</p>

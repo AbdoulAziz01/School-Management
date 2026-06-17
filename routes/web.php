@@ -30,6 +30,10 @@ Route::get('/', function () {
     return view('welcome-school');
 })->name('home');
 
+// Vérification publique d'un bulletin (lien QR Code — aucune auth requise)
+Route::get('/bulletin/verify', [\App\Http\Controllers\BulletinVerifyController::class, 'show'])
+    ->name('bulletin.verify');
+
 // Routes d'authentification
 require __DIR__.'/auth.php';
 

@@ -9,6 +9,8 @@ use App\Services\Reports\BulletinReportService;
 use App\Support\DashboardAcademicYearContext;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
@@ -43,6 +45,21 @@ class ReportController extends Controller
 
         $bulletins = $this->reports->buildClassSemesterBulletins($class, $year, $semester);
         $schoolName = config('app.school_name', 'Établissement scolaire');
+
+        // Générer URL signée + QR code PNG base64 pour chaque bulletin
+        foreach ($bulletins as &$bulletin) {
+            $verifyUrl = URL::signedRoute('bulletin.verify', [
+                'student_id'       => $bulletin['student_id'],
+                'class_id'         => $class->id,
+                'academic_year_id' => $year->id,
+                'semester'         => $semester,
+            ]);
+            $bulletin['verifyUrl'] = $verifyUrl;
+            $bulletin['qrCode']    = base64_encode(
+                QrCode::format('png')->size(120)->errorCorrection('H')->generate($verifyUrl)
+            );
+        }
+        unset($bulletin);
 
         $pdf = Pdf::loadView('admin.reports.pdf.semester-class', [
             'bulletins' => $bulletins,

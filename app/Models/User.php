@@ -76,6 +76,7 @@ class User extends Authenticatable
         'guardian_phone',
         'conduct_evaluation',
         'assiduity_comment',
+        'status',
     ];
     
     /**
