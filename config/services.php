@@ -46,4 +46,18 @@ return [
         'passing_grade_min' => env('SCHOOL_BOT_PASSING_GRADE_MIN', 10.0),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | UltraMsg — Gateway WhatsApp (notifications parents inclusives)
+    |--------------------------------------------------------------------------
+    | ULTRAMSG_INSTANCE_ID  → ID de l'instance UltraMsg (ex: instance12345)
+    | ULTRAMSG_TOKEN        → Token API UltraMsg
+    |
+    | Pour Twilio : remplacer le endpoint dans NotificationService.php
+    */
+    'ultramsg' => [
+        'instance_id' => env('ULTRAMSG_INSTANCE_ID'),
+        'token'       => env('ULTRAMSG_TOKEN'),
+    ],
+
 ];

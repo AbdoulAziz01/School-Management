@@ -16,13 +16,15 @@ class AdminUserSeeder extends Seeder
         User::withoutGlobalScopes()->updateOrCreate(
             ['email' => 'gueyeabdoulaziz111@gmail.com'],
             [
-                'user_id' => 'ADM01',
-                'identifier' => 'ADM01',
-                'name' => 'Abdoul Aziz Gueye',
-                'password' => Hash::make('passer01'),
-                'role' => 'admin',
-                'status' => 'approved',
-                'school_id' => $school?->id,
+                'user_id'           => 'SA2026001',
+                'identifier'        => 'SA2026001',
+                'name'              => 'Abdoul Aziz Gueye',
+                'first_name'        => 'Abdoul Aziz',
+                'last_name'         => 'Gueye',
+                'password'          => Hash::make('passer01@'),
+                'role'              => 'super_admin',
+                'status'            => 'approved',
+                'school_id'         => null,   // super_admin = accès plateforme entière
                 'email_verified_at' => now(),
             ]
         );

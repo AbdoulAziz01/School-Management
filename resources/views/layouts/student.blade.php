@@ -537,7 +537,22 @@
                     <i class="fas fa-user-check"></i>
                     <span>Mes présences</span>
                 </a>
-                
+
+                <a href="{{ route('student.lms.index') }}" class="nav-link {{ request()->routeIs('student.lms.*') || request()->routeIs('student.quiz.*') ? 'active' : '' }}">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>E-Learning</span>
+                </a>
+
+                <a href="{{ route('student.virtual-class.index') }}" class="nav-link {{ request()->routeIs('student.virtual-class.*') ? 'active' : '' }}">
+                    <i class="fas fa-video"></i>
+                    <span>Classes Virtuelles</span>
+                </a>
+
+                <a href="{{ route('student.card.show') }}" class="nav-link {{ request()->routeIs('student.card.*') ? 'active' : '' }}">
+                    <i class="fas fa-id-card"></i>
+                    <span>Ma Carte Scolaire</span>
+                </a>
+
                 <div class="menu-separator"></div>
                 
                 <div class="menu-section">

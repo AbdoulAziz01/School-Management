@@ -326,11 +326,56 @@
         }
         
         /* Responsive Styles */
+        /* ── Bouton toggle desktop ───────────────────────────────────── */
+        @media (min-width: 992px) {
+            .sidebar-toggle-btn {
+                position: fixed;
+                top: 50%;
+                transform: translateY(-50%);
+                left: calc(var(--sidebar-width) - 14px);
+                z-index: 1060;
+                width: 28px; height: 28px;
+                border-radius: 50%;
+                background: #f59e0b;
+                color: #1c1917;
+                border: 2.5px solid #fff;
+                cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
+                box-shadow: 0 2px 10px rgba(0,0,0,.30);
+                font-size: 10px; font-weight: 800;
+                transition: left 0.4s cubic-bezier(0.4,0,0.2,1), background .18s;
+                padding: 0;
+            }
+            .sidebar-toggle-btn:hover { background: #d97706; }
+
+            /* État réduit — sidebar cachée */
+            body.sidebar-hidden .sidebar {
+                transform: translateX(-100%);
+            }
+            body.sidebar-hidden .main-content {
+                margin-left: 0 !important;
+                width:     100vw !important;
+                max-width: 100vw !important;
+            }
+            body.sidebar-hidden .sidebar-toggle-btn {
+                left: 6px;
+            }
+
+            /* Transition douce sur le contenu */
+            .main-content {
+                transition: margin-left 0.4s cubic-bezier(0.4,0,0.2,1),
+                            width       0.4s cubic-bezier(0.4,0,0.2,1),
+                            max-width   0.4s cubic-bezier(0.4,0,0.2,1);
+            }
+        }
+
         @media (max-width: 991.98px) {
+            .sidebar-toggle-btn { display: none !important; }
+
             .sidebar {
                 transform: translateX(-100%);
             }
-            
+
             .sidebar.active {
                 transform: translateX(0);
             }
@@ -503,6 +548,11 @@
     
     <!-- Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Bouton toggle sidebar desktop -->
+    <button id="desktopSidebarToggle" class="sidebar-toggle-btn" title="Réduire/Afficher le menu">
+        <i class="fas fa-chevron-left" id="deskToggleIcon"></i>
+    </button>
     
     <div class="wrapper d-flex">
         <!-- Sidebar -->
@@ -580,6 +630,35 @@
                 }
             });
         });
+
+        // ── Toggle sidebar desktop ───────────────────────────────────
+        (function () {
+            var btn  = document.getElementById('desktopSidebarToggle');
+            var icon = document.getElementById('deskToggleIcon');
+            if (!btn) return;
+
+            var hidden = localStorage.getItem('adminSidebarHidden') === '1';
+
+            function applyState(animate) {
+                if (hidden) {
+                    document.body.classList.add('sidebar-hidden');
+                    icon.className = 'fas fa-chevron-right';
+                    btn.title = 'Afficher le menu';
+                } else {
+                    document.body.classList.remove('sidebar-hidden');
+                    icon.className = 'fas fa-chevron-left';
+                    btn.title = 'Réduire le menu';
+                }
+            }
+
+            applyState(); // restaurer l'état au chargement
+
+            btn.addEventListener('click', function () {
+                hidden = !hidden;
+                localStorage.setItem('adminSidebarHidden', hidden ? '1' : '0');
+                applyState();
+            });
+        })();
 
         // Conserver la position de scroll du sidebar entre les pages
         (function () {

@@ -27,6 +27,12 @@ class User extends Authenticatable
             ->setDescriptionForEvent(fn (string $eventName) => "Élève {$eventName}");
     }
 
+    // Langues de communication parent (pour les notifications WhatsApp inclusives)
+    public const PARENT_LANG_FR_TEXT  = 'fr_text';
+    public const PARENT_LANG_WO_AUDIO = 'wo_audio';
+    public const PARENT_LANG_PU_AUDIO = 'pu_audio';
+    public const PARENT_LANGS = [self::PARENT_LANG_FR_TEXT, self::PARENT_LANG_WO_AUDIO, self::PARENT_LANG_PU_AUDIO];
+
     public const ROLE_SUPER_ADMIN = 'super_admin';
 
     // Constantes pour les rôles (alignées avec l'enum DB après migration 2026_01_12)
@@ -77,6 +83,9 @@ class User extends Authenticatable
         'conduct_evaluation',
         'assiduity_comment',
         'status',
+        'parent_name',
+        'parent_whatsapp',
+        'parent_lang',
     ];
     
     /**
@@ -129,9 +138,10 @@ class User extends Authenticatable
         'invitation_email_sent_at' => 'datetime',
         'password'                 => 'hashed',
         'date_of_birth'            => 'date',
-        'phone'                    => 'encrypted',
-        'address'                  => 'encrypted',
-        'guardian_phone'           => 'encrypted',
+        'phone'            => 'encrypted',
+        'address'          => 'encrypted',
+        'guardian_phone'   => 'encrypted',
+        'parent_whatsapp'  => 'encrypted',
     ];
 
     // Relations

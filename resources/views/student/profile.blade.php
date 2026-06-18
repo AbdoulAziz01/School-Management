@@ -16,15 +16,42 @@
                     <h6 class="m-0 font-weight-bold text-primary">Photo de profil</h6>
                 </div>
                 <div class="card-body text-center">
-                    <div class="mb-4">
-                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto" 
-                             style="width: 150px; height: 150px; font-size: 60px; color: white;">
-                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                    <form method="POST" action="{{ route('student.profile.update-photo') }}" enctype="multipart/form-data" id="photo-form">
+                        @csrf
+                        <input type="file" id="photo-input" name="photo" accept="image/jpeg,image/png,image/jpg"
+                               style="display:none" onchange="document.getElementById('photo-form').submit()">
+
+                        <div class="mb-3 position-relative d-inline-block">
+                            @if($user->profile_photo_path)
+                                <img src="{{ Storage::url($user->profile_photo_path) }}"
+                                     alt="Photo de profil"
+                                     class="rounded-circle border border-3"
+                                     style="width:150px;height:150px;object-fit:cover;border-color:#f59e0b!important;">
+                            @else
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto"
+                                     style="width:150px;height:150px;font-size:60px;color:white;">
+                                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                                </div>
+                            @endif
+                            {{-- Badge caméra cliquable --}}
+                            <button type="button"
+                                    onclick="document.getElementById('photo-input').click()"
+                                    class="position-absolute bottom-0 end-0 btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width:36px;height:36px;background:#f59e0b;border:2px solid #fff;"
+                                    title="Changer la photo">
+                                <i class="fas fa-camera" style="font-size:.75rem;color:#1c1917;"></i>
+                            </button>
                         </div>
-                    </div>
-                    <h5 class="font-weight-bold">{{ $user->name }}</h5>
-                    <p class="text-muted">{{ $user->email }}</p>
-                    <button class="btn btn-primary btn-sm">Changer la photo</button>
+
+                        <h5 class="font-weight-bold mt-1">{{ $user->name }}</h5>
+                        <p class="text-muted mb-2">{{ $user->email }}</p>
+                        <button type="button"
+                                onclick="document.getElementById('photo-input').click()"
+                                class="btn btn-sm"
+                                style="background:#f59e0b;color:#1c1917;font-weight:700;">
+                            <i class="fas fa-upload me-1"></i> Changer la photo
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -41,7 +68,8 @@
                         </p>
                         <p class="card-text">
                             <i class="fas fa-user-tie me-2"></i> 
-                            {{ $user->schoolClass->teacher ? $user->schoolClass->teacher->name : 'Professeur non assigné' }}
+                            @php $mainTeacher = $user->schoolClass->teachers->first(); @endphp
+                            {{ $mainTeacher?->name ?? 'Professeur non assigné' }}
                         </p>
                     @else
                         <p class="text-muted">Aucune classe assignée</p>
@@ -90,10 +118,10 @@
                                 @enderror
                             </div>
                             <div class="col-md-6">
-                                <label for="birthdate" class="form-label">Date de naissance</label>
-                                <input type="date" class="form-control @error('birthdate') is-invalid @enderror" 
-                                       id="birthdate" name="birthdate" value="{{ old('birthdate', $user->birthdate ? $user->birthdate->format('Y-m-d') : '') }}">
-                                @error('birthdate')
+                                <label for="date_of_birth" class="form-label">Date de naissance</label>
+                                <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror"
+                                       id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth', $user->date_of_birth?->format('Y-m-d')) }}">
+                                @error('date_of_birth')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

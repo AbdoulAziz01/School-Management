@@ -11,6 +11,8 @@ use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\SendWhatsAppNotification;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 
 class TeacherAttendanceController extends Controller
@@ -127,6 +129,22 @@ class TeacherAttendanceController extends Controller
                 ]);
             }
         });
+
+        // ── Notifications WhatsApp aux parents des élèves absents ────────────
+        $absentIds = collect($request->attendances)
+            ->filter(fn (array $a) => ($a['status'] ?? '') === 'absent')
+            ->pluck('user_id');
+
+        if ($absentIds->isNotEmpty()) {
+            User::whereIn('id', $absentIds)
+                ->whereNotNull('parent_whatsapp')
+                ->get()
+                ->each(fn (User $student) => SendWhatsAppNotification::dispatchAfterResponse(
+                    $student,
+                    NotificationService::EVENT_ABSENCE,
+                    ['date' => now()->format('d/m/Y')],
+                ));
+        }
 
         return redirect()->route('teacher.attendance.index', [
             'class_id' => $request->class_id,

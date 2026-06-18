@@ -68,6 +68,7 @@ class School extends Model
         'formation_lmd_settings',
         'formation_use_lmd',
         'login_credentials_snapshot',
+        'card_settings',
     ];
 
     protected $casts = [
@@ -76,6 +77,7 @@ class School extends Model
         'formation_lmd_settings' => 'array',
         'formation_use_lmd' => 'boolean',
         'login_credentials_snapshot' => 'array',
+        'card_settings' => 'array',
     ];
 
     protected $attributes = [

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Assignment extends Model
 {
@@ -13,6 +14,7 @@ class Assignment extends Model
     protected $fillable = [
         'title',
         'description',
+        'instructions',
         'due_date',
         'subject_id',
         'class_id',
@@ -25,7 +27,7 @@ class Assignment extends Model
 
     protected $casts = [
         'due_date' => 'datetime',
-        'points' => 'integer',
+        'points'   => 'integer',
     ];
 
     public function subject(): BelongsTo
@@ -41,5 +43,15 @@ class Assignment extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class);
+    }
+
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
     }
 }

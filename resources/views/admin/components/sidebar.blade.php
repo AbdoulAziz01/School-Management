@@ -415,6 +415,22 @@
             </a>
         </li>
 
+        <!-- E-Learning / LMS -->
+        <li class="nav-item">
+            <a href="{{ route('admin.lms.index') }}" class="nav-link {{ request()->routeIs('admin.lms.*') ? 'active' : '' }}">
+                <i class="fas fa-graduation-cap"></i>
+                <span>E-Learning</span>
+            </a>
+        </li>
+
+        <!-- Cartes Scolaires -->
+        <li class="nav-item">
+            <a href="{{ route('admin.cards.index') }}" class="nav-link {{ request()->routeIs('admin.cards.*') ? 'active' : '' }}">
+                <i class="fas fa-id-card"></i>
+                <span>Cartes Scolaires</span>
+            </a>
+        </li>
+
         <!-- Journal d'activité -->
         <li class="nav-item">
             <a href="{{ route('admin.audit-log.index') }}" class="nav-link {{ request()->routeIs('admin.audit-log.*') ? 'active' : '' }}">

@@ -24,7 +24,7 @@ class StudentProfileController extends Controller
         }
 
         // Charger les données complètes de l'utilisateur
-        $user->load(['schoolClass', 'schoolClass.level']);
+        $user->load(['schoolClass', 'schoolClass.level', 'schoolClass.teachers']);
 
         return view('student.profile', compact('user'));
     }
@@ -54,7 +54,8 @@ class StudentProfileController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:20'],
-            'country' => ['nullable', 'string', 'max:100'],
+            'country'       => ['nullable', 'string', 'max:100'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
         ]);
 
         if (array_key_exists('email', $validated) && $validated['email'] === '') {
@@ -63,7 +64,7 @@ class StudentProfileController extends Controller
 
         $user->update($validated);
 
-        return redirect()->route('student.profile')
+        return redirect()->route('student.profile.index')
             ->with('success', 'Votre profil a été mis à jour avec succès.');
     }
 

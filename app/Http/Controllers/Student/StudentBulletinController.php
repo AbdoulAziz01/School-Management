@@ -17,6 +17,7 @@ use App\Support\StudentClassContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use App\Services\StudentClassPromotionService;
 
 class StudentBulletinController extends Controller
@@ -80,6 +81,17 @@ class StudentBulletinController extends Controller
 
         $schoolName = config('app.school_name', 'Établissement scolaire');
 
+        // URL signée pour la vérification via QR code (validité 1 an)
+        $verifyUrl = null;
+        if ($class) {
+            $verifyUrl = URL::signedRoute('bulletin.verify', [
+                'student_id'      => $user->id,
+                'class_id'        => $class->id,
+                'academic_year_id' => $academicYear->id,
+                'semester'        => $semester,
+            ]);
+        }
+
         return view('student.bulletin-senegal', compact(
             'bulletinData',
             'generalAverage',
@@ -88,7 +100,8 @@ class StudentBulletinController extends Controller
             'classStats',
             'semester',
             'academicYear',
-            'schoolName'
+            'schoolName',
+            'verifyUrl'
         ));
     }
 

@@ -290,8 +290,22 @@
                 <span>Emploi du temps</span>
             </a>
         </li>
+
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('teacher.lms.*') ? 'active' : '' }}" href="{{ route('teacher.lms.index') }}">
+                <i class="fas fa-graduation-cap"></i>
+                <span>E-Learning</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('teacher.virtual-class.*') ? 'active' : '' }}" href="{{ route('teacher.virtual-class.index') }}">
+                <i class="fas fa-video"></i>
+                <span>Classes Virtuelles</span>
+            </a>
+        </li>
     </ul>
-    
+
     <div class="menu-separator"></div>
     
     <div class="menu-section">

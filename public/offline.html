@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hors ligne — EduManager</title>
+    <style>
+        *  { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 20px;
+        }
+        .card {
+            background: #292524;
+            border: 1px solid rgba(251,191,36,.2);
+            border-radius: 20px;
+            padding: 40px 32px;
+            text-align: center;
+            max-width: 380px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,.4);
+        }
+        .icon {
+            width: 72px; height: 72px;
+            border-radius: 18px;
+            background: rgba(251,191,36,.12);
+            border: 1px solid rgba(251,191,36,.25);
+            margin: 0 auto 24px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem;
+        }
+        h1 { color: #fef3c7; font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
+        p  { color: #a8a29e; font-size: .9rem; line-height: 1.6; margin-bottom: 28px; }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #1c1917;
+            font-weight: 700;
+            padding: 12px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: .9rem;
+            cursor: pointer;
+            border: none;
+            transition: opacity .2s;
+        }
+        .btn:hover { opacity: .88; }
+        .status {
+            margin-top: 20px;
+            font-size: .75rem;
+            color: #78716c;
+        }
+        .status span {
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #dc2626;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">📡</div>
+        <h1>Vous êtes hors ligne</h1>
+        <p>
+            EduManager ne peut pas accéder au serveur.<br>
+            Les cours et ressources déjà consultés restent disponibles.
+        </p>
+        <button class="btn" onclick="window.location.reload()">
+            Réessayer la connexion
+        </button>
+        <div class="status">
+            <span><span class="dot" id="dot"></span> <span id="statusText">Hors ligne</span></span>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('online', function () {
+            document.getElementById('dot').style.background = '#16a34a';
+            document.getElementById('statusText').textContent = 'Connexion rétablie — rechargement…';
+            setTimeout(() => window.location.reload(), 1200);
+        });
+    </script>
+</body>
+</html>

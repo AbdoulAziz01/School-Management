@@ -24,6 +24,14 @@ use App\Http\Controllers\Teacher\TeacherAttendanceController;
 use App\Http\Controllers\Teacher\TeacherScheduleController;
 use App\Http\Controllers\Teacher\TeacherProfileController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Student\StudentLmsController;
+use App\Http\Controllers\Student\StudentQuizController;
+use App\Http\Controllers\Student\StudentCardController;
+use App\Http\Controllers\Student\StudentVirtualClassController;
+use App\Http\Controllers\Teacher\TeacherLmsController;
+use App\Http\Controllers\Teacher\TeacherVirtualClassController;
+use App\Http\Controllers\Admin\AdminLmsController;
+use App\Http\Controllers\Admin\AdminCardController;
 
 // Page d'accueil
 Route::get('/', function () {
@@ -33,6 +41,11 @@ Route::get('/', function () {
 // Vérification publique d'un bulletin (lien QR Code — aucune auth requise)
 Route::get('/bulletin/verify', [\App\Http\Controllers\BulletinVerifyController::class, 'show'])
     ->name('bulletin.verify');
+
+// Vérification QR carte scolaire (publique — signature Laravel requise)
+Route::get('/card/verify/{student}', [StudentCardController::class, 'verify'])
+    ->name('student.card.verify')
+    ->middleware('signed');
 
 // Routes d'authentification
 require __DIR__.'/auth.php';
@@ -122,6 +135,25 @@ Route::middleware(['auth', 'school.active', \App\Http\Middleware\StudentMiddlewa
         Route::post('/password', [StudentProfileController::class, 'updatePassword'])->name('update-password');
     });
     
+    // E-Learning / LMS
+    Route::get('/lms', [StudentLmsController::class, 'index'])->name('lms.index');
+    Route::get('/lms/lessons/{lesson}/download', [StudentLmsController::class, 'downloadLesson'])->name('lms.download');
+
+    // Quiz interactifs (max 3 tentatives)
+    Route::get('/quiz/{quiz}',                          [StudentQuizController::class, 'show'])  ->name('quiz.show');
+    Route::post('/quiz/{quiz}/start',                   [StudentQuizController::class, 'start']) ->name('quiz.start');
+    Route::get('/quiz/attempt/{attempt}',               [StudentQuizController::class, 'take'])  ->name('quiz.take');
+    Route::post('/quiz/attempt/{attempt}/submit',       [StudentQuizController::class, 'submit'])->name('quiz.submit');
+    Route::get('/quiz/attempt/{attempt}/result',        [StudentQuizController::class, 'result'])->name('quiz.result');
+
+    // Classes Virtuelles Jitsi
+    Route::get('/virtual-classes',                      [StudentVirtualClassController::class, 'index'])->name('virtual-class.index');
+    Route::get('/virtual-classes/{virtualClass}/join',  [StudentVirtualClassController::class, 'join']) ->name('virtual-class.join');
+
+    // Carte scolaire QR antifraude
+    Route::get('/card',       [StudentCardController::class, 'show']) ->name('card.show');
+    Route::get('/card/token', [StudentCardController::class, 'token'])->name('card.token');
+
     // Redirection de /student vers /student/dashboard
     Route::get('/', function () {
         return redirect()->route('student.dashboard');
@@ -162,6 +194,31 @@ Route::middleware(['auth', 'school.active', \App\Http\Middleware\TeacherMiddlewa
         Route::post('/photo', [TeacherProfileController::class, 'updatePhoto'])->name('update-photo');
     });
     
+    // E-Learning / LMS
+    Route::get('/lms', [TeacherLmsController::class, 'index'])->name('lms.index');
+    // Cours — (suite inchangée)
+    Route::get('/lms/lessons/create', [TeacherLmsController::class, 'lessonCreate'])->name('lms.lesson.create');
+    Route::post('/lms/lessons', [TeacherLmsController::class, 'lessonStore'])->name('lms.lesson.store');
+    Route::delete('/lms/lessons/{lesson}', [TeacherLmsController::class, 'lessonDestroy'])->name('lms.lesson.destroy');
+    // Devoirs
+    Route::get('/lms/assignments/create', [TeacherLmsController::class, 'assignmentCreate'])->name('lms.assignment.create');
+    Route::post('/lms/assignments', [TeacherLmsController::class, 'assignmentStore'])->name('lms.assignment.store');
+    Route::get('/lms/assignments/{assignment}/submissions', [TeacherLmsController::class, 'assignmentSubmissions'])->name('lms.assignment.submissions');
+    Route::patch('/lms/submissions/{submission}/grade', [TeacherLmsController::class, 'submissionGrade'])->name('lms.submission.grade');
+    Route::delete('/lms/assignments/{assignment}', [TeacherLmsController::class, 'assignmentDestroy'])->name('lms.assignment.destroy');
+    // Quiz
+    Route::get('/lms/quizzes/create', [TeacherLmsController::class, 'quizCreate'])->name('lms.quiz.create');
+    Route::post('/lms/quizzes', [TeacherLmsController::class, 'quizStore'])->name('lms.quiz.store');
+    Route::delete('/lms/quizzes/{quiz}', [TeacherLmsController::class, 'quizDestroy'])->name('lms.quiz.destroy');
+
+    // Classes Virtuelles Jitsi
+    Route::get('/virtual-classes',                              [TeacherVirtualClassController::class, 'index'])  ->name('virtual-class.index');
+    Route::get('/virtual-classes/create',                       [TeacherVirtualClassController::class, 'create']) ->name('virtual-class.create');
+    Route::post('/virtual-classes',                             [TeacherVirtualClassController::class, 'store'])  ->name('virtual-class.store');
+    Route::patch('/virtual-classes/{virtualClass}/toggle',      [TeacherVirtualClassController::class, 'toggle']) ->name('virtual-class.toggle');
+    Route::get('/virtual-classes/{virtualClass}/join',          [TeacherVirtualClassController::class, 'join'])   ->name('virtual-class.join');
+    Route::delete('/virtual-classes/{virtualClass}',            [TeacherVirtualClassController::class, 'destroy'])->name('virtual-class.destroy');
+
     // Redirection de /teacher vers /teacher/dashboard
     Route::get('/', function () {
         return redirect()->route('teacher.dashboard');
@@ -298,6 +355,20 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     // Export élèves (Excel / CSV)
     Route::get('/students/export', [StudentController::class, 'export'])
         ->name('admin.students.export');
+
+    // E-Learning / LMS
+    Route::get('/lms', [AdminLmsController::class, 'index'])->name('admin.lms.index');
+    Route::delete('/lms/lessons/{lesson}', [AdminLmsController::class, 'destroyLesson'])->name('admin.lms.lesson.destroy');
+    Route::delete('/lms/assignments/{assignment}', [AdminLmsController::class, 'destroyAssignment'])->name('admin.lms.assignment.destroy');
+    Route::delete('/lms/quizzes/{quiz}', [AdminLmsController::class, 'destroyQuiz'])->name('admin.lms.quiz.destroy');
+
+    // Cartes scolaires — liste élèves + aperçu + personnalisation
+    Route::prefix('cards')->name('admin.cards.')->group(function () {
+        Route::get('/',          [AdminCardController::class, 'index'])->name('index');
+        Route::get('/settings',  [AdminCardController::class, 'settings'])->name('settings');
+        Route::post('/settings', [AdminCardController::class, 'saveSettings'])->name('settings.save');
+        Route::get('/{student}', [AdminCardController::class, 'show'])->name('show');
+    });
 
     // Journal d'activité (Audit Log)
     Route::get('/audit-log', [\App\Http\Controllers\Admin\AuditLogController::class, 'index'])
