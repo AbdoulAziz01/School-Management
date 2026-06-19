@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('parent_name', 150)->nullable()->after('guardian_phone');
 
             // Numéro WhatsApp en format international : +221XXXXXXXXX
-            // Chiffré au repos via Laravel encryption (cast 'encrypted')
-            $table->string('parent_whatsapp', 30)->nullable()->after('parent_name');
+            // Chiffré au repos via Laravel encryption (cast 'encrypted') → TEXT obligatoire
+            $table->text('parent_whatsapp')->nullable()->after('parent_name');
 
             // Langue de communication préférée du parent
             // fr_text  → message texte en français (alphabétisé)

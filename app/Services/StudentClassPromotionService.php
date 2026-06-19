@@ -73,6 +73,7 @@ class StudentClassPromotionService
             ]);
         }
 
+        $student->loadMissing('schoolClass');
         $class = $contextClass ?? $student->schoolClass;
         if (! $class) {
             return array_merge($base, ['message' => 'Élève sans classe assignée.']);

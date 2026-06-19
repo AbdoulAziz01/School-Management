@@ -185,7 +185,8 @@ class ClassController extends Controller
                 $query->orderBy('name');
             },
             'teacherAssignments.teacher',
-            'teacherAssignments.subject'
+            'teacherAssignments.subject',
+            'teachers.subjects',
         ]);
         
         // Récupérer les enseignants disponibles pour l'ajout
@@ -213,7 +214,7 @@ class ClassController extends Controller
                 ->orderBy('name')
                 ->paginate(10);
         } else {
-            $assignedStudents = $class->students()->paginate(10);
+            $assignedStudents = $class->students()->with('schoolClass')->paginate(10);
         }
 
         // ========= STATISTIQUES DE LA CLASSE =========

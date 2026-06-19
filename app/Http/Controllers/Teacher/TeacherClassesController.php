@@ -43,7 +43,7 @@ class TeacherClassesController extends Controller
             
             // Si pas d'affectation de matières, récupérer les matières du prof
             if ($subjects->isEmpty()) {
-                $subjects = $teacher->subjects;
+                $subjects = $teacher->subjects()->get();
             }
             
             $classes->push([
@@ -83,7 +83,7 @@ class TeacherClassesController extends Controller
         
         $subjects = $assignments->pluck('subject')->filter();
         if ($subjects->isEmpty()) {
-            $subjects = $teacher->subjects;
+            $subjects = $teacher->subjects()->get();
         }
         
         // Récupérer les élèves de la classe

@@ -2,6 +2,20 @@
 
 @section('title', 'Emploi du temps - Enseignant')
 
+@push('styles')
+<style>
+.schedule-cell {
+    transition: background-color 0.2s, transform 0.1s;
+    cursor: pointer;
+}
+.schedule-cell:hover {
+    background-color: rgba(13, 110, 253, 0.2) !important;
+    transform: scale(1.03);
+    box-shadow: 0 2px 8px rgba(13,110,253,0.15);
+}
+</style>
+@endpush
+
 @section('content')
 <div class="mb-4">
     <h1 class="mb-0 h3">Mon Emploi du Temps</h1>
@@ -85,13 +99,16 @@
                                 <td class="p-2 text-center align-middle" style="min-width: 140px;">
                                     @if(isset($scheduleGrid[$dayName][$slot['label']]) && $scheduleGrid[$dayName][$slot['label']])
                                         @php $course = $scheduleGrid[$dayName][$slot['label']]; @endphp
-                                        <div class="p-2 rounded bg-primary bg-opacity-10">
+                                        <a href="{{ $course['class'] ? route('teacher.classes.show', $course['class']->id) : '#' }}"
+                                           class="text-decoration-none d-block p-2 rounded bg-primary bg-opacity-10 schedule-cell"
+                                           title="Voir la classe {{ $course['class']->name ?? '' }}">
                                             <strong class="text-primary d-block">{{ $course['subject']->name ?? 'N/A' }}</strong>
                                             <small class="text-muted d-block">{{ $course['class']->name ?? 'N/A' }}</small>
                                             @if($course['room'])
                                                 <small class="badge bg-secondary">{{ $course['room'] }}</small>
                                             @endif
-                                        </div>
+                                            <small class="text-info d-block mt-1" style="font-size:0.7em;"><i class="fas fa-arrow-right"></i> Voir la classe</small>
+                                        </a>
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif

@@ -283,35 +283,29 @@
                                                 @endif
                                             </div>
                                             
-                                            @if($attendance->status === 'absent' && $attendance->justification)
+                                            @if($attendance->status === 'absent' && $attendance->justification_status)
                                                 <div class="alert alert-warning p-2 mt-2 mb-0">
                                                     <div class="d-flex">
                                                         <i class="fas fa-info-circle mt-1 me-2"></i>
                                                         <div>
-                                                            <strong>Justification :</strong> 
-                                                            {{ $attendance->justification->status === 'pending' ? 'En attente de validation' : 'Validée' }}
-                                                            @if($attendance->justification->comment)
-                                                                <div class="mt-1">
-                                                                    <strong>Commentaire :</strong> 
-                                                                    {{ $attendance->justification->comment }}
-                                                                </div>
-                                                            @endif
+                                                            <strong>Justification :</strong>
+                                                            {{ $attendance->justification_status === 'pending' ? 'En attente de validation' : 'Validée' }}
                                                         </div>
                                                     </div>
                                                 </div>
                                             @endif
                                         </div>
                                         <div class="col-md-3 text-end">
-                                            @if($attendance->status === 'absent' && (!$attendance->justification || $attendance->justification->status === 'rejected'))
-                                                <button class="btn btn-sm btn-outline-primary justify-content-end" 
-                                                        data-bs-toggle="modal" 
+                                            @if($attendance->status === 'absent' && ! in_array($attendance->justification_status, ['pending', 'approved']))
+                                                <button class="btn btn-sm btn-outline-primary justify-content-end"
+                                                        data-bs-toggle="modal"
                                                         data-bs-target="#justifyAbsenceModal"
                                                         data-attendance-id="{{ $attendance->id }}">
                                                     <i class="fas fa-pen-alt me-1"></i> Justifier
                                                 </button>
-                                            @elseif($attendance->status === 'absent' && $attendance->justification)
+                                            @elseif($attendance->status === 'absent' && $attendance->justification_status)
                                                 <button class="btn btn-sm btn-outline-info justify-content-end"
-                                                        data-bs-toggle="tooltip" 
+                                                        data-bs-toggle="tooltip"
                                                         title="Voir la justification">
                                                     <i class="fas fa-eye me-1"></i> Voir
                                                 </button>

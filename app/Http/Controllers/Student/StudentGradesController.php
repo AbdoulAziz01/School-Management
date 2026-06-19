@@ -171,6 +171,7 @@ class StudentGradesController extends Controller
             return [];
         }
 
+        $user->loadMissing('schoolClass');
         $academicYear = $selectedYear ?? $user->schoolClass?->academicYear;
         [$periodStart, $periodEnd] = $this->getAcademicYearMonthRange($academicYear);
 

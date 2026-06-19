@@ -70,13 +70,13 @@ class TeacherGradesController extends Controller
             ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
         
-        $subjects = $teacher->subjects;
-        
+        $subjects = $teacher->subjects()->get();
+
         $assignments = TeacherAssignment::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
             ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
-        
+
         // Fusionner les matières
         $subjects = $subjects->merge($assignments->pluck('subject')->filter())->unique('id');
         
@@ -162,7 +162,7 @@ class TeacherGradesController extends Controller
             ->with(['level', 'academicYear'])
             ->whereHas('academicYear', fn ($q) => $q->where('is_current', true)->where('is_closed', false))
             ->get();
-        $subjects = $teacher->subjects;
+        $subjects = $teacher->subjects()->get();
 
         $selectedClassId   = $request->get('class_id');
         $selectedSubjectId = $request->get('subject_id');

@@ -170,17 +170,36 @@ final class NotificationService
 
         return match ($event) {
 
-            self::EVENT_ABSENCE => implode("\n", [
-                "🏫 *{$schoolName}*",
-                "",
-                "Bonjour *{$parentName}*,",
-                "",
-                "⚠️ Votre enfant *{$childName}* était *absent(e)* le {$date}"
-                    . ($ctx['subject'] ? " en *{$ctx['subject']}*" : '') . '.',
-                "",
-                "📞 Veuillez contacter l'établissement pour toute justification.",
-                "_Message automatique — ne pas répondre._",
-            ]),
+            self::EVENT_ABSENCE => (static function () use ($ctx, $schoolName, $parentName, $childName, $date): string {
+                $lines = [
+                    "🏫 *{$schoolName}*",
+                    "",
+                    "Bonjour *{$parentName}*,",
+                    "",
+                ];
+
+                $absenceLine = "⚠️ Votre enfant *{$childName}* était *absent(e)* le {$date}";
+                if (! empty($ctx['subject'])) {
+                    $absenceLine .= " en *{$ctx['subject']}*";
+                }
+                if (! empty($ctx['time'])) {
+                    $absenceLine .= " à *{$ctx['time']}*";
+                }
+                $lines[] = $absenceLine . '.';
+
+                if (! empty($ctx['teacher_name'])) {
+                    $lines[] = "👨‍🏫 Enseignant : {$ctx['teacher_name']}";
+                }
+                if (! empty($ctx['remark'])) {
+                    $lines[] = "📝 Remarque : {$ctx['remark']}";
+                }
+
+                $lines[] = "";
+                $lines[] = "📞 Veuillez contacter l'établissement pour toute justification.";
+                $lines[] = "_Message automatique — ne pas répondre._";
+
+                return implode("\n", $lines);
+            })(),
 
             self::EVENT_RETARD => implode("\n", [
                 "🏫 *{$schoolName}*",

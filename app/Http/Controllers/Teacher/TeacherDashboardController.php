@@ -40,7 +40,7 @@ class TeacherDashboardController extends Controller
             ->where('status', User::STATUS_APPROVED)
             ->count();
 
-        $subjects = $teacher->subjects;
+        $subjects = $teacher->subjects()->get();
         $subjectsCount = $subjects->count();
 
         $assignments = TeacherAssignment::with(['schoolClass', 'subject'])

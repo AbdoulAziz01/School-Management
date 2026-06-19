@@ -73,6 +73,7 @@ class BulletinReportService
         ?int $rank = null,
         ?int $rankTotal = null,
     ): array {
+        $student->loadMissing('schoolClass');
         $class ??= $student->schoolClass;
         $class?->loadMissing(['level', 'school']);
         $level = $class?->level;

@@ -57,13 +57,22 @@ class TeacherAttendanceController extends Controller
 
         $attendanceLocked = $students->isNotEmpty() && $attendances->isNotEmpty();
 
+        $subjects = $teacher->subjects()->get()
+            ->merge(
+                \App\Models\TeacherAssignment::with('subject')
+                    ->where('teacher_id', $teacher->id)
+                    ->when($selectedClassId, fn ($q) => $q->where('class_id', $selectedClassId))
+                    ->get()->pluck('subject')->filter()
+            )->unique('id');
+
         return view('teacher.attendance.index', compact(
             'classes',
             'students',
             'attendances',
             'selectedClassId',
             'selectedDate',
-            'attendanceLocked'
+            'attendanceLocked',
+            'subjects'
         ));
     }
 
@@ -75,6 +84,8 @@ class TeacherAttendanceController extends Controller
         $request->validate([
             'class_id'              => 'required|exists:classes,id',
             'date'                  => 'required|date',
+            'subject_id'            => 'nullable|exists:subjects,id',
+            'start_time'            => 'nullable|date_format:H:i',
             'attendances'           => 'required|array',
             'attendances.*.user_id' => 'required|integer|exists:users,id',
             'attendances.*.status'  => 'required|in:present,absent,late,excused',
@@ -118,19 +129,36 @@ class TeacherAttendanceController extends Controller
             ])->with('error', 'L\'appel de cette date est déjà enregistré et ne peut plus être modifié.');
         }
 
-        DB::transaction(function () use ($request, $schoolId, $date) {
+        $subjectId  = $request->input('subject_id');
+        $startTime  = $request->input('start_time');
+        $teacherId  = $teacher->id;
+
+        // Indexer les remarques par user_id pour les retrouver dans la notification
+        $remarksByUserId = collect($request->attendances)
+            ->keyBy('user_id')
+            ->map(fn ($a) => $a['notes'] ?? null);
+
+        DB::transaction(function () use ($request, $schoolId, $date, $subjectId, $startTime, $teacherId) {
             foreach ($request->attendances as $attendanceData) {
                 Attendance::withoutGlobalScopes()->create([
-                    'user_id'   => (int) $attendanceData['user_id'],
-                    'date'      => $date,
-                    'status'    => $attendanceData['status'],
-                    'reason'    => $attendanceData['notes'] ?? null,
-                    'school_id' => $schoolId,
+                    'user_id'    => (int) $attendanceData['user_id'],
+                    'subject_id' => $subjectId ?: null,
+                    'teacher_id' => $teacherId,
+                    'class_id'   => (int) $request->class_id,
+                    'date'       => $date,
+                    'status'     => $attendanceData['status'],
+                    'reason'     => $attendanceData['notes'] ?? null,
+                    'start_time' => $startTime ?: null,
+                    'school_id'  => $schoolId,
                 ]);
             }
         });
 
         // ── Notifications WhatsApp aux parents des élèves absents ────────────
+        $subjectName = $subjectId
+            ? \App\Models\Subject::find($subjectId)?->name
+            : null;
+
         $absentIds = collect($request->attendances)
             ->filter(fn (array $a) => ($a['status'] ?? '') === 'absent')
             ->pluck('user_id');
@@ -139,11 +167,19 @@ class TeacherAttendanceController extends Controller
             User::whereIn('id', $absentIds)
                 ->whereNotNull('parent_whatsapp')
                 ->get()
-                ->each(fn (User $student) => SendWhatsAppNotification::dispatchAfterResponse(
-                    $student,
-                    NotificationService::EVENT_ABSENCE,
-                    ['date' => now()->format('d/m/Y')],
-                ));
+                ->each(function (User $student) use ($subjectName, $startTime, $teacher, $remarksByUserId) {
+                    SendWhatsAppNotification::dispatchAfterResponse(
+                        $student,
+                        NotificationService::EVENT_ABSENCE,
+                        [
+                            'date'         => now()->format('d/m/Y'),
+                            'subject'      => $subjectName,
+                            'time'         => $startTime,
+                            'teacher_name' => $teacher->name,
+                            'remark'       => $remarksByUserId->get($student->id),
+                        ]
+                    );
+                });
         }
 
         return redirect()->route('teacher.attendance.index', [

@@ -139,6 +139,23 @@
                         <input type="hidden" name="class_id" value="{{ $selectedClassId }}">
                         <input type="hidden" name="date" value="{{ $selectedDate }}">
 
+                        {{-- Infos de séance --}}
+                        <div class="row g-3 mb-4 pb-3 border-bottom">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Matière <span class="text-muted fw-normal">(optionnel)</span></label>
+                                <select name="subject_id" class="form-select">
+                                    <option value="">— Sélectionner une matière —</option>
+                                    @foreach($subjects as $subject)
+                                        <option value="{{ $subject->id }}">{{ $subject->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Heure de début <span class="text-muted fw-normal">(optionnel)</span></label>
+                                <input type="time" name="start_time" class="form-control" value="{{ date('H:i') }}">
+                            </div>
+                        </div>
+
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
                                 <thead class="table-light">

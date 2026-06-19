@@ -168,6 +168,7 @@ class User extends Authenticatable
      */
     public function events()
     {
+        $this->loadMissing('schoolClass');
         if ($this->schoolClass) {
             return $this->schoolClass->events();
         }
@@ -179,6 +180,7 @@ class User extends Authenticatable
      */
     public function assignments()
     {
+        $this->loadMissing('schoolClass');
         if ($this->schoolClass) {
             return $this->schoolClass->assignments();
         }

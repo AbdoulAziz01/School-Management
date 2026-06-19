@@ -17,10 +17,20 @@ class Attendance extends Model
      */
     protected $fillable = [
         'user_id',
+        'subject_id',
+        'teacher_id',
+        'class_id',
         'date',
         'status', // present, absent, late, excused
         'reason',
         'justified',
+        'justified_at',
+        'justification_status',
+        'session_type',
+        'minutes_late',
+        'start_time',
+        'end_time',
+        'classroom',
         'school_id',
     ];
 

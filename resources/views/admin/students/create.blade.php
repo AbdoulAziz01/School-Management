@@ -137,6 +137,45 @@
                     </div>
                 </div>
 
+                <hr class="my-4">
+
+                {{-- Contact Parent / Tuteur --}}
+                <h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size:.75rem;letter-spacing:.08em;">
+                    <i class="fab fa-whatsapp me-1 text-success"></i> Contact Parent / Tuteur
+                </h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="parent_name" class="form-label">Nom du parent/tuteur</label>
+                            <input type="text" class="form-control @error('parent_name') is-invalid @enderror"
+                                   id="parent_name" name="parent_name" value="{{ old('parent_name') }}"
+                                   placeholder="Ex : Ibrahima Fall">
+                            @error('parent_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="parent_whatsapp" class="form-label">Numéro WhatsApp parent</label>
+                            <input type="text" class="form-control @error('parent_whatsapp') is-invalid @enderror"
+                                   id="parent_whatsapp" name="parent_whatsapp" value="{{ old('parent_whatsapp') }}"
+                                   placeholder="Ex : 221781234567">
+                            <div class="form-text">Format international sans + ni espaces (ex : 221781234567)</div>
+                            @error('parent_whatsapp')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="parent_lang" class="form-label">Langue de notification</label>
+                            <select class="form-select @error('parent_lang') is-invalid @enderror" id="parent_lang" name="parent_lang">
+                                <option value="fr_text" {{ old('parent_lang', 'fr_text') === 'fr_text' ? 'selected' : '' }}>Français (texte)</option>
+                                <option value="wo_audio" {{ old('parent_lang') === 'wo_audio' ? 'selected' : '' }}>Wolof (audio)</option>
+                                <option value="pu_audio" {{ old('parent_lang') === 'pu_audio' ? 'selected' : '' }}>Pulaar (audio)</option>
+                            </select>
+                            @error('parent_lang')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mt-4">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-1"></i> Enregistrer

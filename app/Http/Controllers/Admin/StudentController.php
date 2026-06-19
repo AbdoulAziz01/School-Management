@@ -368,14 +368,17 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name'  => 'required|string|max:255',
-            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')],
-            'date_of_birth' => 'required|date|before:today',
-            'class_id' => 'nullable|exists:classes,id',
-            'status' => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
-            'photo' => ['nullable', 'image', 'max:4096'],
+            'first_name'        => 'required|string|max:255',
+            'last_name'         => 'required|string|max:255',
+            'email'             => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')],
+            'date_of_birth'     => 'required|date|before:today',
+            'class_id'          => 'nullable|exists:classes,id',
+            'status'            => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
+            'photo'             => ['nullable', 'image', 'max:4096'],
             'birth_certificate' => ['nullable', 'file', 'mimes:pdf', 'max:8192'],
+            'parent_name'       => 'nullable|string|max:150',
+            'parent_whatsapp'   => 'nullable|string|max:20',
+            'parent_lang'       => ['nullable', Rule::in(['fr_text', 'wo_audio', 'pu_audio'])],
         ]);
 
         try {
@@ -402,20 +405,25 @@ class StudentController extends Controller
                 $birthCertPath = $request->file('birth_certificate')->store('students/birth_certificates', 'public');
             }
 
+            $rawWhatsapp = preg_replace('/\D/', '', $validated['parent_whatsapp'] ?? '');
+
             $student = (new User)->forceFill([
-                'name'       => $fullName,
-                'first_name' => $validated['first_name'],
-                'last_name'  => $validated['last_name'],
-                'email' => $validated['email'] ?? null,
-                'identifier' => $identifier,
-                'password' => Hash::make($plainPassword),
-                'role' => User::ROLE_STUDENT,
-                'status' => $validated['status'],
-                'date_of_birth' => $validated['date_of_birth'],
-                'class_id' => $validated['class_id'] ?? null,
-                'school_id' => $schoolId,
-                'profile_photo_path' => $photoPath,
+                'name'                   => $fullName,
+                'first_name'             => $validated['first_name'],
+                'last_name'              => $validated['last_name'],
+                'email'                  => $validated['email'] ?? null,
+                'identifier'             => $identifier,
+                'password'               => Hash::make($plainPassword),
+                'role'                   => User::ROLE_STUDENT,
+                'status'                 => $validated['status'],
+                'date_of_birth'          => $validated['date_of_birth'],
+                'class_id'               => $validated['class_id'] ?? null,
+                'school_id'              => $schoolId,
+                'profile_photo_path'     => $photoPath,
                 'birth_certificate_path' => $birthCertPath,
+                'parent_name'            => $validated['parent_name'] ?? null,
+                'parent_whatsapp'        => $rawWhatsapp ?: null,
+                'parent_lang'            => $validated['parent_lang'] ?? 'fr_text',
             ]);
             $student->save();
 
@@ -468,35 +476,36 @@ class StudentController extends Controller
         abort_unless($student->isStudent(), 404);
 
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name'  => 'required|string|max:255',
-            'email' => [
-                'nullable',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique('users')->ignore($student->id),
-            ],
-            'date_of_birth' => 'required|date|before:today',
-            'class_id' => 'nullable|exists:classes,id',
-            'status' => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
-            'photo' => ['nullable', 'image', 'max:4096'],
+            'first_name'        => 'required|string|max:255',
+            'last_name'         => 'required|string|max:255',
+            'email'             => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')->ignore($student->id)],
+            'date_of_birth'     => 'required|date|before:today',
+            'class_id'          => 'nullable|exists:classes,id',
+            'status'            => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
+            'photo'             => ['nullable', 'image', 'max:4096'],
             'birth_certificate' => ['nullable', 'file', 'mimes:pdf', 'max:8192'],
+            'parent_name'       => 'nullable|string|max:150',
+            'parent_whatsapp'   => 'nullable|string|max:20',
+            'parent_lang'       => ['nullable', Rule::in(['fr_text', 'wo_audio', 'pu_audio'])],
         ]);
 
         try {
             DB::beginTransaction();
 
             $fullName = trim($validated['first_name'].' '.$validated['last_name']);
+            $rawWhatsapp = preg_replace('/\D/', '', $validated['parent_whatsapp'] ?? '');
 
             $updates = [
-                'name'       => $fullName,
-                'first_name' => $validated['first_name'],
-                'last_name'  => $validated['last_name'],
-                'email' => $validated['email'] ?? null,
-                'status' => $validated['status'],
-                'date_of_birth' => $validated['date_of_birth'],
-                'class_id' => $validated['class_id'] ?? null,
+                'name'           => $fullName,
+                'first_name'     => $validated['first_name'],
+                'last_name'      => $validated['last_name'],
+                'email'          => $validated['email'] ?? null,
+                'status'         => $validated['status'],
+                'date_of_birth'  => $validated['date_of_birth'],
+                'class_id'       => $validated['class_id'] ?? null,
+                'parent_name'    => $validated['parent_name'] ?? null,
+                'parent_whatsapp'=> $rawWhatsapp ?: null,
+                'parent_lang'    => $validated['parent_lang'] ?? 'fr_text',
             ];
 
             if ($request->hasFile('photo')) {

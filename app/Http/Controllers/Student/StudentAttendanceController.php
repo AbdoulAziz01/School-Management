@@ -19,6 +19,7 @@ class StudentAttendanceController extends Controller
 
         // Récupérer les présences triées par date décroissante
         $attendances = $user->attendances()
+            ->with(['subject', 'teacher'])
             ->orderBy('date', 'desc')
             ->paginate(15);
 
