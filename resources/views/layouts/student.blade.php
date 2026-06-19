@@ -48,13 +48,12 @@
         /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
-            min-height: 100vh;
-            height: 100vh;
             background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%);
             color: #fef3c7;
             position: fixed;
             left: 0;
             top: 0;
+            bottom: 0;
             z-index: 1050;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto;
@@ -343,8 +342,8 @@
         /* Main Content */
         .main-content {
             margin-left: var(--sidebar-width);
-            width: calc(100vw - var(--sidebar-width));
-            max-width: calc(100vw - var(--sidebar-width));
+            flex: 1;
+            min-width: 0;
             min-height: 100vh;
             overflow-x: hidden;
         }

@@ -139,9 +139,9 @@
         ════════════════════════════════════════════════ */
         .plf-sidebar {
             background-color: var(--sidebar-bg) !important;
-            position: fixed; left: 0; top: 0;
+            position: fixed;
+            left: 0; top: 0; bottom: 0;   /* top+bottom = robuste sur tous les mobiles */
             width: var(--sidebar-w);
-            height: 100vh;
             display: flex;
             flex-direction: column;
             z-index: 50;
@@ -320,9 +320,70 @@
         /* ════════════════════════════════════════════════
            RESPONSIVE
         ════════════════════════════════════════════════ */
+
+        /* Overlay sidebar mobile */
+        .plf-sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 49;
+            cursor: pointer;
+        }
+        .plf-sidebar-overlay.is-open { display: block; }
+
+        /* Bouton hamburger dans la topbar */
+        .plf-topbar-toggle {
+            display: none;
+            background: none;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            font-size: 1rem;
+            padding: 0.35rem 0.55rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .plf-topbar-toggle:hover { background: #f1f5f9; }
+
         @media (max-width: 991.98px) {
-            .plf-sidebar { position: relative; width: 100%; height: auto; }
-            .plf-main    { margin-left: 0; }
+            /* Sidebar : off-canvas à gauche, pleine hauteur via top+bottom */
+            .plf-sidebar {
+                position: fixed;
+                left: 0; top: 0; bottom: 0;
+                width: min(var(--sidebar-w), 82vw);
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 50;
+            }
+            .plf-sidebar.is-open {
+                transform: translateX(0);
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+            }
+
+            .plf-main { margin-left: 0; }
+
+            /* Topbar */
+            .plf-topbar {
+                padding: 0.65rem 1rem;
+                position: sticky;
+                top: 0;
+                z-index: 40;
+                gap: 0.75rem;
+            }
+            .plf-topbar-toggle { display: inline-flex; align-items: center; }
+
+            /* Contenu */
+            .plf-content { padding: 1.25rem 1rem 2rem; }
+            .plf-flash   { margin: 0.75rem 1rem 0; }
+        }
+
+        @media (max-width: 575.98px) {
+            .plf-topbar          { padding: 0.5rem 0.75rem; }
+            .plf-content         { padding: 1rem 0.75rem 2rem; }
+            .plf-topbar-platform { display: none; }
+            .plf-topbar-greeting { font-size: 0.8rem; }
         }
     </style>
 
@@ -330,8 +391,11 @@
 </head>
 <body>
 
+{{-- Overlay sidebar mobile --}}
+<div class="plf-sidebar-overlay" id="plfSidebarOverlay"></div>
+
 {{-- ═══════════════════════  SIDEBAR  ═══════════════════════ --}}
-<aside class="plf-sidebar">
+<aside class="plf-sidebar" id="plfSidebar">
 
     {{-- Brand --}}
     <div class="plf-brand">
@@ -395,6 +459,10 @@
 
     {{-- Topbar --}}
     <div class="plf-topbar">
+        {{-- Hamburger (visible uniquement sur mobile) --}}
+        <button class="plf-topbar-toggle" id="plfSidebarToggle" aria-label="Ouvrir le menu">
+            <i class="fas fa-bars"></i>
+        </button>
         <div>
             <p class="plf-topbar-platform">{{ $platformName }}</p>
             <p class="plf-topbar-greeting">
@@ -448,6 +516,28 @@
         var el = document.getElementById('plf-date');
         if (el) el.textContent = new Date().toLocaleDateString('fr-FR', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+    })();
+
+    // Toggle sidebar mobile (super-admin)
+    (function () {
+        var toggle  = document.getElementById('plfSidebarToggle');
+        var sidebar = document.getElementById('plfSidebar');
+        var overlay = document.getElementById('plfSidebarOverlay');
+        if (!toggle || !sidebar || !overlay) return;
+
+        function openSidebar()  { sidebar.classList.add('is-open');    overlay.classList.add('is-open'); }
+        function closeSidebar() { sidebar.classList.remove('is-open'); overlay.classList.remove('is-open'); }
+
+        toggle.addEventListener('click', function () {
+            sidebar.classList.contains('is-open') ? closeSidebar() : openSidebar();
+        });
+        overlay.addEventListener('click', closeSidebar);
+
+        sidebar.querySelectorAll('.plf-nav-link, .plf-logout-btn, .plf-user-card').forEach(function (el) {
+            el.addEventListener('click', function () {
+                if (window.innerWidth < 992) closeSidebar();
+            });
         });
     })();
 

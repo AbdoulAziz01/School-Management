@@ -47,8 +47,6 @@
         }
         
         .sidebar {
-            min-height: 100vh;
-            height: 100vh;
             background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%);
             color: #fef3c7;
             box-shadow: none;
@@ -56,6 +54,7 @@
             position: fixed;
             left: 0;
             top: 0;
+            bottom: 0;             /* pleine hauteur robuste sur tous les mobiles */
             border-right: 1px solid rgba(251, 191, 36, 0.12);
             padding: 0;
             width: var(--sidebar-width);
@@ -144,8 +143,6 @@
             min-width: 0;
             background: linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fef3c7 100%);
             min-height: 100vh;
-            width: calc(100vw - var(--sidebar-width));
-            max-width: calc(100vw - var(--sidebar-width));
             margin-left: var(--sidebar-width);
             overflow-x: hidden;
             overflow-y: visible;
@@ -293,11 +290,11 @@
             .sidebar {
                 transform: translateX(-100%);
             }
-            
+
             .sidebar.active {
                 transform: translateX(0);
             }
-            
+
             .main-content {
                 margin-left: 0;
                 width: 100%;
@@ -313,26 +310,51 @@
         
         @media (max-width: 576px) {
             .main-content {
-                padding: 10px;
-                padding-top: 75px;
+                padding: 0;
                 padding-bottom: 40px;
             }
-            
+
+            .portal-page-body {
+                padding: 0.75rem 0.65rem 0;
+            }
+
             .card-body {
-                padding: 15px;
+                padding: 12px;
             }
-            
+
+            /* Card-header : empile les éléments sur xs */
+            .card-header {
+                padding: 0.65rem 0.75rem;
+            }
+            .card-header > .d-flex {
+                flex-wrap: wrap !important;
+                gap: 0.5rem !important;
+            }
+            .card-header form.d-flex {
+                flex-wrap: wrap !important;
+                width: 100%;
+            }
+            .card-header .form-control,
+            .card-header .form-select {
+                min-width: 0 !important;
+                flex: 1 1 120px;
+            }
+
             .table-responsive {
-                font-size: 0.875rem;
+                font-size: 0.8rem;
             }
-            
+            td .btn-sm {
+                padding: 0.2rem 0.35rem;
+                font-size: 0.72rem;
+            }
+
             .stat-value {
                 font-size: 1.4rem;
             }
-            
-            h1, .h1 { font-size: 1.5rem; }
-            h2, .h2 { font-size: 1.3rem; }
-            h3, .h3 { font-size: 1.15rem; }
+
+            h1, .h1 { font-size: 1.4rem; }
+            h2, .h2 { font-size: 1.25rem; }
+            h3, .h3 { font-size: 1.1rem; }
         }
     </style>
     @include('partials.portal-top-navbar-styles')

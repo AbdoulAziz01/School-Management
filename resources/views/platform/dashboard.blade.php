@@ -278,6 +278,48 @@
         flex-shrink: 0;
     }
     .btn-manage:hover { transform: scale(1.05); background: rgba(249,115,22,.15); }
+
+    /* ════════════════════════════════════════════════
+       RESPONSIVE MOBILE (≤575px)
+    ════════════════════════════════════════════════ */
+    @media (max-width: 575.98px) {
+        .dash-header   { margin-bottom: 1.25rem; }
+        .dash-title    { font-size: 1.2rem; }
+        .btn-new-school { font-size: 0.8rem; padding: 0.55rem 0.9rem; }
+
+        /* KPI : réduire la densité */
+        .kpi-grid  { gap: 0.6rem; margin-bottom: 1.25rem; }
+        .kpi-card  { padding: 0.875rem 0.75rem; border-radius: 0.75rem; }
+        .kpi-value { font-size: 1.5rem; }
+        .kpi-icon-wrap { width: 2rem; height: 2rem; margin-bottom: 0.625rem; border-radius: 0.5rem; }
+        .kpi-icon-wrap svg { width: 16px; height: 16px; }
+
+        /* Charts */
+        .charts-grid { gap: 0.875rem; margin-bottom: 1.25rem; }
+        .chart-card  { padding: 1rem 0.875rem; border-radius: 0.875rem; }
+
+        /* Donut : empiler vertical sur xs */
+        .donut-wrap { flex-direction: column; align-items: stretch; gap: 0.875rem; }
+        .donut-wrap > div:first-child { display: flex; justify-content: center; }
+
+        /* Tables */
+        .tables-grid  { gap: 0.875rem; }
+        .table-card   { border-radius: 0.875rem; }
+        .table-card-header { padding: 0.875rem 1rem; }
+        .dash-row     { padding: 0.75rem 1rem; gap: 0.75rem; }
+        .row-avatar   { width: 1.875rem; height: 1.875rem; border-radius: 0.5rem; font-size: 0.75rem; }
+        .row-name     { font-size: 0.8rem; }
+        .row-meta     { font-size: 0.65rem; }
+
+        /* Alertes */
+        .alerts-grid { margin-bottom: 1.25rem; }
+        .alert-banner { padding: 0.75rem; border-radius: 0.75rem; }
+    }
+
+    @media (max-width: 400px) {
+        /* Très petits écrans : 1 colonne pour les KPI */
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
 </style>
 @endpush
 

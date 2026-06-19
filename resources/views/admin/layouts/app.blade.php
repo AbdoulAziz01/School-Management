@@ -51,8 +51,6 @@
         }
         
         .sidebar {
-            min-height: 100vh;
-            height: 100vh;
             background: linear-gradient(180deg, #1c1917 0%, #292524 50%, #1c1917 100%);
             color: #fef3c7;
             box-shadow: none;
@@ -60,6 +58,7 @@
             position: fixed;
             left: 0;
             top: 0;
+            bottom: 0;             /* pleine hauteur robuste sur tous les mobiles */
             border-right: 1px solid rgba(251, 191, 36, 0.12);
             padding: 0;
             width: var(--sidebar-width);
@@ -176,8 +175,6 @@
             min-width: 0;
             background: linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fef3c7 100%);
             min-height: 100vh;
-            width: calc(100vw - var(--sidebar-width));
-            max-width: calc(100vw - var(--sidebar-width));
             margin-left: var(--sidebar-width);
             overflow-x: hidden;
             overflow-y: visible;
@@ -379,25 +376,30 @@
             .sidebar.active {
                 transform: translateX(0);
             }
-            
+
             .mobile-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
-            
+
             .main-content {
                 margin-left: 0;
                 width: 100%;
+                max-width: 100%;
                 padding: 0;
                 padding-top: 56px;
                 padding-bottom: 50px;
             }
 
+            /* Le portal-top-navbar doit se coller SOUS le mobile-header fixe (56px) */
+            .portal-top-navbar {
+                top: 56px !important;
+            }
+
             .admin-page-body {
                 padding: 1rem 0.85rem 0;
             }
-
         }
         
         @media (max-width: 576px) {
@@ -410,33 +412,49 @@
             .admin-page-body {
                 padding: 0.75rem 0.65rem 0;
             }
-            
+
             .card-body {
-                padding: 15px;
+                padding: 12px;
             }
-            
-            /* Table responsive on mobile */
+
+            /* Card-header : empile les éléments verticalement sur xs */
+            .card-header {
+                padding: 0.65rem 0.75rem;
+            }
+            .card-header > .d-flex {
+                flex-wrap: wrap !important;
+                gap: 0.5rem !important;
+            }
+            .card-header form.d-flex {
+                flex-wrap: wrap !important;
+                width: 100%;
+            }
+            .card-header .form-control,
+            .card-header .form-select {
+                min-width: 0 !important;
+                flex: 1 1 120px;
+            }
+
+            /* Tables sur mobile */
             .table-responsive {
-                margin: 0 -15px;
-                padding: 0 15px;
+                font-size: 0.8rem;
             }
-            
+            td .btn-sm {
+                padding: 0.2rem 0.35rem;
+                font-size: 0.72rem;
+            }
+
             .btn-group {
                 flex-direction: column;
             }
-            
             .btn-group .btn {
                 border-radius: 4px !important;
                 margin-bottom: 2px;
             }
-            
-            .table-responsive {
-                font-size: 0.875rem;
-            }
-            
-            h1, .h1 { font-size: 1.5rem; }
-            h2, .h2 { font-size: 1.3rem; }
-            h3, .h3 { font-size: 1.15rem; }
+
+            h1, .h1 { font-size: 1.4rem; }
+            h2, .h2 { font-size: 1.25rem; }
+            h3, .h3 { font-size: 1.1rem; }
         }
         
         /* Table Styles */
