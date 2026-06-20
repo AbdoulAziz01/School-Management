@@ -114,6 +114,45 @@
         font-weight: 500;
     }
 
+    /* ── Stats strip ── */
+    .sched-stats-strip {
+        display: flex;
+        align-items: stretch;
+        background: rgba(245,158,11,0.07);
+        border-radius: 14px;
+        padding: 1rem 0;
+    }
+    .sched-stat-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0.75rem;
+        border-right: 1.5px solid rgba(245,158,11,0.22);
+        text-align: center;
+    }
+    .sched-stat-item:last-child { border-right: none; }
+    .sched-stat-value {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #d97706;
+        line-height: 1;
+    }
+    .sched-stat-label {
+        font-size: 0.62rem;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-top: 5px;
+    }
+
+    @media (max-width: 575.98px) {
+        .sched-stat-value { font-size: 1.4rem; }
+        .sched-stats-strip { padding: 0.75rem 0; }
+    }
+
     .schedule-print-header {
         display: none;
     }
@@ -412,39 +451,23 @@
         </div>
     </div>
 
-    <!-- Statistiques -->
-    <div class="row mt-4 no-print">
-        <div class="col-md-4">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h3 class="mb-0">
-                        @php
-                            $totalCourses = 0;
-                            foreach($schedule as $dayCourses) {
-                                $totalCourses += $dayCourses->count();
-                            }
-                        @endphp
-                        {{ $totalCourses }}
-                    </h3>
-                    <small>Cours par semaine</small>
-                </div>
-            </div>
+    {{-- Statistiques --}}
+    @php
+        $totalCourses = 0;
+        foreach($schedule as $dayCourses) { $totalCourses += $dayCourses->count(); }
+    @endphp
+    <div class="sched-stats-strip mt-4 no-print">
+        <div class="sched-stat-item">
+            <span class="sched-stat-value">{{ $totalCourses }}</span>
+            <span class="sched-stat-label">Cours / semaine</span>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h3 class="mb-0">{{ $subjectCount ?? 0 }}</h3>
-                    <small>Matières différentes</small>
-                </div>
-            </div>
+        <div class="sched-stat-item">
+            <span class="sched-stat-value">{{ $subjectCount ?? 0 }}</span>
+            <span class="sched-stat-label">Matières</span>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center">
-                    <h3 class="mb-0">{{ $totalCourses }}h</h3>
-                    <small>Heures de cours</small>
-                </div>
-            </div>
+        <div class="sched-stat-item">
+            <span class="sched-stat-value">{{ $totalCourses }}h</span>
+            <span class="sched-stat-label">Heures / semaine</span>
         </div>
     </div>
 </div>

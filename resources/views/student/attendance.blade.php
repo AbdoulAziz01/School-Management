@@ -4,498 +4,413 @@
 
 @push('styles')
 <style>
-    .attendance-card {
-        border-left: 4px solid #f59e0b;
-        margin-bottom: 1rem;
-        transition: all 0.3s;
+    /* ═══════════════════════════════════════
+       PAGE HEADER
+    ═══════════════════════════════════════ */
+    .attend-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 1.125rem;
+        flex-wrap: wrap;
     }
-    .attendance-card.absent {
-        border-left-color: #e74a3b;
+    .attend-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0;
     }
-    .attendance-card.late {
-        border-left-color: #f6c23e;
+    .btn-absence-request {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        color: #1c1917;
+        border: none;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        font-weight: 700;
+        font-size: 0.82rem;
+        white-space: nowrap;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 3px 10px rgba(245,158,11,0.3);
     }
-    .attendance-card.present {
-        border-left-color: #1cc88a;
+    .btn-absence-request:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(245,158,11,0.4); color: #1c1917; }
+
+    /* ═══════════════════════════════════════
+       STATS STRIP
+    ═══════════════════════════════════════ */
+    .attend-stats-strip {
+        display: flex;
+        align-items: stretch;
+        background: rgba(245,158,11,0.07);
+        border-radius: 14px;
+        margin-bottom: 1.125rem;
+        overflow: hidden;
     }
-    .attendance-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+    .attend-stat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.875rem 0.5rem;
+        text-align: center;
+        border-right: 1.5px solid rgba(245,158,11,0.2);
+        min-width: 0;
     }
-    .status-badge {
+    .attend-stat:last-child { border-right: none; }
+    .as-value {
+        font-size: 1.5rem;
+        font-weight: 900;
+        line-height: 1;
+        color: #1e293b;
+    }
+    .as-value.amber { color: #d97706; }
+    .as-value.danger { color: #dc2626; }
+    .as-label {
+        font-size: 0.57rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #94a3b8;
+        margin-top: 4px;
+    }
+    /* Barre de progression du taux */
+    .as-progress-wrap {
+        width: 80%;
+        margin-top: 5px;
+    }
+    .as-progress-track {
+        height: 4px;
+        background: rgba(245,158,11,0.2);
+        border-radius: 99px;
+        overflow: hidden;
+    }
+    .as-progress-fill {
+        height: 100%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+        transition: width .8s ease;
+    }
+    @media (max-width: 575.98px) {
+        .as-value { font-size: 1.2rem; }
+        .attend-stat { padding: 0.75rem 0.3rem; }
+        .attend-title { font-size: 1.2rem; }
+    }
+
+    /* ═══════════════════════════════════════
+       HISTORIQUE : cartes présence
+    ═══════════════════════════════════════ */
+    .attendance-item {
+        background: #fff;
+        border: 1px solid #f1f5f9;
+        border-radius: 12px;
+        border-left: 4px solid #e2e8f0;
+        padding: 0.875rem 1rem;
+        margin-bottom: 0.625rem;
+        transition: box-shadow 0.15s;
+    }
+    .attendance-item:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.07); }
+    .attendance-item.present { border-left-color: #10b981; }
+    .attendance-item.absent  { border-left-color: #ef4444; }
+    .attendance-item.late    { border-left-color: #f59e0b; }
+
+    .attend-item-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .attend-date-block { flex-shrink: 0; text-align: center; min-width: 38px; }
+    .attend-date-day   { font-size: 1.2rem; font-weight: 800; color: #1e293b; line-height: 1; }
+    .attend-date-month { font-size: 0.62rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; }
+    .attend-date-dow   { font-size: 0.6rem; color: #cbd5e1; }
+
+    .attend-subject    { font-size: 0.9rem; font-weight: 700; color: #1e293b; }
+    .attend-meta       { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+    .attend-meta i     { width: 12px; opacity: .6; }
+
+    /* Status pill */
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        border-radius: 99px;
+        padding: 3px 10px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .pill-present { background: #dcfce7; color: #15803d; }
+    .pill-absent  { background: #fee2e2; color: #b91c1c; }
+    .pill-late    { background: #fef3c7; color: #b45309; }
+
+    /* Action */
+    .attend-item-action {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #f8fafc;
+    }
+    .btn-justify {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         font-size: 0.75rem;
-        padding: 0.35em 0.65em;
+        font-weight: 600;
+        border: 1px solid #d97706;
+        color: #d97706;
+        background: #fff;
+        border-radius: 8px;
+        padding: 0.3rem 0.75rem;
+        cursor: pointer;
+        transition: all .15s;
+        text-decoration: none;
     }
-    .progress {
-        height: 1rem;
-        border-radius: 0.35rem;
+    .btn-justify:hover { background: #fff7ed; color: #b45309; }
+
+    /* Justification notice */
+    .justif-notice {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.72rem;
+        color: #b45309;
+        background: #fff7ed;
+        border-radius: 6px;
+        padding: 4px 10px;
+        margin-top: 0.4rem;
     }
-    .stats-card {
-        border-radius: 0.5rem;
-        transition: all 0.3s;
-    }
-    .stats-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
-    }
-    .attendance-details {
+
+    /* ═══════════════════════════════════════
+       CALENDRIER
+    ═══════════════════════════════════════ */
+    #attendanceCalendar .fc-toolbar-title { font-size: 0.88rem !important; }
+    #attendanceCalendar .fc-button       { padding: 0.2rem 0.4rem !important; font-size: 0.72rem !important; }
+    #attendanceCalendar .fc-daygrid-day-number { font-size: 0.72rem !important; padding: 2px 4px !important; }
+    #attendanceCalendar .fc-col-header-cell-cushion { font-size: 0.68rem !important; }
+    #attendanceCalendar .fc-daygrid-day,
+    #attendanceCalendar .fc-daygrid-day-frame { min-height: 28px !important; }
+
+    .cal-legend { display: flex; justify-content: center; gap: 1rem; margin-top: 0.75rem; }
+    .cal-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #64748b; }
+    .cal-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ═══════════════════════════════════════
+       SECTION TITLES
+    ═══════════════════════════════════════ */
+    .section-title {
         font-size: 0.9rem;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
     }
-    .subject-badge {
-        font-size: 0.8em;
-        margin-right: 0.3rem;
-        margin-bottom: 0.3rem;
-    }
-    
-    /* Calendrier compact */
-    #attendanceCalendar .fc-toolbar-title {
-        font-size: 0.9rem !important;
-    }
-    #attendanceCalendar .fc-button {
-        padding: 0.2rem 0.4rem !important;
-        font-size: 0.75rem !important;
-    }
-    #attendanceCalendar .fc-daygrid-day-number {
-        font-size: 0.75rem !important;
-        padding: 2px 4px !important;
-    }
-    #attendanceCalendar .fc-col-header-cell-cushion {
-        font-size: 0.7rem !important;
-    }
-    #attendanceCalendar .fc-daygrid-day {
-        min-height: 30px !important;
-    }
-    #attendanceCalendar .fc-daygrid-day-frame {
-        min-height: 30px !important;
+    .section-title i { color: #d97706; }
+
+    @media print {
+        .attend-header, .attend-stats-strip { display: none !important; }
     }
 </style>
 @endpush
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Mes Présences</h1>
-        <div class="d-none d-sm-inline-block">
-            <button class="btn btn-sm btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#requestAbsenceModal">
-                <i class="fas fa-plus-circle fa-sm text-white-50"></i> Demande d'absence
-            </button>
+
+    {{-- ── En-tête ── --}}
+    <div class="attend-header">
+        <h1 class="attend-title">Mes Présences</h1>
+        <button class="btn-absence-request" data-bs-toggle="modal" data-bs-target="#requestAbsenceModal">
+            <i class="fas fa-plus-circle"></i>
+            <span class="d-none d-sm-inline">Demande d'absence</span>
+            <span class="d-sm-none">Absence</span>
+        </button>
+    </div>
+
+    {{-- ── Stats strip ── --}}
+    <div class="attend-stats-strip">
+        <div class="attend-stat">
+            <span class="as-value amber">{{ $stats['attendance_rate'] }}%</span>
+            <span class="as-label">Taux de présence</span>
+            <div class="as-progress-wrap">
+                <div class="as-progress-track">
+                    <div class="as-progress-fill" style="width:{{ $stats['attendance_rate'] }}%;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="attend-stat">
+            <span class="as-value">{{ $stats['present_days'] }}
+                @if($stats['total_days'] > 0)
+                    <span style="font-size:.75rem;font-weight:600;color:#94a3b8;">/{{ $stats['total_days'] }}</span>
+                @endif
+            </span>
+            <span class="as-label">Jours présents</span>
+        </div>
+        <div class="attend-stat">
+            <span class="as-value {{ $stats['late_days'] > 0 ? 'amber' : '' }}">{{ $stats['late_days'] }}</span>
+            <span class="as-label">Retards</span>
+        </div>
+        <div class="attend-stat">
+            <span class="as-value {{ $stats['absent_days'] > 0 ? 'danger' : '' }}">{{ $stats['absent_days'] }}</span>
+            <span class="as-label">Abs. non just.</span>
         </div>
     </div>
 
-    <!-- Cartes de statistiques -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2 stats-card">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Taux de présence</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $stats['attendance_rate'] }}%
-                            </div>
-                            <div class="mt-2">
-                                <div class="progress">
-                                    <div class="progress-bar bg-primary" role="progressbar" 
-                                         style="width: {{ $stats['attendance_rate'] }}%" 
-                                         aria-valuenow="{{ $stats['attendance_rate'] }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    {{-- ── Contenu principal ── --}}
+    <div class="row g-3">
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2 stats-card">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Jours présents</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $stats['present_days'] }}
-                                @if($stats['total_days'] > 0)
-                                <small class="text-muted">/ {{ $stats['total_days'] }} jours</small>
-                                @endif
-                            </div>
-                            @if($stats['total_days'] > 0)
-                            <div class="mt-2">
-                                <span class="badge bg-success text-white">
-                                    <i class="fas fa-check-circle me-1"></i> À jour
-                                </span>
-                            </div>
-                            @endif
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2 stats-card">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Retards</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $stats['late_days'] }}
-                                @if($stats['late_days'] > 0)
-                                <small class="text-muted">cours</small>
-                                @endif
-                            </div>
-                            @if($stats['late_days'] > 0)
-                            <div class="mt-2">
-                                <span class="badge bg-warning text-dark">
-                                    <i class="fas fa-clock me-1"></i> Retard
-                                </span>
-                            </div>
-                            @endif
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2 stats-card">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Absences non justifiées</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $stats['absent_days'] }}
-                                @if($stats['absent_days'] > 0)
-                                <small class="text-muted">cours</small>
-                                @endif
-                            </div>
-                            @if($stats['absent_days'] > 0)
-                            <div class="mt-2">
-                                <span class="badge bg-danger">
-                                    <i class="fas fa-exclamation-circle me-1"></i> À justifier
-                                </span>
-                            </div>
-                            @endif
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-times fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
+        {{-- Historique --}}
         <div class="col-lg-8">
-            <!-- Liste des présences -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Historique des présences</h6>
-                    <div class="dropdown no-arrow">
-                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" 
-                           data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownMenuLink">
-                            <li><a class="dropdown-item" href="#">Tout afficher</a></li>
-                            <li><a class="dropdown-item" href="#">Présences uniquement</a></li>
-                            <li><a class="dropdown-item" href="#">Absences uniquement</a></li>
-                            <li><a class="dropdown-item" href="#">Retards uniquement</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="card-body">
-                    @if($attendances->count() > 0)
-                        @foreach($attendances as $attendance)
-                            <div class="card mb-3 attendance-card {{ $attendance->status }}">
-                                <div class="card-body py-2">
-                                    <div class="row align-items-center">
-                                        <div class="col-md-2 text-center">
-                                            <div class="h5 mb-0">
-                                                {{ $attendance->date->format('d') }}
-                                            </div>
-                                            <div class="small text-muted">
-                                                {{ $attendance->date->translatedFormat('M') }}
-                                            </div>
-                                            <div class="small">
-                                                {{ $attendance->date->translatedFormat('l') }}
-                                            </div>
-                                        </div>
-                                        <div class="col-md-7">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h6 class="mb-0">
-                                                    {{ $attendance->subject->name ?? 'Cours' }}
-                                                    @if($attendance->session_type)
-                                                        <span class="badge bg-secondary subject-badge">
-                                                            {{ $attendance->session_type }}
-                                                        </span>
-                                                    @endif
-                                                </h6>
-                                                <span class="badge status-badge 
-                                                    {{ $attendance->status === 'present' ? 'bg-success' : '' }}
-                                                    {{ $attendance->status === 'absent' ? 'bg-danger' : '' }}
-                                                    {{ $attendance->status === 'late' ? 'bg-warning text-dark' : '' }}
-                                                ">
-                                                    @if($attendance->status === 'present')
-                                                        <i class="fas fa-check-circle me-1"></i> Présent
-                                                    @elseif($attendance->status === 'absent')
-                                                        <i class="fas fa-times-circle me-1"></i> Absent
-                                                    @elseif($attendance->status === 'late')
-                                                        <i class="fas fa-clock me-1"></i> Retard
-                                                    @endif
-                                                    @if($attendance->minutes_late > 0)
-                                                        ({{ $attendance->minutes_late }} min)
-                                                    @endif
-                                                </span>
-                                            </div>
-                                            
-                                            <div class="attendance-details mt-2">
-                                                <div class="mb-1">
-                                                    <i class="far fa-clock text-muted me-1"></i>
-                                                    {{ $attendance->start_time }} - {{ $attendance->end_time }}
-                                                </div>
-                                                @if($attendance->teacher)
-                                                    <div class="mb-1">
-                                                        <i class="fas fa-chalkboard-teacher text-muted me-1"></i>
-                                                        {{ $attendance->teacher->name ?? '' }}
-                                                    </div>
-                                                @endif
-                                                @if($attendance->classroom)
-                                                    <div>
-                                                        <i class="fas fa-door-open text-muted me-1"></i>
-                                                        {{ $attendance->classroom }}
-                                                    </div>
-                                                @endif
-                                            </div>
-                                            
-                                            @if($attendance->status === 'absent' && $attendance->justification_status)
-                                                <div class="alert alert-warning p-2 mt-2 mb-0">
-                                                    <div class="d-flex">
-                                                        <i class="fas fa-info-circle mt-1 me-2"></i>
-                                                        <div>
-                                                            <strong>Justification :</strong>
-                                                            {{ $attendance->justification_status === 'pending' ? 'En attente de validation' : 'Validée' }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <div class="col-md-3 text-end">
-                                            @if($attendance->status === 'absent' && ! in_array($attendance->justification_status, ['pending', 'approved']))
-                                                <button class="btn btn-sm btn-outline-primary justify-content-end"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#justifyAbsenceModal"
-                                                        data-attendance-id="{{ $attendance->id }}">
-                                                    <i class="fas fa-pen-alt me-1"></i> Justifier
-                                                </button>
-                                            @elseif($attendance->status === 'absent' && $attendance->justification_status)
-                                                <button class="btn btn-sm btn-outline-info justify-content-end"
-                                                        data-bs-toggle="tooltip"
-                                                        title="Voir la justification">
-                                                    <i class="fas fa-eye me-1"></i> Voir
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                        
-                        <div class="d-flex justify-content-center mt-4">
-                            {{ $attendances->links() }}
+            <p class="section-title"><i class="fas fa-history"></i> Historique des présences</p>
+
+            @if($attendances->count() > 0)
+                @foreach($attendances as $attendance)
+                <div class="attendance-item {{ $attendance->status }}">
+
+                    {{-- Ligne haute : date | matière + statut --}}
+                    <div class="attend-item-top">
+                        <div class="attend-date-block">
+                            <div class="attend-date-day">{{ $attendance->date->format('d') }}</div>
+                            <div class="attend-date-month">{{ $attendance->date->translatedFormat('M') }}</div>
+                            <div class="attend-date-dow">{{ $attendance->date->translatedFormat('D') }}</div>
                         </div>
-                    @else
-                        <div class="text-center py-5">
-                            <div class="mb-4">
-                                <i class="fas fa-clipboard-list fa-4x text-gray-300"></i>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                <span class="attend-subject">
+                                    {{ $attendance->subject->name ?? 'Cours' }}
+                                    @if($attendance->session_type)
+                                        <span class="badge bg-light text-secondary border ms-1" style="font-size:.62rem;">{{ $attendance->session_type }}</span>
+                                    @endif
+                                </span>
+                                @if($attendance->status === 'present')
+                                    <span class="status-pill pill-present"><i class="fas fa-check-circle"></i> Présent</span>
+                                @elseif($attendance->status === 'absent')
+                                    <span class="status-pill pill-absent"><i class="fas fa-times-circle"></i> Absent</span>
+                                @elseif($attendance->status === 'late')
+                                    <span class="status-pill pill-late">
+                                        <i class="fas fa-clock"></i> Retard
+                                        @if($attendance->minutes_late > 0)({{ $attendance->minutes_late }} min)@endif
+                                    </span>
+                                @endif
                             </div>
-                            <h5 class="text-gray-700">Aucune présence enregistrée</h5>
-                            <p class="text-muted">Vos présences apparaîtront ici une fois enregistrées par vos professeurs.</p>
+                            <div class="attend-meta mt-1">
+                                <i class="far fa-clock"></i> {{ $attendance->start_time }} – {{ $attendance->end_time }}
+                                @if($attendance->teacher)
+                                    &nbsp;·&nbsp; <i class="fas fa-user-tie"></i> {{ $attendance->teacher->name ?? '' }}
+                                @endif
+                                @if($attendance->classroom)
+                                    &nbsp;·&nbsp; <i class="fas fa-door-open"></i> {{ $attendance->classroom }}
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Justification status --}}
+                    @if($attendance->status === 'absent' && $attendance->justification_status)
+                        <div class="justif-notice">
+                            <i class="fas fa-info-circle"></i>
+                            Justification : {{ $attendance->justification_status === 'pending' ? 'En attente de validation' : 'Validée' }}
+                        </div>
+                    @endif
+
+                    {{-- Action --}}
+                    @if($attendance->status === 'absent' && ! in_array($attendance->justification_status, ['pending', 'approved']))
+                        <div class="attend-item-action">
+                            <button class="btn-justify"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#justifyAbsenceModal"
+                                    data-attendance-id="{{ $attendance->id }}">
+                                <i class="fas fa-pen-alt"></i> Justifier
+                            </button>
+                        </div>
+                    @elseif($attendance->status === 'absent' && $attendance->justification_status === 'approved')
+                        <div class="attend-item-action">
+                            <span class="status-pill pill-present" style="font-size:.68rem;">
+                                <i class="fas fa-check"></i> Justifiée
+                            </span>
                         </div>
                     @endif
                 </div>
-            </div>
+                @endforeach
+
+                <div class="d-flex justify-content-center mt-3">
+                    {{ $attendances->links() }}
+                </div>
+            @else
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-clipboard-list fa-3x mb-3 d-block opacity-25"></i>
+                    <p class="mb-0 small">Aucune présence enregistrée pour le moment.</p>
+                </div>
+            @endif
         </div>
-        
+
+        {{-- Calendrier --}}
         <div class="col-lg-4">
-            <!-- Calendrier des absences -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-calendar-alt me-2"></i>Calendrier
-                    </h6>
-                </div>
-                <div class="card-body p-2">
-                    <div id="attendanceCalendar" style="font-size: 0.75rem;"></div>
-                    <div class="mt-3 d-flex justify-content-center gap-3 small">
-                        <span><i class="fas fa-circle text-success"></i> Présent</span>
-                        <span><i class="fas fa-circle text-warning"></i> Retard</span>
-                        <span><i class="fas fa-circle text-danger"></i> Absent</span>
-                    </div>
+            <p class="section-title"><i class="fas fa-calendar-alt"></i> Calendrier</p>
+            <div class="bg-white border rounded-3 p-2" style="border-color:#fde68a!important;">
+                <div id="attendanceCalendar" style="font-size:.75rem;"></div>
+                <div class="cal-legend">
+                    <span class="cal-legend-item"><span class="cal-dot" style="background:#10b981;"></span>Présent</span>
+                    <span class="cal-legend-item"><span class="cal-dot" style="background:#f59e0b;"></span>Retard</span>
+                    <span class="cal-legend-item"><span class="cal-dot" style="background:#ef4444;"></span>Absent</span>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
-<!-- Modal de justification d'absence - À implémenter plus tard
-<div class="modal fade" id="justifyAbsenceModal" tabindex="-1" aria-labelledby="justifyAbsenceModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="justificationForm" action="#" method="POST">
-                @csrf
-                <input type="hidden" name="attendance_id" id="attendanceId">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="justifyAbsenceModalLabel">Justifier une absence</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="justificationType" class="form-label">Type de justification</label>
-                        <select class="form-select" id="justificationType" name="type" required>
-                            <option value="">Sélectionnez un motif</option>
-                            <option value="illness">Maladie</option>
-                            <option value="medical">Rendez-vous médical</option>
-                            <option value="family">Raison familiale</option>
-                            <option value="transport">Problème de transport</option>
-                            <option value="other">Autre</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="justificationComment" class="form-label">Commentaire (optionnel)</label>
-                        <textarea class="form-control" id="justificationComment" name="comment" rows="3" 
-                                  placeholder="Précisez la raison de votre absence..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="justificationFile" class="form-label">Pièce justificative (optionnel)</label>
-                        <input class="form-control" type="file" id="justificationFile" name="file">
-                        <div class="form-text">Format accepté : PDF, JPG, PNG (max 2MB)</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Envoyer la justification</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
--->
-
-{{-- Modal de demande d'absence - À implémenter plus tard
-<div class="modal fade" id="requestAbsenceModal" tabindex="-1" aria-labelledby="requestAbsenceModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="absenceRequestForm" action="#" method="POST">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title" id="requestAbsenceModalLabel">Demande d'absence</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="absenceType" class="form-label">Type d'absence</label>
-                        <select class="form-select" id="absenceType" name="type" required>
-                            <option value="">Sélectionnez un type</option>
-                            <option value="planned">Absence prévue</option>
-                            <option value="exceptional">Absence exceptionnelle</option>
-                        </select>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="startDate" class="form-label">Du</label>
-                            <input type="date" class="form-control" id="startDate" name="start_date" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="endDate" class="form-label">Au</label>
-                            <input type="date" class="form-control" id="endDate" name="end_date" required>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="absenceReason" class="form-label">Motif</label>
-                        <select class="form-select" id="absenceReason" name="reason" required>
-                            <option value="">Sélectionnez un motif</option>
-                            <option value="illness">Maladie</option>
-                            <option value="family">Raison familiale</option>
-                            <option value="personal">Raison personnelle</option>
-                            <option value="other">Autre</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="absenceDetails" class="form-label">Détails (optionnel)</label>
-                        <textarea class="form-control" id="absenceDetails" name="details" rows="3" 
-                                 placeholder="Précisez les raisons de votre demande..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="absenceFile" class="form-label">Pièce justificative (si nécessaire)</label>
-                        <input class="form-control" type="file" id="absenceFile" name="file">
-                        <div class="form-text">Format accepté : PDF, JPG, PNG (max 2MB)</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Envoyer la demande</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{{-- Modals (commentés, fonctionnalité à implémenter) --}}
+{{--
+<div class="modal fade" id="justifyAbsenceModal" ...>...</div>
+<div class="modal fade" id="requestAbsenceModal" ...>...</div>
 --}}
 
 @push('scripts')
-<!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
-<!-- FullCalendar JS -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fr.js"></script>
-
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialisation du calendrier
-        var calendarEl = document.getElementById('attendanceCalendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'fr',
-            height: 'auto',
-            headerToolbar: {
-                left: 'prev',
-                center: 'title',
-                right: 'next'
-            },
-            titleFormat: { month: 'short', year: 'numeric' },
-            dayHeaderFormat: { weekday: 'narrow' },
-            events: @json($calendarEvents ?? []),
-            eventDidMount: function(info) {
-                if (info.event.extendedProps.description) {
-                    info.el.setAttribute('title', info.event.extendedProps.description);
-                    info.el.setAttribute('data-bs-toggle', 'tooltip');
-                }
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('attendanceCalendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'fr',
+        height: 'auto',
+        headerToolbar: { left: 'prev', center: 'title', right: 'next' },
+        titleFormat: { month: 'short', year: 'numeric' },
+        dayHeaderFormat: { weekday: 'narrow' },
+        events: @json($calendarEvents ?? []),
+        eventDidMount: function(info) {
+            if (info.event.extendedProps.description) {
+                info.el.setAttribute('title', info.event.extendedProps.description);
+                info.el.setAttribute('data-bs-toggle', 'tooltip');
             }
-        });
-        calendar.render();
-        
-        // Initialiser les tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function(tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+        }
+    });
+    calendar.render();
+
+    var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltips.forEach(function(el) { new bootstrap.Tooltip(el); });
+
+    // Injecter l'id dans le modal de justification
+    document.querySelectorAll('[data-attendance-id]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = this.dataset.attendanceId;
+            var input = document.getElementById('attendanceId');
+            if (input) input.value = id;
         });
     });
+});
 </script>
 @endpush
-
 @endsection
