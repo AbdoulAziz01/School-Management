@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduManager — Mode Hors Ligne</title>
+    <style>
+        :root {
+            --amber:  #f59e0b;
+            --amber2: #fbbf24;
+            --amber3: #fde68a;
+            --dark:   #1c1917;
+            --dark2:  #292524;
+            --dark3:  #44403c;
+            --text:   #fef3c7;
+            --muted:  #a8a29e;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ──────────────────────────────────────────────────── */
+        .header {
+            background: var(--dark2);
+            border-bottom: 1px solid rgba(251,191,36,.15);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .logo-box {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--amber), #d97706);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: var(--dark); font-weight: 800;
+        }
+        .header-title { font-size: 1.05rem; font-weight: 700; color: var(--amber2); }
+        .header-sub   { font-size: .7rem; color: var(--muted); margin-top: 1px; }
+        .offline-badge {
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(220,38,38,.15);
+            border: 1px solid rgba(220,38,38,.3);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: .72rem; font-weight: 700;
+            color: #fca5a5;
+        }
+        .offline-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #dc2626;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+        /* ── Avatar band ─────────────────────────────────────────────── */
+        .student-band {
+            background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(217,119,6,.06));
+            border-bottom: 1px solid rgba(251,191,36,.12);
+            padding: 18px 20px;
+            display: flex; align-items: center; gap: 16px;
+        }
+        .avatar {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--amber), #d97706);
+            color: var(--dark);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .student-name  { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+        .student-meta  { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+        .student-class {
+            display: inline-block;
+            background: rgba(251,191,36,.15);
+            border: 1px solid rgba(251,191,36,.3);
+            border-radius: 6px;
+            padding: 2px 10px;
+            font-size: .7rem; font-weight: 700;
+            color: var(--amber2);
+            margin-top: 5px;
+        }
+
+        /* ── Stats cards ─────────────────────────────────────────────── */
+        .stats-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 12px; padding: 16px 16px 0;
+        }
+        .stat-card {
+            background: var(--dark2);
+            border: 1px solid rgba(251,191,36,.15);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8rem; font-weight: 800;
+            color: var(--amber2);
+            line-height: 1;
+        }
+        .stat-label { font-size: .7rem; color: var(--muted); margin-top: 5px; }
+        .stat-sub   { font-size: .65rem; color: rgba(251,191,36,.5); margin-top: 3px; }
+
+        /* ── Tabs ────────────────────────────────────────────────────── */
+        .tabs {
+            display: flex; gap: 0;
+            padding: 14px 16px 0;
+            border-bottom: 1px solid rgba(251,191,36,.1);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            flex-shrink: 0;
+            padding: 9px 16px;
+            font-size: .8rem; font-weight: 600;
+            color: var(--muted);
+            border: none; background: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all .2s;
+        }
+        .tab.active { color: var(--amber2); border-bottom-color: var(--amber); }
+        .tab-panel  { display: none; padding: 16px; }
+        .tab-panel.active { display: block; }
+
+        /* ── Section title ───────────────────────────────────────────── */
+        .section-title {
+            font-size: .75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            color: rgba(251,191,36,.5);
+            margin-bottom: 12px;
+        }
+
+        /* ── Grade rows ──────────────────────────────────────────────── */
+        .grade-card {
+            background: var(--dark2);
+            border: 1px solid rgba(251,191,36,.12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .subject-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%; flex-shrink: 0;
+        }
+        .grade-subject { font-size: .9rem; font-weight: 600; flex: 1; }
+        .grade-avg {
+            font-size: 1.2rem; font-weight: 800;
+            color: var(--amber2);
+        }
+        .grade-count { font-size: .68rem; color: var(--muted); margin-top: 1px; }
+
+        /* ── Lesson cards ────────────────────────────────────────────── */
+        .lesson-card {
+            background: var(--dark2);
+            border: 1px solid rgba(251,191,36,.12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .lesson-header {
+            display: flex; align-items: flex-start;
+            gap: 12px; margin-bottom: 6px;
+        }
+        .lesson-type-icon {
+            width: 36px; height: 36px;
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+            background: rgba(251,191,36,.12);
+        }
+        .lesson-title  { font-size: .9rem; font-weight: 600; }
+        .lesson-meta   { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+        .lesson-action {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, var(--amber), #d97706);
+            color: var(--dark);
+            font-size: .75rem; font-weight: 700;
+            padding: 6px 14px; border-radius: 8px;
+            text-decoration: none;
+            border: none; cursor: pointer;
+        }
+
+        /* ── Schedule ────────────────────────────────────────────────── */
+        .day-block { margin-bottom: 18px; }
+        .day-name  {
+            font-size: .75rem; font-weight: 700;
+            color: var(--amber2);
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .day-name::after {
+            content: ''; flex: 1;
+            height: 1px;
+            background: rgba(251,191,36,.15);
+        }
+        .course-slot {
+            background: var(--dark2);
+            border: 1px solid rgba(251,191,36,.1);
+            border-left: 3px solid var(--amber);
+            border-radius: 0 10px 10px 0;
+            padding: 10px 14px;
+            margin-bottom: 6px;
+            display: flex; gap: 12px; align-items: center;
+        }
+        .slot-time  { font-size: .7rem; color: var(--muted); min-width: 80px; flex-shrink: 0; }
+        .slot-subj  { font-size: .88rem; font-weight: 600; }
+        .slot-teach { font-size: .7rem; color: var(--muted); margin-top: 2px; }
+
+        /* ── Empty state ─────────────────────────────────────────────── */
+        .empty {
+            text-align: center; padding: 32px 20px;
+            color: var(--muted); font-size: .85rem;
+        }
+        .empty-icon { font-size: 2.5rem; margin-bottom: 10px; opacity: .5; }
+
+        /* ── Retry button ────────────────────────────────────────────── */
+        .retry-bar {
+            padding: 16px; text-align: center;
+            border-top: 1px solid rgba(251,191,36,.1);
+        }
+        .retry-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: linear-gradient(135deg, var(--amber), #d97706);
+            color: var(--dark);
+            font-weight: 700; font-size: .85rem;
+            padding: 12px 28px; border-radius: 12px;
+            border: none; cursor: pointer;
+        }
+        .sync-info {
+            font-size: .68rem; color: var(--muted);
+            margin-top: 8px;
+        }
+
+        /* ── No data screen ──────────────────────────────────────────── */
+        #no-data-screen {
+            display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh;
+            padding: 32px 20px; text-align: center;
+        }
+        #no-data-screen.show { display: flex; }
+        #main-screen { display: none; }
+        #main-screen.show { display: block; }
+        .no-data-icon { font-size: 4rem; margin-bottom: 20px; opacity: .5; }
+        .no-data-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 10px; }
+        .no-data-text  { color: var(--muted); font-size: .88rem; line-height: 1.6; margin-bottom: 28px; }
+    </style>
+</head>
+<body>
+
+<!-- ── Écran "pas encore de données" ──────────────────────────────────────── -->
+<div id="no-data-screen">
+    <div class="no-data-icon">📡</div>
+    <div class="no-data-title">Aucune donnée hors ligne</div>
+    <p class="no-data-text">
+        Vous n'avez pas encore de données sauvegardées.<br>
+        Connectez-vous une fois en ligne pour que<br>
+        votre espace soit disponible hors connexion.
+    </p>
+    <button class="retry-btn" onclick="window.location.reload()">
+        ↻ Réessayer la connexion
+    </button>
+</div>
+
+<!-- ── Écran principal offline ────────────────────────────────────────────── -->
+<div id="main-screen">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-box">E</div>
+            <div>
+                <div class="header-title">EduManager</div>
+                <div class="header-sub">Espace Élève</div>
+            </div>
+        </div>
+        <div class="offline-badge">
+            <span class="offline-dot"></span> Hors ligne
+        </div>
+    </div>
+
+    <!-- Profil élève -->
+    <div class="student-band">
+        <div class="avatar" id="avatarEl">—</div>
+        <div>
+            <div class="student-name" id="nameEl">—</div>
+            <div class="student-meta" id="schoolEl">—</div>
+            <div class="student-class" id="classEl">—</div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value" id="avgEl">—</div>
+            <div class="stat-label">Moyenne générale</div>
+            <div class="stat-sub">sur 20</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="attEl">—</div>
+            <div class="stat-label">Taux de présence</div>
+            <div class="stat-sub" id="attSubEl"></div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="notes">📊 Mes Notes</button>
+        <button class="tab" data-tab="cours">📚 E-Learning</button>
+        <button class="tab" data-tab="emploi">📅 Emploi du temps</button>
+    </div>
+
+    <!-- Notes -->
+    <div class="tab-panel active" id="tab-notes">
+        <div class="section-title">Notes par matière</div>
+        <div id="grades-list"></div>
+    </div>
+
+    <!-- Cours -->
+    <div class="tab-panel" id="tab-cours">
+        <div class="section-title">Cours disponibles</div>
+        <div id="lessons-list"></div>
+    </div>
+
+    <!-- Emploi du temps -->
+    <div class="tab-panel" id="tab-emploi">
+        <div class="section-title">Horaires de la semaine</div>
+        <div id="schedule-list"></div>
+    </div>
+
+    <!-- Bas de page -->
+    <div class="retry-bar">
+        <button class="retry-btn" onclick="window.location.reload()">
+            ↻ Réessayer la connexion
+        </button>
+        <div class="sync-info" id="syncInfo">Données sauvegardées localement</div>
+    </div>
+
+</div><!-- /#main-screen -->
+
+<script>
+(function () {
+    'use strict';
+
+    var DB_NAME    = 'edumanager-offline';
+    var DB_VERSION = 1;
+
+    function openDB() {
+        return new Promise(function (resolve, reject) {
+            var req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror   = function () { reject(req.error); };
+            req.onupgradeneeded = function (e) {
+                var db = e.target.result;
+                ['profile','stats','grades','lessons','schedule'].forEach(function (n) {
+                    if (!db.objectStoreNames.contains(n)) db.createObjectStore(n, { keyPath: 'key' });
+                });
+            };
+        });
+    }
+
+    function getStore(db, name) {
+        return new Promise(function (resolve) {
+            try {
+                var tx  = db.transaction(name, 'readonly');
+                var req = tx.objectStore(name).get('data');
+                req.onsuccess = function () { resolve(req.result ? req.result.value : null); };
+                req.onerror   = function () { resolve(null); };
+            } catch (e) { resolve(null); }
+        });
+    }
+
+    function el(id) { return document.getElementById(id); }
+
+    function typeIcon(type) {
+        var icons = { pdf: '📄', doc: '📝', video: '🎬', link: '🔗' };
+        return icons[type] || '📄';
+    }
+
+    function getAppreciation(avg) {
+        if (avg >= 16) return 'Excellent';
+        if (avg >= 14) return 'Très bien';
+        if (avg >= 12) return 'Bien';
+        if (avg >= 10) return 'Passable';
+        if (avg >= 8)  return 'Insuffisant';
+        return 'Très insuffisant';
+    }
+
+    function renderGrades(grades) {
+        var list = el('grades-list');
+        if (!grades || grades.length === 0) {
+            list.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Aucune note enregistrée</div>';
+            return;
+        }
+        list.innerHTML = grades.map(function (g) {
+            var color = g.color || '#f59e0b';
+            var appre = getAppreciation(g.average);
+            return [
+                '<div class="grade-card">',
+                '<div class="subject-dot" style="background:' + color + '"></div>',
+                '<div style="flex:1">',
+                '<div class="grade-subject">' + esc(g.subject) + '</div>',
+                '<div class="grade-count">' + g.count + ' note(s) — ' + appre + '</div>',
+                '</div>',
+                '<div style="text-align:right">',
+                '<div class="grade-avg">' + g.average + '</div>',
+                '<div class="grade-count">/20</div>',
+                '</div>',
+                '</div>',
+            ].join('');
+        }).join('');
+    }
+
+    function renderLessons(lessons) {
+        var list = el('lessons-list');
+        if (!lessons || lessons.length === 0) {
+            list.innerHTML = '<div class="empty"><div class="empty-icon">📚</div>Aucun cours disponible</div>';
+            return;
+        }
+
+        // Grouper par matière
+        var bySubject = {};
+        lessons.forEach(function (l) {
+            if (!bySubject[l.subject]) bySubject[l.subject] = { color: l.color, items: [] };
+            bySubject[l.subject].items.push(l);
+        });
+
+        list.innerHTML = Object.keys(bySubject).map(function (subj) {
+            var group = bySubject[subj];
+            var items = group.items.map(function (l) {
+                var actionHtml = '';
+                if (l.download_url) {
+                    actionHtml = '<a class="lesson-action" href="' + esc(l.download_url) + '">'
+                        + typeIcon(l.type) + ' Ouvrir le cours</a>';
+                } else if (l.link_url) {
+                    actionHtml = '<a class="lesson-action" href="' + esc(l.link_url) + '" target="_blank">'
+                        + typeIcon(l.type) + ' Voir en ligne</a>';
+                }
+                return [
+                    '<div class="lesson-card">',
+                    '<div class="lesson-header">',
+                    '<div class="lesson-type-icon">' + typeIcon(l.type) + '</div>',
+                    '<div>',
+                    '<div class="lesson-title">' + esc(l.title) + '</div>',
+                    '<div class="lesson-meta">Prof. ' + esc(l.teacher) + '</div>',
+                    '</div>',
+                    '</div>',
+                    actionHtml,
+                    '</div>',
+                ].join('');
+            }).join('');
+
+            return '<div class="day-block">'
+                + '<div class="day-name" style="color:' + (group.color || '#fbbf24') + '">' + esc(subj) + '</div>'
+                + items + '</div>';
+        }).join('');
+    }
+
+    function renderSchedule(schedule) {
+        var list = el('schedule-list');
+        if (!schedule || schedule.length === 0) {
+            list.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>Emploi du temps non disponible</div>';
+            return;
+        }
+
+        list.innerHTML = schedule.map(function (day) {
+            if (!day.courses || day.courses.length === 0) return '';
+            var slots = day.courses.map(function (c) {
+                return [
+                    '<div class="course-slot" style="border-left-color:' + (c.color || '#f59e0b') + '">',
+                    '<div class="slot-time">' + esc(c.start) + ' – ' + esc(c.end) + '</div>',
+                    '<div>',
+                    '<div class="slot-subj">' + esc(c.subject) + '</div>',
+                    '<div class="slot-teach">Prof. ' + esc(c.teacher) + '</div>',
+                    '</div>',
+                    '</div>',
+                ].join('');
+            }).join('');
+            return '<div class="day-block"><div class="day-name">' + esc(day.day) + '</div>' + slots + '</div>';
+        }).join('');
+
+        if (!list.innerHTML.trim()) {
+            list.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>Pas de cours enregistrés</div>';
+        }
+    }
+
+    function esc(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;');
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+            tab.classList.add('active');
+            var panelId = 'tab-' + tab.dataset.tab;
+            var panel = document.getElementById(panelId);
+            if (panel) panel.classList.add('active');
+        });
+    });
+
+    // ── Redirection si connexion retrouvée ────────────────────────────────────
+    window.addEventListener('online', function () {
+        setTimeout(function () { window.location.href = '/student/dashboard'; }, 800);
+    });
+
+    // ── Chargement des données ────────────────────────────────────────────────
+    openDB().then(function (db) {
+        return Promise.all([
+            getStore(db, 'profile'),
+            getStore(db, 'stats'),
+            getStore(db, 'grades'),
+            getStore(db, 'lessons'),
+            getStore(db, 'schedule'),
+        ]);
+    }).then(function (results) {
+        var profile  = results[0];
+        var stats    = results[1];
+        var grades   = results[2];
+        var lessons  = results[3];
+        var schedule = results[4];
+
+        if (!profile) {
+            el('no-data-screen').classList.add('show');
+            return;
+        }
+
+        // Afficher l'écran principal
+        el('main-screen').classList.add('show');
+
+        // Profil
+        el('avatarEl').textContent = profile.avatar || '?';
+        el('nameEl').textContent   = profile.name   || '—';
+        el('schoolEl').textContent = profile.school  || 'EduManager';
+        el('classEl').textContent  = profile.class   || '—';
+
+        // Stats
+        if (stats) {
+            el('avgEl').textContent = stats.average !== null ? stats.average + '/20' : '—';
+            el('attEl').textContent = stats.attendance_rate !== null ? stats.attendance_rate + '%' : '—';
+            if (stats.present_days !== undefined) {
+                el('attSubEl').textContent = stats.present_days + ' j. présent / ' + stats.total_days;
+            }
+        }
+
+        // Info sync
+        if (profile.synced_at) {
+            el('syncInfo').textContent = 'Dernière sync : ' + profile.synced_at;
+        }
+
+        // Contenu
+        renderGrades(grades);
+        renderLessons(lessons);
+        renderSchedule(schedule);
+
+    }).catch(function () {
+        el('no-data-screen').classList.add('show');
+    });
+})();
+</script>
+</body>
+</html>

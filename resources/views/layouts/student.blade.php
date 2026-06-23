@@ -650,6 +650,7 @@
     
     @include('partials.ai-agent-widget')
     <script src="{{ asset('js/form-draft-autosave.js') }}"></script>
+    <script src="{{ asset('js/offline-student.js') }}"></script>
     @stack('scripts')
 </body>
 </html>

@@ -28,6 +28,7 @@ use App\Http\Controllers\Student\StudentLmsController;
 use App\Http\Controllers\Student\StudentQuizController;
 use App\Http\Controllers\Student\StudentCardController;
 use App\Http\Controllers\Student\StudentVirtualClassController;
+use App\Http\Controllers\Student\StudentOfflineSyncController;
 use App\Http\Controllers\Teacher\TeacherLmsController;
 use App\Http\Controllers\Teacher\TeacherVirtualClassController;
 use App\Http\Controllers\Admin\AdminLmsController;
@@ -135,6 +136,9 @@ Route::middleware(['auth', 'school.active', \App\Http\Middleware\StudentMiddlewa
         Route::post('/password', [StudentProfileController::class, 'updatePassword'])->name('update-password');
     });
     
+    // Synchronisation hors ligne (IndexedDB)
+    Route::get('/offline-data', [StudentOfflineSyncController::class, 'sync'])->name('offline-sync');
+
     // E-Learning / LMS
     Route::get('/lms', [StudentLmsController::class, 'index'])->name('lms.index');
     Route::get('/lms/lessons/{lesson}/download', [StudentLmsController::class, 'downloadLesson'])->name('lms.download');

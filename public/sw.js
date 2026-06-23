@@ -1,25 +1,25 @@
 /**
- * EduManager — Service Worker v5
- * Stratégie principale : Cache-First pour les assets pédagogiques et statiques.
- * Stratégie secondaire : Network-First pour les pages HTML (données fraîches).
- * Fallback offline pour les navigations impossibles.
- *
- * v5 : fix ignoreVary + double-cache sur redirect + pré-cache login
+ * EduManager — Service Worker v6
+ * Cache-First  : assets statiques + pédagogiques
+ * Network-First: pages HTML (avec double-cache redirect + ignoreVary)
+ * Offline élève: /offline-student.html (lit IndexedDB)
+ * Offline admin: /offline.html
  */
 
 'use strict';
 
-const SW_VERSION     = 'v5';
+const SW_VERSION     = 'v6';
 const STATIC_CACHE   = `edumanager-static-${SW_VERSION}`;
 const DYNAMIC_CACHE  = `edumanager-dynamic-${SW_VERSION}`;
-const OFFLINE_URL    = '/offline.html';
+const OFFLINE_URL         = '/offline.html';
+const OFFLINE_STUDENT_URL = '/offline-student.html';
 
-// ── Assets pré-chargés à l'installation ──────────────────────────────────────
+// ── Pré-cache à l'installation ───────────────────────────────────────────────
 const PRECACHE_URLS = [
     OFFLINE_URL,
+    OFFLINE_STUDENT_URL,
     '/login',
     '/',
-    // CDN Bootstrap + FontAwesome (UI)
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
     'https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js',
@@ -28,7 +28,7 @@ const PRECACHE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2',
 ];
 
-// ── Patterns → Cache-First (ne changent pas ou rarement) ─────────────────────
+// ── Cache-First : assets immuables ───────────────────────────────────────────
 const CACHE_FIRST_PATTERNS = [
     /\/build\/assets\/.+\.(js|css)$/,
     /cdn\.jsdelivr\.net/,
@@ -43,7 +43,7 @@ const CACHE_FIRST_PATTERNS = [
     /\.(mp3|ogg|wav)$/i,
 ];
 
-// ── Patterns → Network-First (données fraîches souhaitées) ───────────────────
+// ── Network-First : pages dynamiques ─────────────────────────────────────────
 const NETWORK_FIRST_PATTERNS = [
     /\/api\//,
     /\/student\//,
@@ -51,7 +51,7 @@ const NETWORK_FIRST_PATTERNS = [
     /\/admin\//,
 ];
 
-// ── Installation : pré-cache des assets critiques ────────────────────────────
+// ── Installation ──────────────────────────────────────────────────────────────
 self.addEventListener('install', function (event) {
     event.waitUntil(
         Promise.allSettled(
@@ -66,16 +66,14 @@ self.addEventListener('install', function (event) {
     );
 });
 
-// ── Activation : purge des anciens caches ────────────────────────────────────
+// ── Activation : purge des anciens caches ─────────────────────────────────────
 self.addEventListener('activate', function (event) {
-    const validCaches = [STATIC_CACHE, DYNAMIC_CACHE];
-
+    const valid = [STATIC_CACHE, DYNAMIC_CACHE];
     event.waitUntil(
         caches.keys()
             .then(function (keys) {
                 return Promise.all(
-                    keys
-                        .filter(function (k) { return !validCaches.includes(k); })
+                    keys.filter(function (k) { return !valid.includes(k); })
                         .map(function (k)   { return caches.delete(k); })
                 );
             })
@@ -91,19 +89,16 @@ self.addEventListener('fetch', function (event) {
     if (request.method !== 'GET') return;
     if (!url.startsWith('http'))  return;
 
-    // ── 1. Cache-First pour les assets statiques et pédagogiques ─────────────
     if (matchesPatterns(url, CACHE_FIRST_PATTERNS)) {
         event.respondWith(cacheFirst(request, STATIC_CACHE));
         return;
     }
 
-    // ── 2. Network-First pour les pages applicatives (données fraîches) ───────
     if (request.mode === 'navigate' || matchesPatterns(url, NETWORK_FIRST_PATTERNS)) {
         event.respondWith(networkFirstWithOfflineFallback(request));
         return;
     }
 
-    // ── 3. Stale-While-Revalidate pour tout le reste ──────────────────────────
     event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
 });
 
@@ -117,39 +112,32 @@ async function cacheFirst(request, cacheName) {
 
     try {
         const response = await fetch(request);
-
-        if (response.ok || response.type === 'opaque') {
+        if ((response.ok || response.type === 'opaque') && response.status !== 206) {
             const cache = await caches.open(cacheName);
-            if (response.status !== 206) {
-                cache.put(request, response.clone());
-            }
+            cache.put(request, response.clone());
         }
-
         return response;
     } catch (_) {
-        if (request.destination === 'image') {
-            return placeholderImage();
-        }
+        if (request.destination === 'image') return placeholderImage();
         return new Response('', { status: 503, statusText: 'Offline' });
     }
 }
 
 /**
- * Network-First avec fallback cache puis page offline.
- * Double-cache : stocke sous l'URL d'origine ET sous l'URL finale après redirect.
+ * Network-First avec :
+ * - Double-cache (URL originale + URL finale après redirect)
+ * - Fallback élève : /offline-student.html (lit IndexedDB)
+ * - Fallback générique : /offline.html
  */
 async function networkFirstWithOfflineFallback(request) {
     try {
         const response = await fetch(request);
 
         if (response.ok) {
-            const cache = await caches.open(DYNAMIC_CACHE);
-
-            // Toujours cacher sous l'URL de la requête originale
+            const cache  = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
 
-            // Si la réponse a suivi un redirect, cacher aussi sous l'URL finale
-            // (ex: /admin → /admin/dashboard : on cache les deux clés)
+            // Double-cache après redirect (/admin → /admin/dashboard)
             if (response.redirected && response.url && response.url !== request.url) {
                 cache.put(new Request(response.url), response.clone());
             }
@@ -157,14 +145,32 @@ async function networkFirstWithOfflineFallback(request) {
 
         return response;
     } catch (_) {
-        // Réseau indisponible → chercher dans le cache (ignoreVary pour fiabilité)
+        // 1. Page exacte dans le cache ?
         const cached = await matchCache(request);
         if (cached) return cached;
 
-        // Dernière chance : page offline générique
-        const offlinePage = await matchCache(new Request(OFFLINE_URL));
-        return offlinePage || new Response(
-            '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hors ligne</title><style>body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1c1917;font-family:sans-serif;color:#fef3c7;padding:20px}div{text-align:center}h1{margin-bottom:10px}p{color:#a8a29e}</style></head><body><div><h1>Hors ligne</h1><p>V&eacute;rifiez votre connexion.</p><button onclick="location.reload()" style="margin-top:20px;padding:10px 24px;background:#f59e0b;border:none;border-radius:8px;font-weight:700;cursor:pointer">R&eacute;essayer</button></div></body></html>',
+        // 2. Page offline adaptée au profil de l'URL
+        const urlPath = new URL(request.url).pathname;
+
+        if (urlPath.startsWith('/student/')) {
+            const studentOffline = await matchCache(new Request(OFFLINE_STUDENT_URL));
+            if (studentOffline) return studentOffline;
+        }
+
+        // 3. Fallback générique
+        const genericOffline = await matchCache(new Request(OFFLINE_URL));
+        return genericOffline || new Response(
+            '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+            + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            + '<title>Hors ligne</title>'
+            + '<style>body{min-height:100vh;display:flex;align-items:center;justify-content:center;'
+            + 'background:#1c1917;font-family:sans-serif;color:#fef3c7;padding:20px}'
+            + 'div{text-align:center}h1{margin-bottom:10px}p{color:#a8a29e;margin-bottom:20px}'
+            + 'button{padding:10px 24px;background:#f59e0b;border:none;border-radius:8px;'
+            + 'font-weight:700;cursor:pointer}</style></head>'
+            + '<body><div><h1>Hors ligne</h1>'
+            + '<p>V&eacute;rifiez votre connexion.</p>'
+            + '<button onclick="location.reload()">R&eacute;essayer</button></div></body></html>',
             { headers: { 'Content-Type': 'text/html; charset=utf-8' }, status: 503 }
         );
     }
@@ -187,35 +193,30 @@ async function staleWhileRevalidate(request, cacheName) {
 // Utilitaires
 // ════════════════════════════════════════════════════════════════════════════════
 
-/**
- * Recherche dans tous les caches avec ignoreVary=true pour éviter les faux négatifs
- * dus aux headers Vary: Cookie / Vary: Accept-Encoding envoyés par Laravel.
- */
+// ignoreVary=true : évite les faux-négatifs dus à Vary: Cookie / Accept-Encoding
 async function matchCache(request) {
     return caches.match(request, { ignoreVary: true });
 }
 
 function matchesPatterns(url, patterns) {
-    return patterns.some(function (pattern) { return pattern.test(url); });
+    return patterns.some(function (p) { return p.test(url); });
 }
 
 function placeholderImage() {
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
-    return new Response(svg, {
+    return new Response('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', {
         headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' },
     });
 }
 
-// ── Background Sync : retry des formulaires soumis hors ligne ─────────────────
+// ── Background Sync ───────────────────────────────────────────────────────────
 self.addEventListener('sync', function (event) {
     if (event.tag === 'sync-attendance') {
-        event.waitUntil(syncPendingAttendances());
+        event.waitUntil(
+            self.clients.matchAll().then(function (clients) {
+                clients.forEach(function (c) {
+                    c.postMessage({ type: 'SYNC_COMPLETE', tag: 'sync-attendance' });
+                });
+            })
+        );
     }
 });
-
-async function syncPendingAttendances() {
-    const clients = await self.clients.matchAll();
-    clients.forEach(function (client) {
-        client.postMessage({ type: 'SYNC_COMPLETE', tag: 'sync-attendance' });
-    });
-}
