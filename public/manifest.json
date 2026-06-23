@@ -3,10 +3,12 @@
     "short_name": "EduManager",
     "description": "Application de gestion scolaire",
     "start_url": "/admin",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#1c1917",
     "theme_color": "#f59e0b",
     "orientation": "portrait-primary",
+    "prefer_related_applications": false,
     "icons": [
         {
             "src": "/favicon.ico",

@@ -1,20 +1,24 @@
 /**
- * EduManager — Service Worker v4
+ * EduManager — Service Worker v5
  * Stratégie principale : Cache-First pour les assets pédagogiques et statiques.
  * Stratégie secondaire : Network-First pour les pages HTML (données fraîches).
  * Fallback offline pour les navigations impossibles.
+ *
+ * v5 : fix ignoreVary + double-cache sur redirect + pré-cache login
  */
 
 'use strict';
 
-const SW_VERSION     = 'v4';
-const STATIC_CACHE   = `edumanager-static-${SW_VERSION}`;   // Assets immuables
-const DYNAMIC_CACHE  = `edumanager-dynamic-${SW_VERSION}`;  // Pages et ressources dynamiques
+const SW_VERSION     = 'v5';
+const STATIC_CACHE   = `edumanager-static-${SW_VERSION}`;
+const DYNAMIC_CACHE  = `edumanager-dynamic-${SW_VERSION}`;
 const OFFLINE_URL    = '/offline.html';
 
 // ── Assets pré-chargés à l'installation ──────────────────────────────────────
 const PRECACHE_URLS = [
     OFFLINE_URL,
+    '/login',
+    '/',
     // CDN Bootstrap + FontAwesome (UI)
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
@@ -26,20 +30,15 @@ const PRECACHE_URLS = [
 
 // ── Patterns → Cache-First (ne changent pas ou rarement) ─────────────────────
 const CACHE_FIRST_PATTERNS = [
-    // Assets compilés (Vite hash dans le nom)
     /\/build\/assets\/.+\.(js|css)$/,
-    // CDN externes
     /cdn\.jsdelivr\.net/,
     /cdnjs\.cloudflare\.com/,
     /fonts\.googleapis\.com/,
     /fonts\.gstatic\.com/,
-    // Images et polices locales
     /\.(png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|eot)(\?.*)?$/i,
-    // Ressources pédagogiques (PDFs cours, stockés dans /storage/)
     /\/storage\/lms\//,
     /\/storage\/lessons\//,
     /\.pdf$/i,
-    // Audio (messages vocaux parents)
     /\/storage\/audio\//,
     /\.(mp3|ogg|wav)$/i,
 ];
@@ -55,20 +54,15 @@ const NETWORK_FIRST_PATTERNS = [
 // ── Installation : pré-cache des assets critiques ────────────────────────────
 self.addEventListener('install', function (event) {
     event.waitUntil(
-        caches.open(STATIC_CACHE)
-            .then(function (cache) {
-                return cache.addAll(
-                    PRECACHE_URLS.map(function (url) {
-                        return new Request(url, { credentials: 'omit' });
-                    })
-                );
+        Promise.allSettled(
+            PRECACHE_URLS.map(function (url) {
+                return caches.open(STATIC_CACHE).then(function (cache) {
+                    return cache.add(new Request(url, { credentials: 'omit' }));
+                }).catch(function (err) {
+                    console.warn('[SW] Précache ignoré :', url, err.message);
+                });
             })
-            .then(function () { return self.skipWaiting(); })
-            .catch(function (err) {
-                // Ne pas bloquer l'install si un CDN est inaccessible
-                console.warn('[SW] Précache partiel :', err.message);
-                return self.skipWaiting();
-            })
+        ).then(function () { return self.skipWaiting(); })
     );
 });
 
@@ -94,11 +88,8 @@ self.addEventListener('fetch', function (event) {
     const request = event.request;
     const url     = request.url;
 
-    // Ignorer : non-GET, extensions navigateur, chrome-extension, etc.
     if (request.method !== 'GET') return;
     if (!url.startsWith('http'))  return;
-
-    const urlObj = new URL(url);
 
     // ── 1. Cache-First pour les assets statiques et pédagogiques ─────────────
     if (matchesPatterns(url, CACHE_FIRST_PATTERNS)) {
@@ -120,23 +111,15 @@ self.addEventListener('fetch', function (event) {
 // Stratégies
 // ════════════════════════════════════════════════════════════════════════════════
 
-/**
- * Cache-First : sert depuis le cache, met en cache si absent.
- * Idéal pour : CSS/JS hashés, fonts, images, PDFs cours.
- */
 async function cacheFirst(request, cacheName) {
-    const cached = await caches.match(request, { ignoreSearch: false });
-
-    if (cached) {
-        return cached;
-    }
+    const cached = await matchCache(request);
+    if (cached) return cached;
 
     try {
         const response = await fetch(request);
 
         if (response.ok || response.type === 'opaque') {
             const cache = await caches.open(cacheName);
-            // Ne pas mettre en cache les réponses partielles (range requests)
             if (response.status !== 206) {
                 cache.put(request, response.clone());
             }
@@ -144,7 +127,6 @@ async function cacheFirst(request, cacheName) {
 
         return response;
     } catch (_) {
-        // Ressource absente du cache et réseau indisponible
         if (request.destination === 'image') {
             return placeholderImage();
         }
@@ -154,39 +136,43 @@ async function cacheFirst(request, cacheName) {
 
 /**
  * Network-First avec fallback cache puis page offline.
- * Idéal pour : pages HTML de l'application.
+ * Double-cache : stocke sous l'URL d'origine ET sous l'URL finale après redirect.
  */
 async function networkFirstWithOfflineFallback(request) {
     try {
         const response = await fetch(request);
 
-        // Mettre en cache la page réussie pour usage offline futur
         if (response.ok) {
             const cache = await caches.open(DYNAMIC_CACHE);
+
+            // Toujours cacher sous l'URL de la requête originale
             cache.put(request, response.clone());
+
+            // Si la réponse a suivi un redirect, cacher aussi sous l'URL finale
+            // (ex: /admin → /admin/dashboard : on cache les deux clés)
+            if (response.redirected && response.url && response.url !== request.url) {
+                cache.put(new Request(response.url), response.clone());
+            }
         }
 
         return response;
     } catch (_) {
-        // Réseau indisponible → chercher dans le cache
-        const cached = await caches.match(request);
+        // Réseau indisponible → chercher dans le cache (ignoreVary pour fiabilité)
+        const cached = await matchCache(request);
         if (cached) return cached;
 
         // Dernière chance : page offline générique
-        const offlinePage = await caches.match(OFFLINE_URL);
+        const offlinePage = await matchCache(new Request(OFFLINE_URL));
         return offlinePage || new Response(
-            '<h1>Hors ligne</h1><p>Vérifiez votre connexion.</p>',
+            '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hors ligne</title><style>body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1c1917;font-family:sans-serif;color:#fef3c7;padding:20px}div{text-align:center}h1{margin-bottom:10px}p{color:#a8a29e}</style></head><body><div><h1>Hors ligne</h1><p>V&eacute;rifiez votre connexion.</p><button onclick="location.reload()" style="margin-top:20px;padding:10px 24px;background:#f59e0b;border:none;border-radius:8px;font-weight:700;cursor:pointer">R&eacute;essayer</button></div></body></html>',
             { headers: { 'Content-Type': 'text/html; charset=utf-8' }, status: 503 }
         );
     }
 }
 
-/**
- * Stale-While-Revalidate : sert le cache immédiatement puis met à jour en arrière-plan.
- */
 async function staleWhileRevalidate(request, cacheName) {
-    const cache      = await caches.open(cacheName);
-    const cached     = await cache.match(request);
+    const cache        = await caches.open(cacheName);
+    const cached       = await matchCache(request);
     const fetchPromise = fetch(request).then(function (response) {
         if (response.ok || response.type === 'opaque') {
             cache.put(request, response.clone());
@@ -201,11 +187,18 @@ async function staleWhileRevalidate(request, cacheName) {
 // Utilitaires
 // ════════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Recherche dans tous les caches avec ignoreVary=true pour éviter les faux négatifs
+ * dus aux headers Vary: Cookie / Vary: Accept-Encoding envoyés par Laravel.
+ */
+async function matchCache(request) {
+    return caches.match(request, { ignoreVary: true });
+}
+
 function matchesPatterns(url, patterns) {
     return patterns.some(function (pattern) { return pattern.test(url); });
 }
 
-/** SVG placeholder 1×1 transparent pour les images manquantes */
 function placeholderImage() {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
     return new Response(svg, {
@@ -221,8 +214,6 @@ self.addEventListener('sync', function (event) {
 });
 
 async function syncPendingAttendances() {
-    // Lire les appels sauvegardés dans IndexedDB et les envoyer quand le réseau revient
-    // (Implémentation complète dans js/offline-queue.js)
     const clients = await self.clients.matchAll();
     clients.forEach(function (client) {
         client.postMessage({ type: 'SYNC_COMPLETE', tag: 'sync-attendance' });

@@ -216,6 +216,52 @@
 
         .footer-text { text-align: center; margin-top: 40px; color: rgba(254,243,199,0.5); font-size: 0.78rem; }
 
+        /* ── Bouton PWA Install ── */
+        .btn-pwa-install {
+            display: none; /* affiché par JS quand disponible */
+            align-items: center; gap: 10px;
+            padding: 15px 32px; border-radius: 50px;
+            background: rgba(255,255,255,0.13);
+            border: 1.5px solid rgba(255,255,255,0.38);
+            color: #fff; font-size: 1rem; font-weight: 600;
+            cursor: pointer; text-decoration: none;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-pwa-install:hover {
+            background: rgba(255,255,255,0.22);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        }
+        .btn-pwa-install.visible { display: inline-flex; }
+        .pwa-install-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Toast iOS */
+        .pwa-ios-toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1c1917; color: #fef3c7;
+            border: 1px solid rgba(251,191,36,0.3);
+            border-radius: 16px; padding: 14px 20px;
+            font-size: 0.82rem; font-weight: 500; line-height: 1.5;
+            max-width: 320px; width: calc(100% - 40px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+            z-index: 9999; display: none;
+            text-align: center;
+        }
+        .pwa-ios-toast.show { display: block; animation: slideUp .3s ease; }
+        .pwa-ios-toast strong { color: #fbbf24; }
+        .pwa-ios-close {
+            margin-top: 10px; background: rgba(255,255,255,0.1);
+            border: none; color: #fef3c7; border-radius: 8px;
+            padding: 5px 16px; font-size: 0.78rem; cursor: pointer; width: 100%;
+        }
+        @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity:0; } to { transform: translateX(-50%) translateY(0); opacity:1; } }
+
         @keyframes blink { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.75); } }
         @keyframes floatA { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-16px) rotate(2deg); } }
         @keyframes floatB { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-22px) rotate(-2deg); } }
@@ -286,12 +332,33 @@
                     </svg>
                     Se connecter
                 </a>
+
+                {{-- Bouton installation PWA (affiché par JS si supporté) --}}
+                <button id="pwaInstallBtn" class="btn-pwa-install" type="button">
+                    <div class="pwa-install-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 16L7 11M12 16L17 11M12 16V4" stroke="#1c1917" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 20H21" stroke="#1c1917" stroke-width="2.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    Installer l'application
+                </button>
+
                 <a href="#espaces" class="btn-discover">
                     Découvrir les espaces
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
                         <path d="M12 5V19M5 12L12 19L19 12" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </a>
+            </div>
+
+            {{-- Toast iOS --}}
+            <div class="pwa-ios-toast" id="pwaIosToast">
+                <strong>📲 Installer EduManager</strong><br>
+                Appuyez sur <strong>Partager</strong>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin:0 3px;"><path d="M8 12H16M12 8V16" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#fbbf24" stroke-width="2"/></svg>
+                puis <strong>« Sur l'écran d'accueil »</strong>
+                <button class="pwa-ios-close" onclick="document.getElementById('pwaIosToast').classList.remove('show')">Compris</button>
             </div>
 
             <div class="float-badge badge-tl">
