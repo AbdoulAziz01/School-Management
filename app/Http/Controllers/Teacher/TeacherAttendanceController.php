@@ -163,12 +163,25 @@ class TeacherAttendanceController extends Controller
             ->filter(fn (array $a) => ($a['status'] ?? '') === 'absent')
             ->pluck('user_id');
 
+        $notifCount  = 0;
+        $notifFailed = false;
+
         if ($absentIds->isNotEmpty()) {
-            User::whereIn('id', $absentIds)
+            // Vérifier que les credentials UltraMsg sont configurés
+            $ultramsgReady = filled(config('services.ultramsg.instance_id'))
+                          && filled(config('services.ultramsg.token'));
+
+            $studentsToNotify = User::whereIn('id', $absentIds)
                 ->whereNotNull('parent_whatsapp')
-                ->get()
-                ->each(function (User $student) use ($subjectName, $startTime, $teacher, $remarksByUserId) {
-                    SendWhatsAppNotification::dispatchAfterResponse(
+                ->get();
+
+            $notifCount = $studentsToNotify->count();
+
+            if ($ultramsgReady && $notifCount > 0) {
+                $studentsToNotify->each(function (User $student) use (
+                    $subjectName, $startTime, $teacher, $remarksByUserId
+                ) {
+                    SendWhatsAppNotification::dispatch(
                         $student,
                         NotificationService::EVENT_ABSENCE,
                         [
@@ -176,16 +189,31 @@ class TeacherAttendanceController extends Controller
                             'subject'      => $subjectName,
                             'time'         => $startTime,
                             'teacher_name' => $teacher->name,
-                            'remark'       => $remarksByUserId->get($student->id),
+                            'remark'       => $remarksByUserId->get((string) $student->id),
                         ]
                     );
                 });
+            } elseif ($notifCount > 0) {
+                // Credentials manquants → avertir sans bloquer
+                \Illuminate\Support\Facades\Log::warning('[TeacherAttendance] Notifications WhatsApp ignorées : ULTRAMSG non configuré.', [
+                    'absent_count' => $notifCount,
+                ]);
+                $notifFailed = true;
+            }
+        }
+
+        // Message de retour selon résultat des notifications
+        $successMsg = 'Appel enregistré. Les présences de cette date sont définitives.';
+        if ($notifCount > 0 && ! $notifFailed) {
+            $successMsg .= " 📱 {$notifCount} notification(s) WhatsApp envoyée(s) aux parents.";
+        } elseif ($notifFailed) {
+            $successMsg .= ' ⚠️ Les notifications WhatsApp n\'ont pas pu être envoyées (service non configuré).';
         }
 
         return redirect()->route('teacher.attendance.index', [
             'class_id' => $request->class_id,
             'date'     => $date,
-        ])->with('success', 'Appel enregistré. Les présences de cette date sont définitives.');
+        ])->with('success', $successMsg);
     }
 
     /**
