@@ -237,6 +237,52 @@ class User extends Authenticatable
         return in_array($this->role, self::ROLE_STUDENT_ALIASES, true);
     }
 
+    /**
+     * Nom du rôle Spatie canonique correspondant à la valeur (éventuellement
+     * un alias historique) actuellement stockée dans users.role.
+     */
+    public function canonicalRoleName(): ?string
+    {
+        return match (true) {
+            $this->role === self::ROLE_SUPER_ADMIN => self::ROLE_SUPER_ADMIN,
+            $this->role === self::ROLE_ADMIN => self::ROLE_ADMIN,
+            $this->role === self::ROLE_SURVEILLANT => self::ROLE_SURVEILLANT,
+            in_array($this->role, self::ROLE_TEACHER_ALIASES, true) => self::ROLE_TEACHER,
+            in_array($this->role, self::ROLE_STUDENT_ALIASES, true) => self::ROLE_STUDENT,
+            default => null,
+        };
+    }
+
+    /**
+     * Aligne le rôle Spatie (spatie/laravel-permission) sur users.role, qui
+     * reste la source de vérité fonctionnelle. Appelé automatiquement à
+     * chaque sauvegarde où le rôle change (voir booted()) et par
+     * RolePermissionSeeder pour le rattrapage initial.
+     */
+    public function syncRoleFromColumn(): void
+    {
+        $canonical = $this->canonicalRoleName();
+
+        if ($canonical === null) {
+            return;
+        }
+
+        if (! \Spatie\Permission\Models\Role::where('name', $canonical)->where('guard_name', 'web')->exists()) {
+            return;
+        }
+
+        $this->syncRoles([$canonical]);
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function (self $user) {
+            if ($user->wasChanged('role') || $user->wasRecentlyCreated) {
+                $user->syncRoleFromColumn();
+            }
+        });
+    }
+
     public function isPending(): bool
     {
         return $this->status === self::STATUS_PENDING;

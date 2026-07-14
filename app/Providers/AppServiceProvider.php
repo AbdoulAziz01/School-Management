@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -45,6 +46,11 @@ class AppServiceProvider extends ServiceProvider
         Password::defaults(fn () => $this->app->isProduction()
             ? Password::min(10)->mixedCase()->numbers()->symbols()->uncompromised()
             : Password::min(8));
+
+        // super_admin passe outre toute vérification de permission Spatie
+        // (Gate::allows()/$user->can()) — cohérent avec TenantSchool::applyForUser()
+        // qui désactive déjà le scope multi-établissement pour ce rôle.
+        Gate::before(fn ($user, string $ability) => $user->isSuperAdmin() ? true : null);
 
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(5)
