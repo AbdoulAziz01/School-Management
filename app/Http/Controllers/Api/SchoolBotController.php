@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\School;
 use App\Models\User;
 use App\Services\SchoolBot\SchoolBotStatsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SchoolBotController extends Controller
 {
@@ -14,29 +16,33 @@ class SchoolBotController extends Controller
         private SchoolBotStatsService $statsService
     ) {}
 
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
-        return response()->json($this->statsService->stats());
+        return response()->json($this->statsService->stats($this->resolveSchoolId($request)));
     }
 
     public function repeaters(Request $request): JsonResponse
     {
+        $schoolId = $this->resolveSchoolId($request);
+
         $limit = (int) $request->query('limit', 50);
         $limit = max(1, min($limit, 200));
 
         return response()->json([
-            'items' => $this->statsService->repeatersList($limit),
+            'items' => $this->statsService->repeatersList($schoolId, $limit),
             'hint' => 'Liste basée sur l’heuristique « années académiques distinctes avec notes ».',
         ]);
     }
 
-    public function outcomes(): JsonResponse
+    public function outcomes(Request $request): JsonResponse
     {
-        return response()->json($this->statsService->outcomes());
+        return response()->json($this->statsService->outcomes($this->resolveSchoolId($request)));
     }
 
     public function searchStudents(Request $request): JsonResponse
     {
+        $schoolId = $this->resolveSchoolId($request);
+
         $q = trim((string) $request->query('q', ''));
         if ($q === '') {
             return response()->json(['message' => 'Le paramètre « q » est requis.'], 422);
@@ -45,7 +51,7 @@ class SchoolBotController extends Controller
             return response()->json(['message' => 'Requête trop longue (max 200 caractères).'], 422);
         }
 
-        $items = $this->statsService->studentSearchQuery($q)->limit(25)->get()
+        $items = $this->statsService->studentSearchQuery($q, $schoolId)->limit(25)->get()
             ->map(fn (User $u) => $this->studentSummary($u));
 
         return response()->json([
@@ -59,6 +65,8 @@ class SchoolBotController extends Controller
      */
     public function searchUsers(Request $request): JsonResponse
     {
+        $schoolId = $this->resolveSchoolId($request);
+
         $q = trim((string) $request->query('q', ''));
         if ($q === '') {
             return response()->json(['message' => 'Le paramètre « q » est requis.'], 422);
@@ -67,7 +75,7 @@ class SchoolBotController extends Controller
             return response()->json(['message' => 'Requête trop longue (max 200 caractères).'], 422);
         }
 
-        $items = $this->statsService->userSearchQuery($q)->limit(25)->get()
+        $items = $this->statsService->userSearchQuery($q, $schoolId)->limit(25)->get()
             ->map(fn (User $u) => $this->userSummaryForBot($u));
 
         return response()->json([
@@ -76,9 +84,12 @@ class SchoolBotController extends Controller
         ]);
     }
 
-    public function showStudent(int $id): JsonResponse
+    public function showStudent(Request $request, int $id): JsonResponse
     {
+        $schoolId = $this->resolveSchoolId($request);
+
         $user = User::query()
+            ->where('school_id', $schoolId)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->with(['class:id,name,level_id,academic_year_id', 'class.level:id,name', 'class.academicYear:id,name'])
             ->find($id);
@@ -88,6 +99,32 @@ class SchoolBotController extends Controller
         }
 
         return response()->json($this->studentDetail($user));
+    }
+
+    /**
+     * Résout et valide l'établissement ciblé par la requête bot. Le secret Bearer
+     * (EnsureSchoolBotSecret) authentifie l'appelant mais n'identifie aucun
+     * établissement précis — school_id doit donc être fourni explicitement à
+     * chaque appel pour éviter d'agréger les données de toute la plateforme.
+     */
+    private function resolveSchoolId(Request $request): int
+    {
+        $validated = $request->validate([
+            'school_id' => ['required', 'integer'],
+        ]);
+
+        $exists = School::query()
+            ->where('id', $validated['school_id'])
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $exists) {
+            throw ValidationException::withMessages([
+                'school_id' => 'Établissement introuvable ou inactif.',
+            ]);
+        }
+
+        return (int) $validated['school_id'];
     }
 
     /**

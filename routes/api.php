@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\SchoolBotController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('bot/school')
-    ->middleware('school.bot')
+    ->middleware(['school.bot', 'throttle:60,1'])
     ->group(function () {
         Route::get('/stats', [SchoolBotController::class, 'stats']);
         Route::get('/stats/repeaters', [SchoolBotController::class, 'repeaters']);

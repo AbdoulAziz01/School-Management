@@ -14,14 +14,14 @@ class SchoolBotStatsService
         private BulletinComputation $bulletinComputation
     ) {}
 
-    public function stats(): array
+    public function stats(int $schoolId): array
     {
-        $studentQuery = User::query()->whereIn('role', User::ROLE_STUDENT_ALIASES);
-        $teacherQuery = User::query()->whereIn('role', User::ROLE_TEACHER_ALIASES);
+        $studentQuery = User::query()->where('school_id', $schoolId)->whereIn('role', User::ROLE_STUDENT_ALIASES);
+        $teacherQuery = User::query()->where('school_id', $schoolId)->whereIn('role', User::ROLE_TEACHER_ALIASES);
 
-        $currentYear = AcademicYear::where('is_current', true)->first();
+        $currentYear = AcademicYear::where('school_id', $schoolId)->where('is_current', true)->first();
 
-        $repeatersCount = $this->countRepeatersEstimate();
+        $repeatersCount = $this->countRepeatersEstimate($schoolId);
 
         return [
             'current_academic_year' => $currentYear ? [
@@ -43,8 +43,8 @@ class SchoolBotStatsService
                 'approved' => (clone $teacherQuery)->where('status', User::STATUS_APPROVED)->count(),
                 'pending' => (clone $teacherQuery)->where('status', User::STATUS_PENDING)->count(),
             ],
-            'admins' => User::query()->where('role', User::ROLE_ADMIN)->count(),
-            'classes' => SchoolClass::query()->count(),
+            'admins' => User::query()->where('school_id', $schoolId)->where('role', User::ROLE_ADMIN)->count(),
+            'classes' => SchoolClass::query()->where('school_id', $schoolId)->count(),
             'repeaters' => [
                 'count' => $repeatersCount,
                 'definition' => 'Élèves approuvés ayant des notes sur au moins deux années académiques distinctes (heuristique, pas de champ « redoublant » en base).',
@@ -55,9 +55,10 @@ class SchoolBotStatsService
     /**
      * Heuristique redoublants : plusieurs academic_year_id distincts dans grades.
      */
-    public function countRepeatersEstimate(): int
+    public function countRepeatersEstimate(int $schoolId): int
     {
         $studentIds = User::query()
+            ->where('school_id', $schoolId)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where('status', User::STATUS_APPROVED)
             ->pluck('id');
@@ -68,6 +69,7 @@ class SchoolBotStatsService
 
         // PostgreSQL exige que SELECT ne soit pas * quand GROUP BY user_id (pas MySQL).
         return DB::table('grades')
+            ->where('school_id', $schoolId)
             ->whereIn('user_id', $studentIds)
             ->whereNotNull('academic_year_id')
             ->select('user_id')
@@ -80,11 +82,12 @@ class SchoolBotStatsService
     /**
      * @return list<array{id:int, identifier:?string, name:string, status:string, class:?string, academic_years_with_grades:int}>
      */
-    public function repeatersList(int $limit = 50): array
+    public function repeatersList(int $schoolId, int $limit = 50): array
     {
         $limit = max(1, min($limit, 200));
 
         $rows = DB::table('grades')
+            ->where('school_id', $schoolId)
             ->whereNotNull('academic_year_id')
             ->selectRaw('user_id, COUNT(DISTINCT academic_year_id) as academic_years_with_grades')
             ->groupBy('user_id')
@@ -98,6 +101,7 @@ class SchoolBotStatsService
         }
 
         $users = User::query()
+            ->where('school_id', $schoolId)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where('status', User::STATUS_APPROVED)
             ->whereIn('id', $rows->pluck('user_id'))
@@ -129,9 +133,9 @@ class SchoolBotStatsService
      *
      * @return array<string, mixed>
      */
-    public function outcomes(): array
+    public function outcomes(int $schoolId): array
     {
-        $year = AcademicYear::where('is_current', true)->first();
+        $year = AcademicYear::where('school_id', $schoolId)->where('is_current', true)->first();
         if (! $year) {
             return [
                 'configured' => false,
@@ -142,14 +146,14 @@ class SchoolBotStatsService
         $semester = $this->bulletinComputation->getCurrentSemester();
         $threshold = (float) config('services.school_bot.passing_grade_min', 10.0);
 
-        $classes = SchoolClass::query()->with('level')->get();
+        $classes = SchoolClass::query()->where('school_id', $schoolId)->with('level')->get();
 
         $pass = 0;
         $fail = 0;
         $no_data = 0;
 
         foreach ($classes as $class) {
-            $averages = $this->calculateClassAveragesWeighted($class, $semester, $year);
+            $averages = $this->calculateClassAveragesWeighted($schoolId, $class, $semester, $year);
             foreach ($averages as $average) {
                 if ($average <= 0.0) {
                     $no_data++;
@@ -162,6 +166,7 @@ class SchoolBotStatsService
         }
 
         $approvedAssigned = User::query()
+            ->where('school_id', $schoolId)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where('status', User::STATUS_APPROVED)
             ->whereNotNull('class_id')
@@ -194,9 +199,10 @@ class SchoolBotStatsService
     /**
      * @return array<int, float> user_id => moyenne
      */
-    private function calculateClassAveragesWeighted(SchoolClass $class, int $semester, AcademicYear $academicYear): array
+    private function calculateClassAveragesWeighted(int $schoolId, SchoolClass $class, int $semester, AcademicYear $academicYear): array
     {
         $studentIds = User::query()
+            ->where('school_id', $schoolId)
             ->where('class_id', $class->id)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where('status', User::STATUS_APPROVED)
@@ -207,6 +213,7 @@ class SchoolBotStatsService
         }
 
         $gradesByStudent = Grade::query()
+            ->where('school_id', $schoolId)
             ->whereIn('user_id', $studentIds)
             ->where('semester', $semester)
             ->where('academic_year_id', $academicYear->id)
@@ -229,11 +236,12 @@ class SchoolBotStatsService
     /**
      * @return \Illuminate\Database\Eloquent\Builder<User>
      */
-    public function studentSearchQuery(string $q)
+    public function studentSearchQuery(string $q, int $schoolId)
     {
         $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $q).'%';
 
         return User::query()
+            ->where('school_id', $schoolId)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where(function ($query) use ($term) {
                 $query->where('name', 'like', $term)
@@ -248,12 +256,13 @@ class SchoolBotStatsService
      *
      * @return \Illuminate\Database\Eloquent\Builder<User>
      */
-    public function userSearchQuery(string $q)
+    public function userSearchQuery(string $q, int $schoolId)
     {
         $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $q).'%';
         $roles = array_merge(User::ROLE_STUDENT_ALIASES, User::ROLE_TEACHER_ALIASES);
 
         return User::query()
+            ->where('school_id', $schoolId)
             ->whereIn('role', $roles)
             ->where(function ($query) use ($term, $q) {
                 $query->where('identifier', $q)
