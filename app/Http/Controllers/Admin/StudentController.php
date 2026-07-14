@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class StudentController extends Controller
@@ -587,7 +588,7 @@ class StudentController extends Controller
         abort_unless($student->isStudent(), 404);
 
         $validated = $request->validate([
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $student->forceFill([

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,6 +41,10 @@ class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(! $this->app->isProduction());
 
         DB::prohibitDestructiveCommands($this->app->isProduction());
+
+        Password::defaults(fn () => $this->app->isProduction()
+            ? Password::min(10)->mixedCase()->numbers()->symbols()->uncompromised()
+            : Password::min(8));
 
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(5)
