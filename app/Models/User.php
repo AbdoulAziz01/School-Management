@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\BelongsToSchool;
-use App\Models\Concerns\HasAdminVisiblePassword;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
@@ -16,7 +15,7 @@ use App\Models\Grade;
 
 class User extends Authenticatable
 {
-    use BelongsToSchool, HasAdminVisiblePassword, HasFactory, Notifiable, HasRoles, LogsActivity;
+    use BelongsToSchool, HasFactory, Notifiable, HasRoles, LogsActivity;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -124,7 +123,6 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'admin_visible_password',
         'remember_token',
     ];
 
@@ -211,6 +209,12 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
+    }
+
+    /** Autorisation d'accès au panneau de révélation ponctuelle des mots de passe générés. */
+    public function canViewUserPasswords(): bool
+    {
+        return $this->isSuperAdmin() || $this->isAdmin();
     }
 
     public function isSurveillant(): bool

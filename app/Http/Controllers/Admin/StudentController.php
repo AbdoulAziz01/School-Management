@@ -427,7 +427,7 @@ class StudentController extends Controller
             ]);
             $student->save();
 
-            $student->setAdminVisiblePassword($plainPassword);
+            $this->flashStudentCredentials($student, $plainPassword);
 
             DB::commit();
 
@@ -593,7 +593,7 @@ class StudentController extends Controller
         $student->forceFill([
             'password' => Hash::make($validated['password']),
         ])->save();
-        $student->setAdminVisiblePassword($validated['password']);
+        $this->flashStudentCredentials($student, $validated['password']);
 
         return redirect()
             ->route('admin.students.show', $student)
@@ -692,7 +692,7 @@ public function pending()
         abort_unless($student->isStudent(), 404);
         $this->assertCanManageStudentCredentials();
 
-        $plainPassword = $student->adminVisiblePassword() ?? $this->assignStudentPassword($student);
+        $plainPassword = $this->assignStudentPassword($student);
         $result = $this->sendStudentCredentials($student, $plainPassword);
 
         if ($result === true) {
@@ -876,6 +876,22 @@ public function pending()
         abort_unless(auth()->user()?->canViewUserPasswords(), 403, 'Accès réservé à l\'administrateur.');
     }
 
+    /**
+     * Affiche les identifiants en clair une seule fois : uniquement juste après leur
+     * génération (création, régénération, réinitialisation, envoi), via un flash de
+     * session consommé par la requête suivante. Le mot de passe n'est jamais stocké
+     * en clair ni de façon réversible.
+     */
+    private function flashStudentCredentials(User $student, string $plainPassword): void
+    {
+        session()->flash("credentials_reveal.student.{$student->id}", [
+            'name' => $student->name,
+            'identifier' => $student->identifier,
+            'email' => $student->email,
+            'password' => $plainPassword,
+        ]);
+    }
+
     /** @return array{name: string, identifier: string|null, email: string|null, password: string}|null */
     private function resolveStudentCredentials(User $student): ?array
     {
@@ -883,23 +899,7 @@ public function pending()
             return null;
         }
 
-        $plainPassword = $student->adminVisiblePassword();
-
-        if ($plainPassword === null && Hash::check('password', $student->password)) {
-            $student->setAdminVisiblePassword('password');
-            $plainPassword = 'password';
-        }
-
-        if ($plainPassword === null) {
-            return null;
-        }
-
-        return [
-            'name' => $student->name,
-            'identifier' => $student->identifier,
-            'email' => $student->email,
-            'password' => $plainPassword,
-        ];
+        return session("credentials_reveal.student.{$student->id}");
     }
 
     private function assignStudentPassword(User $student): string
@@ -910,7 +910,7 @@ public function pending()
             'password' => Hash::make($plainPassword),
         ])->save();
 
-        $student->setAdminVisiblePassword($plainPassword);
+        $this->flashStudentCredentials($student, $plainPassword);
 
         return $plainPassword;
     }
@@ -945,7 +945,7 @@ public function pending()
                 'invitation_email_sent_at' => now(),
             ])->save();
 
-            $student->setAdminVisiblePassword($plainPassword);
+            $this->flashStudentCredentials($student, $plainPassword);
 
             return true;
         } catch (TransportExceptionInterface $e) {

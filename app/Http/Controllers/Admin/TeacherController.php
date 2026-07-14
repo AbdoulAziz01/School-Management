@@ -275,7 +275,7 @@ class TeacherController extends Controller
         abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
         $this->assertCanManageTeacherCredentials();
 
-        $plainPassword = $teacher->adminVisiblePassword() ?? $this->assignTeacherPassword($teacher);
+        $plainPassword = $this->assignTeacherPassword($teacher);
 
         $result = $this->sendTeacherCredentials($teacher, $plainPassword, manual: true);
 
@@ -334,15 +334,20 @@ class TeacherController extends Controller
         return (bool) config('mail.teacher_credentials_email_enabled', false);
     }
 
-    /** @return array{name: string, identifier: string|null, email: string, password: string} */
-    private function teacherCredentialsFlash(User $teacher, string $plainPassword): array
+    /**
+     * Affiche les identifiants en clair une seule fois : uniquement juste après leur
+     * génération (création, régénération, envoi), via un flash de session consommé
+     * par la requête suivante. Le mot de passe n'est jamais stocké en clair ni de
+     * façon réversible.
+     */
+    private function flashTeacherCredentials(User $teacher, string $plainPassword): void
     {
-        return [
+        session()->flash("credentials_reveal.teacher.{$teacher->id}", [
             'name' => $teacher->name,
             'identifier' => $teacher->identifier,
             'email' => $teacher->email,
             'password' => $plainPassword,
-        ];
+        ]);
     }
 
     /** @return array{name: string, identifier: string|null, email: string, password: string}|null */
@@ -352,13 +357,7 @@ class TeacherController extends Controller
             return null;
         }
 
-        $plainPassword = $teacher->adminVisiblePassword();
-
-        if ($plainPassword === null) {
-            return null;
-        }
-
-        return $this->teacherCredentialsFlash($teacher, $plainPassword);
+        return session("credentials_reveal.teacher.{$teacher->id}");
     }
 
     private function assertCanManageTeacherCredentials(): void
@@ -374,7 +373,7 @@ class TeacherController extends Controller
             'password' => Hash::make($plainPassword),
         ])->save();
 
-        $teacher->setAdminVisiblePassword($plainPassword);
+        $this->flashTeacherCredentials($teacher, $plainPassword);
 
         return $plainPassword;
     }
@@ -416,7 +415,7 @@ class TeacherController extends Controller
                 'invitation_email_sent_at' => now(),
             ])->save();
 
-            $teacher->setAdminVisiblePassword($plainPassword);
+            $this->flashTeacherCredentials($teacher, $plainPassword);
 
             return true;
         } catch (TransportExceptionInterface $e) {

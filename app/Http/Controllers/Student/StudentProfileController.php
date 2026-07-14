@@ -108,7 +108,6 @@ class StudentProfileController extends Controller
         
         $user->forceFill([
             'password' => Hash::make($request->password),
-            'admin_visible_password' => null,
         ])->save();
 
         return back()->with('success', 'Votre mot de passe a été mis à jour avec succès.');

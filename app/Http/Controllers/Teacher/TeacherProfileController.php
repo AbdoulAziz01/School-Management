@@ -77,7 +77,6 @@ class TeacherProfileController extends Controller
         
         $teacher->forceFill([
             'password' => Hash::make($request->password),
-            'admin_visible_password' => null,
         ])->save();
         
         return redirect()->route('teacher.profile.index')

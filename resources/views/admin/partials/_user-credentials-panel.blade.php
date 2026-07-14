@@ -11,6 +11,10 @@
                 <p class="small fw-semibold mb-2 text-dark">
                     <i class="fas fa-key me-1"></i> Identifiants de connexion
                 </p>
+                <p class="small text-danger fw-semibold mb-2">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Affiché une seule fois : notez-le ou envoyez-le maintenant, il ne sera plus jamais visible ici ensuite.
+                </p>
                 <ul class="list-unstyled small mb-3">
                     <li class="mb-1">
                         <span class="text-muted">Identifiant :</span>
@@ -33,7 +37,6 @@
                 @endif
                 <p class="small text-muted mb-3">
                     Connexion avec l'identifiant ou l'email{{ !empty($schoolCode) ? ', et le code établissement si le matricule existe ailleurs' : '' }}.
-                    Visible en permanence pour l'administrateur.
                 </p>
                 <div class="d-flex flex-wrap gap-2">
                     @if(!empty($sendRoute) && $user->email)
