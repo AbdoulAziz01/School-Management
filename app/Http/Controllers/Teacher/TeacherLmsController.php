@@ -73,14 +73,16 @@ class TeacherLmsController extends Controller
         $teacher = auth()->user();
 
         $data = $request->validate([
-            'class_id'   => ['required', 'integer'],
-            'subject_id' => ['required', 'integer'],
+            'class_id'   => ['required', 'integer', Rule::exists('classes', 'id')],
+            'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')],
             'title'      => ['required', 'string', 'max:255'],
             'description'=> ['nullable', 'string', 'max:1000'],
             'file_type'  => ['required', Rule::in(['pdf', 'doc', 'video', 'link'])],
             'file'       => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:20480'], // 20 Mo
             'video_url'  => ['nullable', 'url', 'max:512'],
         ]);
+
+        $this->assertTeacherOwnsClassAndSubject($teacher->id, (int) $data['class_id'], (int) $data['subject_id']);
 
         $filePath = null;
 
@@ -138,14 +140,16 @@ class TeacherLmsController extends Controller
         $teacher = auth()->user();
 
         $data = $request->validate([
-            'class_id'     => ['required', 'integer'],
-            'subject_id'   => ['required', 'integer'],
+            'class_id'     => ['required', 'integer', Rule::exists('classes', 'id')],
+            'subject_id'   => ['required', 'integer', Rule::exists('subjects', 'id')],
             'title'        => ['required', 'string', 'max:255'],
             'description'  => ['nullable', 'string', 'max:2000'],
             'instructions' => ['nullable', 'string', 'max:2000'],
             'due_date'     => ['required', 'date', 'after:today'],
             'points'       => ['required', 'integer', 'min:1', 'max:100'],
         ]);
+
+        $this->assertTeacherOwnsClassAndSubject($teacher->id, (int) $data['class_id'], (int) $data['subject_id']);
 
         Assignment::create([
             'class_id'     => $data['class_id'],
@@ -224,7 +228,7 @@ class TeacherLmsController extends Controller
         $teacher = auth()->user();
 
         $data = $request->validate([
-            'subject_id'              => ['required', 'integer'],
+            'subject_id'              => ['required', 'integer', Rule::exists('subjects', 'id')],
             'title'                   => ['required', 'string', 'max:255'],
             'description'             => ['nullable', 'string', 'max:1000'],
             'time_limit'              => ['nullable', 'integer', 'min:1', 'max:180'],
@@ -235,6 +239,10 @@ class TeacherLmsController extends Controller
             'questions.*.options.*.text'    => ['required', 'string', 'max:255'],
             'questions.*.options.*.correct' => ['nullable', 'boolean'],
         ]);
+
+        if (! $this->teacherSubjects($teacher->id)->pluck('id')->contains((int) $data['subject_id'])) {
+            abort(403, 'Vous n\'êtes pas affecté à cette matière.');
+        }
 
         $quiz = Quiz::create([
             'subject_id'   => $data['subject_id'],
@@ -297,5 +305,22 @@ class TeacherLmsController extends Controller
             'teacherAssignments',
             fn ($q) => $q->where('teacher_id', $teacherId)
         )->get();
+    }
+
+    /**
+     * Garde-fou IDOR : empêche un enseignant de créer du contenu (leçon,
+     * devoir) sur une classe/matière à laquelle il n'est pas affecté, y
+     * compris potentiellement d'un autre établissement (cf. audit sécurité —
+     * même pattern que TeacherAttendanceController::store()).
+     */
+    private function assertTeacherOwnsClassAndSubject(int $teacherId, int $classId, int $subjectId): void
+    {
+        if (! $this->teacherClasses($teacherId)->pluck('id')->contains($classId)) {
+            abort(403, 'Vous n\'êtes pas affecté à cette classe.');
+        }
+
+        if (! $this->teacherSubjects($teacherId)->pluck('id')->contains($subjectId)) {
+            abort(403, 'Vous n\'êtes pas affecté à cette matière.');
+        }
     }
 }
