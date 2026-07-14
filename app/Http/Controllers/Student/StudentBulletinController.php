@@ -5,23 +5,22 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
 use App\Models\Grade;
-use App\Models\Level;
-use App\Models\School;
 use App\Models\SchoolClass;
-use App\Models\Subject;
 use App\Models\User;
-use App\Support\FormationLmdSettings;
-use App\Support\FormationModuleGradeCalculator;
 use App\Support\DashboardAcademicYearContext;
 use App\Support\StudentClassContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use App\Services\StudentClassPromotionService;
+use App\Services\SchoolBot\BulletinComputation;
 
 class StudentBulletinController extends Controller
 {
+    public function __construct(
+        private BulletinComputation $bulletinComputation
+    ) {}
+
     /**
      * Afficher le bulletin semestriel système sénégalais
      */
@@ -34,7 +33,7 @@ class StudentBulletinController extends Controller
         }
 
         // Récupérer le semestre demandé (1 ou 2), par défaut le semestre actuel
-        $semester = $request->query('semester', $this->getCurrentSemester());
+        $semester = $request->query('semester', $this->bulletinComputation->getCurrentSemester());
 
         $academicYear = DashboardAcademicYearContext::resolve($request, 'student');
 
@@ -56,10 +55,10 @@ class StudentBulletinController extends Controller
             ->get();
 
         // Grouper les notes par matière et calculer les moyennes
-        $bulletinData = $this->calculateBulletinData($grades, $level, $user->school);
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school);
 
         // Calculer la moyenne générale pondérée
-        $generalAverage = $this->calculateWeightedAverage($bulletinData);
+        $generalAverage = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
         // Calculer le rang de l'élève
         $rankData = $this->calculateRank($user, $class, $semester, $academicYear);
@@ -106,146 +105,6 @@ class StudentBulletinController extends Controller
     }
 
     /**
-     * Pré-récupère la table des coefficients level_subject pour un niveau donné.
-     * Évite de re-requêter la BDD pour chaque matière de chaque élève.
-     *
-     * @return array<int, int|float> map subject_id => coefficient
-     */
-    private function fetchLevelCoefficients($level): array
-    {
-        if (! $level) {
-            return [];
-        }
-
-        return DB::table('level_subject')
-            ->where('level_id', $level->id)
-            ->pluck('coefficient', 'subject_id')
-            ->toArray();
-    }
-
-    /**
-     * Calcul des données du bulletin par matière (pour UN élève).
-     *
-     * @param  \Illuminate\Support\Collection  $grades  Notes de l'élève (avec subject eager loaded)
-     * @param  mixed  $level  Niveau (Level ou null)
-     * @param  array<int,int|float>|null  $coefficients  Coefficients pré-calculés (optionnel)
-     */
-    private function calculateBulletinData($grades, $level, ?School $school = null, ?array $coefficients = null)
-    {
-        if ($school?->usesLmdGrading()) {
-            return $this->calculateFormationBulletinData($grades, $school);
-        }
-
-        $coefficients ??= $this->fetchLevelCoefficients($level);
-
-        $bulletinData    = [];
-        $gradesBySubject = $grades->groupBy('subject_id');
-
-        foreach ($gradesBySubject as $subjectId => $subjectGrades) {
-            // Le subject est eager-loaded depuis l'appelant : pas de Subject::find() ici
-            $subject = $subjectGrades->first()->subject ?? null;
-            if (! $subject) {
-                continue;
-            }
-
-            $coefficient = $coefficients[$subjectId] ?? 1;
-
-            $devoir1     = $subjectGrades->where('type', 'devoir1')->first();
-            $devoir2     = $subjectGrades->where('type', 'devoir2')->first();
-            $composition = $subjectGrades->where('type', 'composition')->first();
-
-            // Système sénégalais :
-            // Moyenne devoirs = (D1 + D2) / 2
-            // Moyenne matière = Moyenne devoirs * 0.4 + Composition * 0.6
-            $moyenneDevoirs = null;
-            $moyenneMatiere = null;
-
-            if ($devoir1 && $devoir2) {
-                $moyenneDevoirs = ($devoir1->grade + $devoir2->grade) / 2;
-            }
-
-            if ($moyenneDevoirs !== null && $composition) {
-                $moyenneMatiere = ($moyenneDevoirs * 0.5) + ($composition->grade * 0.5);
-            } elseif ($composition) {
-                $moyenneMatiere = $composition->grade;
-            } elseif ($moyenneDevoirs !== null) {
-                $moyenneMatiere = $moyenneDevoirs;
-            }
-
-            $bulletinData[] = [
-                'subject'         => $subject->name,
-                'subject_code'    => $subject->code,
-                'coefficient'     => $coefficient,
-                'devoir1'         => $devoir1 ? round($devoir1->grade, 2) : null,
-                'devoir2'         => $devoir2 ? round($devoir2->grade, 2) : null,
-                'composition'     => $composition ? round($composition->grade, 2) : null,
-                'moyenne_devoirs' => $moyenneDevoirs !== null ? round($moyenneDevoirs, 2) : null,
-                'moyenne_matiere' => $moyenneMatiere !== null ? round($moyenneMatiere, 2) : null,
-                'points'          => $moyenneMatiere !== null ? round($moyenneMatiere * $coefficient, 2) : null,
-                'appreciation'    => $this->getAppreciation($moyenneMatiere),
-            ];
-        }
-
-        usort($bulletinData, fn ($a, $b) => $b['coefficient'] <=> $a['coefficient']);
-
-        return $bulletinData;
-    }
-
-    /**
-     * Bulletin formation : moyenne module LMD (30 % CC + 70 % examen, ou 100 % si une seule famille).
-     *
-     * @param  \Illuminate\Support\Collection  $grades
-     * @return list<array<string, mixed>>
-     */
-    private function calculateFormationBulletinData($grades, School $school): array
-    {
-        $bulletinData = [];
-
-        foreach ($grades->groupBy('subject_id') as $subjectId => $subjectGrades) {
-            $subject = $subjectGrades->first()->subject ?? null;
-            if (! $subject) {
-                continue;
-            }
-
-            $settings = FormationLmdSettings::fromSubject($subject);
-            $coefficient = (float) ($subject->coefficient ?? 1);
-            $devoir1 = $subjectGrades->where('type', 'devoir1')->first();
-            $devoir2 = $subjectGrades->where('type', 'devoir2')->first();
-            $composition = $subjectGrades->where('type', 'composition')->first();
-
-            $ccGrades = $subjectGrades->filter(
-                fn ($g) => in_array((string) $g->type, $settings->ccGradeTypes, true)
-            );
-            $moyenneDevoirs = $ccGrades->isNotEmpty()
-                ? round((float) $ccGrades->avg('grade'), 2)
-                : null;
-
-            $summary = FormationModuleGradeCalculator::summarize($subjectGrades, $settings);
-            $moyenneMatiere = $summary['average'];
-
-            $bulletinData[] = [
-                'subject'         => $subject->name,
-                'subject_code'    => $subject->code,
-                'coefficient'     => $coefficient,
-                'devoir1'         => $devoir1 ? round((float) $devoir1->grade, 2) : null,
-                'devoir2'         => $devoir2 ? round((float) $devoir2->grade, 2) : null,
-                'composition'     => $composition ? round((float) $composition->grade, 2) : null,
-                'moyenne_devoirs' => $moyenneDevoirs,
-                'moyenne_exam'    => $summary['exam_average'],
-                'moyenne_matiere' => $moyenneMatiere,
-                'lmd_mode'        => $summary['mode'],
-                'points'          => $moyenneMatiere !== null ? round($moyenneMatiere * $coefficient, 2) : null,
-                'appreciation'    => $this->getAppreciation($moyenneMatiere),
-                'validated'       => $summary['validated'],
-            ];
-        }
-
-        usort($bulletinData, fn ($a, $b) => $b['coefficient'] <=> $a['coefficient']);
-
-        return $bulletinData;
-    }
-
-    /**
      * Calcule en UNE requête les moyennes pondérées de tous les élèves d'une classe.
      * Remplace les boucles N+1 dans calculateRank() et calculateClassStats().
      *
@@ -276,35 +135,17 @@ class StudentBulletinController extends Controller
             ->groupBy('user_id');
 
         // 3. Coefficients level_subject pré-calculés (1 requête)
-        $coefficients = $this->fetchLevelCoefficients($class->level);
+        $coefficients = $this->bulletinComputation->fetchLevelCoefficients($class->level);
 
         // 4. Calcul en mémoire (zéro requête supplémentaire)
         $averages = [];
         foreach ($studentIds as $studentId) {
             $studentGrades = $gradesByStudent->get($studentId, collect());
-            $bulletinData  = $this->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients);
-            $averages[$studentId] = $this->calculateWeightedAverage($bulletinData);
+            $bulletinData  = $this->bulletinComputation->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients);
+            $averages[$studentId] = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
         }
 
         return $averages;
-    }
-
-    /**
-     * Calculer la moyenne générale pondérée
-     */
-    private function calculateWeightedAverage($bulletinData)
-    {
-        $totalPoints = 0;
-        $totalCoef = 0;
-        
-        foreach ($bulletinData as $data) {
-            if ($data['moyenne_matiere'] !== null) {
-                $totalPoints += $data['points'];
-                $totalCoef += $data['coefficient'];
-            }
-        }
-        
-        return $totalCoef > 0 ? round($totalPoints / $totalCoef, 2) : 0;
     }
 
     /**
@@ -364,32 +205,6 @@ class StudentBulletinController extends Controller
             'highest' => round(max($averages), 2),
             'lowest'  => round(min($averages), 2),
         ];
-    }
-
-    /**
-     * Obtenir le semestre actuel
-     */
-    private function getCurrentSemester()
-    {
-        $month = now()->month;
-        // Semestre 1: Octobre à Janvier
-        // Semestre 2: Février à Juin
-        if ($month >= 10 || $month <= 1) return 1;
-        return 2;
-    }
-
-    /**
-     * Générer une appréciation basée sur la moyenne
-     */
-    private function getAppreciation($average)
-    {
-        if ($average === null) return '-';
-        if ($average >= 16) return 'Très Bien';
-        if ($average >= 14) return 'Bien';
-        if ($average >= 12) return 'Assez Bien';
-        if ($average >= 10) return 'Passable';
-        if ($average >= 8) return 'Insatisfaisant';
-        return 'Très Insuffisant';
     }
 
     /**
@@ -468,8 +283,8 @@ class StudentBulletinController extends Controller
             ->with('subject')
             ->get();
 
-        $bulletinData = $this->calculateBulletinData($grades, $level, $user->school);
-        $moyenne = $this->calculateWeightedAverage($bulletinData);
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school);
+        $moyenne = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
         return [
             'data' => $bulletinData,
@@ -478,45 +293,21 @@ class StudentBulletinController extends Controller
     }
 
     /**
-     * Obtenir la décision du conseil de classe
+     * Obtenir la décision du conseil de classe (texte + mention délégués à
+     * BulletinComputation, la couleur d'affichage reste propre à cette vue).
      */
     private function getDecision($moyenneAnnuelle)
     {
-        if ($moyenneAnnuelle >= 12) {
-            return [
-                'text' => 'Admis(e) en classe supérieure',
-                'color' => 'success',
-                'mention' => $this->getMention($moyenneAnnuelle)
-            ];
-        } elseif ($moyenneAnnuelle >= 10) {
-            return [
-                'text' => 'Admis(e) en classe supérieure',
-                'color' => 'success',
-                'mention' => null
-            ];
-        } elseif ($moyenneAnnuelle >= 8) {
-            return [
-                'text' => 'Passage conditionnel / Redoublement',
-                'color' => 'warning',
-                'mention' => null
-            ];
-        } else {
-            return [
-                'text' => 'Redoublement',
-                'color' => 'danger',
-                'mention' => null
-            ];
-        }
-    }
+        $color = match (true) {
+            $moyenneAnnuelle >= 10 => 'success',
+            $moyenneAnnuelle >= 8 => 'warning',
+            default => 'danger',
+        };
 
-    /**
-     * Obtenir la mention
-     */
-    private function getMention($moyenne)
-    {
-        if ($moyenne >= 16) return 'Mention Très Bien';
-        if ($moyenne >= 14) return 'Mention Bien';
-        if ($moyenne >= 12) return 'Mention Assez Bien';
-        return null;
+        return [
+            'text' => $this->bulletinComputation->getDecisionText($moyenneAnnuelle),
+            'color' => $color,
+            'mention' => $moyenneAnnuelle >= 12 ? $this->bulletinComputation->getMention($moyenneAnnuelle) : null,
+        ];
     }
 }
