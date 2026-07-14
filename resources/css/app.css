@@ -1,6 +1,2 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Styles personnalisés */
-[x-cloak] { display: none !important; }
+/* Le frontend est unifié sur Bootstrap 5 (voir tailwind.config.js retiré :
+   Tailwind/Alpine ne sont plus utilisés dans ce projet). */

@@ -1,20 +1,15 @@
 import './bootstrap';
-import Alpine from 'alpinejs';
 import { Calendar } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
 
-window.Alpine = Alpine;
 window.Calendar = Calendar;
 window.dayGridPlugin = dayGridPlugin;
 window.timeGridPlugin = timeGridPlugin;
 window.interactionPlugin = interactionPlugin;
 window.frLocale = frLocale;
-
-// Initialisation des composants Alpine
-Alpine.start();
 
 // Gestion des menus déroulants et initialisation des tooltips
 document.addEventListener('DOMContentLoaded', function() {
