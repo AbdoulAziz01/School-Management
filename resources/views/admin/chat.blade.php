@@ -19,20 +19,33 @@
     </div>
 
     <script>
+        function appendMessage(chatBox, className, label, text, color) {
+            let p = document.createElement('p');
+            if (className) p.className = className;
+            if (color) p.style.color = color;
+
+            let b = document.createElement('b');
+            b.textContent = label + ' ';
+            p.appendChild(b);
+            p.appendChild(document.createTextNode(text));
+
+            chatBox.appendChild(p);
+        }
+
         async function send() {
             let input = document.getElementById('user-input');
             let chatBox = document.getElementById('chat-box');
             let msg = input.value;
             if(!msg) return;
 
-            chatBox.innerHTML += `<p class="user"><b>Vous:</b> ${msg}</p>`;
+            appendMessage(chatBox, 'user', 'Vous:', msg);
             input.value = '';
 
             try {
                 let res = await axios.post('/chat/send', { message: msg });
-                chatBox.innerHTML += `<p class="ai"><b>IA:</b> ${res.data.reply}</p>`;
+                appendMessage(chatBox, 'ai', 'IA:', res.data.reply);
             } catch (e) {
-                chatBox.innerHTML += `<p style="color:red">Erreur de connexion au serveur IA.</p>`;
+                appendMessage(chatBox, null, '', 'Erreur de connexion au serveur IA.', 'red');
             }
             chatBox.scrollTop = chatBox.scrollHeight;
         }

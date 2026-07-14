@@ -348,14 +348,38 @@
                 return;
             }
 
-            suggestionsBox.innerHTML = items.map(function (item, index) {
-                const cls = item.class ? '<small class="text-muted ms-2">' + item.class + '</small>' : '';
-                const id = item.identifier ? '<small class="text-muted">' + item.identifier + '</small>' : '';
-                return '<button type="button" class="list-group-item list-group-item-action text-start" role="option" data-index="' + index + '" data-search-url="' + item.search_url + '" data-url="' + item.url + '">' +
-                    '<strong>' + item.name + '</strong>' + cls +
-                    (id ? '<br>' + id : '') +
-                    '</button>';
-            }).join('');
+            suggestionsBox.innerHTML = '';
+
+            items.forEach(function (item, index) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'list-group-item list-group-item-action text-start';
+                btn.setAttribute('role', 'option');
+                btn.dataset.index = index;
+                if (item.search_url) btn.dataset.searchUrl = item.search_url;
+                if (item.url) btn.dataset.url = item.url;
+
+                const strong = document.createElement('strong');
+                strong.textContent = item.name || '';
+                btn.appendChild(strong);
+
+                if (item.class) {
+                    const cls = document.createElement('small');
+                    cls.className = 'text-muted ms-2';
+                    cls.textContent = item.class;
+                    btn.appendChild(cls);
+                }
+
+                if (item.identifier) {
+                    btn.appendChild(document.createElement('br'));
+                    const id = document.createElement('small');
+                    id.className = 'text-muted';
+                    id.textContent = item.identifier;
+                    btn.appendChild(id);
+                }
+
+                suggestionsBox.appendChild(btn);
+            });
 
             suggestionsBox.classList.remove('d-none');
             searchInput.setAttribute('aria-expanded', 'true');

@@ -278,13 +278,28 @@
                     subjectsList.innerHTML = '<p class="text-muted small">Aucune matière configurée pour cet établissement.</p>';
                     return;
                 }
-                subjectsList.innerHTML = data.subjects.map(s => `
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="subjects[]" value="${s.id}" id="subject_${s.id}"
-                            ${oldSubjects.includes(String(s.id)) || oldSubjects.includes(s.id) ? 'checked' : ''}>
-                        <label class="form-check-label" for="subject_${s.id}">${s.name}</label>
-                    </div>
-                `).join('');
+                subjectsList.innerHTML = '';
+                data.subjects.forEach(s => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'form-check';
+
+                    const input = document.createElement('input');
+                    input.className = 'form-check-input';
+                    input.type = 'checkbox';
+                    input.name = 'subjects[]';
+                    input.value = s.id;
+                    input.id = 'subject_' + s.id;
+                    input.checked = oldSubjects.includes(String(s.id)) || oldSubjects.includes(s.id);
+
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.setAttribute('for', 'subject_' + s.id);
+                    label.textContent = s.name;
+
+                    wrap.appendChild(input);
+                    wrap.appendChild(label);
+                    subjectsList.appendChild(wrap);
+                });
             } catch (e) {
                 subjectsList.innerHTML = '<p class="text-danger small">Erreur de chargement des matières.</p>';
             }
