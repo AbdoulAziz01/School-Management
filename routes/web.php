@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Student\StudentDashboardController;
 use App\Http\Controllers\Student\StudentProfileController;
@@ -52,11 +51,6 @@ require __DIR__.'/auth.php';
 
 // Routes protégées par authentification
 Route::middleware('auth')->group(function () {
-    // Profil utilisateur
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
     // Redirection vers le tableau de bord approprié selon le rôle
     Route::get('/dashboard', function () {
         if (auth()->user()->role === 'super_admin') {
