@@ -9,6 +9,20 @@ Application web de gestion d'établissement scolaire développée dans le cadre 
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple?style=flat-square&logo=bootstrap)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange?style=flat-square&logo=mysql)
 
+
+## 🚀 Déploiement — document root
+
+**Le document root du serveur web doit impérativement pointer vers le dossier `public/`, jamais vers la racine du dépôt.**
+
+Pointer le document root ailleurs qu'sur `public/` expose directement `.env`, `.git/`, `vendor/`, `storage/`, `database/` (y compris une éventuelle base SQLite) et le code source aux requêtes HTTP non authentifiées — ces répertoires ne contiennent aucune protection d'accès propre, ils comptent sur le fait de ne jamais être servis directement.
+
+Configuration attendue selon l'hébergeur :
+- **Laravel Cloud / hébergeur géré** : document root = `public/` par défaut, rien à faire.
+- **VPS / Nginx** : `root /chemin/vers/projet/public;`
+- **VPS / Apache** : `DocumentRoot /chemin/vers/projet/public` (le `.htaccess` déjà présent dans `public/` gère la réécriture d'URL).
+
+Un ancien mode de déploiement plaçant tout le dépôt à la racine du document root (type mutualisé sans accès à la configuration du vhost) a été retiré du projet : il ne permettait pas de garantir cette isolation.
+
 ---
 
 ## 🔧 Corrections et améliorations apportées
