@@ -826,18 +826,22 @@ class ClassController extends Controller
     public function showAddStudents(SchoolClass $class)
     {
         $class->load('academicYear');
-        
-        // Récupérer les étudiants non affectés à une classe pour l'année en cours
-        $availableStudents = User::where('role', 'student')
+
+        // Récupérer les étudiants non affectés à une classe pour l'année en cours.
+        // Plafonné à 500 : le formulaire sélectionne des cases à cocher sur toute la
+        // liste affichée en une seule soumission (même contrainte que StudentController::index()).
+        $availableStudentsQuery = User::whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where('status', 'approved')
             ->where(function($query) use ($class) {
                 $query->whereNull('class_id')
                       ->orWhere('class_id', $class->id);
             })
-            ->orderBy('name')
-            ->get();
-            
-        return view('admin.classes.add-students', compact('class', 'availableStudents'));
+            ->orderBy('name');
+        $availableStudentsTotal = (clone $availableStudentsQuery)->count();
+        $availableStudents = $availableStudentsQuery->limit(500)->get();
+        $availableStudentsTruncated = $availableStudentsTotal > $availableStudents->count();
+
+        return view('admin.classes.add-students', compact('class', 'availableStudents', 'availableStudentsTotal', 'availableStudentsTruncated'));
     }
     
     /**

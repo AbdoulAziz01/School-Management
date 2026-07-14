@@ -8,17 +8,32 @@ use App\Models\User;
 use App\Services\SchoolBot\SchoolBotStatsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class SchoolBotController extends Controller
 {
+    /** Les agrégats (stats/repeaters/outcomes) sont coûteux à recalculer et
+     *  interrogés en rafale par le bot dans une même conversation ; un TTL
+     *  court évite de tout recalculer à chaque question sans risquer des
+     *  données trop périmées. */
+    private const STATS_CACHE_TTL_SECONDS = 60;
+
     public function __construct(
         private SchoolBotStatsService $statsService
     ) {}
 
     public function stats(Request $request): JsonResponse
     {
-        return response()->json($this->statsService->stats($this->resolveSchoolId($request)));
+        $schoolId = $this->resolveSchoolId($request);
+
+        $data = Cache::remember(
+            "school-bot:stats:{$schoolId}",
+            self::STATS_CACHE_TTL_SECONDS,
+            fn () => $this->statsService->stats($schoolId)
+        );
+
+        return response()->json($data);
     }
 
     public function repeaters(Request $request): JsonResponse
@@ -28,15 +43,29 @@ class SchoolBotController extends Controller
         $limit = (int) $request->query('limit', 50);
         $limit = max(1, min($limit, 200));
 
+        $items = Cache::remember(
+            "school-bot:repeaters:{$schoolId}:{$limit}",
+            self::STATS_CACHE_TTL_SECONDS,
+            fn () => $this->statsService->repeatersList($schoolId, $limit)
+        );
+
         return response()->json([
-            'items' => $this->statsService->repeatersList($schoolId, $limit),
+            'items' => $items,
             'hint' => 'Liste basée sur l’heuristique « années académiques distinctes avec notes ».',
         ]);
     }
 
     public function outcomes(Request $request): JsonResponse
     {
-        return response()->json($this->statsService->outcomes($this->resolveSchoolId($request)));
+        $schoolId = $this->resolveSchoolId($request);
+
+        $data = Cache::remember(
+            "school-bot:outcomes:{$schoolId}",
+            self::STATS_CACHE_TTL_SECONDS,
+            fn () => $this->statsService->outcomes($schoolId)
+        );
+
+        return response()->json($data);
     }
 
     public function searchStudents(Request $request): JsonResponse

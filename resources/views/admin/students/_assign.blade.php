@@ -26,6 +26,13 @@
                 </div>
             </div>
             
+            @if($truncated ?? false)
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    {{ number_format($total) }} élèves non affectés au total — seuls les {{ $students->count() }} premiers sont affichés ici. Affectez-les par lots, ou affinez via la recherche.
+                </div>
+            @endif
+
             <div class="mt-4">
                 <h6>Sélectionnez les élèves à affecter :</h6>
                 <div class="table-responsive">

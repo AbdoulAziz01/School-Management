@@ -282,7 +282,9 @@
              tabindex="0">
             @include('admin.students._assign', [
                 'students' => $unassignedStudents,
-                'classes' => $classes
+                'classes' => $classes,
+                'total' => $unassignedStudentsTotal ?? $unassignedStudents->count(),
+                'truncated' => $unassignedStudentsTruncated ?? false,
             ])
         </div>
     </div>

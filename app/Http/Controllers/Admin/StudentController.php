@@ -55,12 +55,17 @@ class StudentController extends Controller
                 ? StudentSearch::suggestions($search, 8)
                 : collect();
                 
-            // Récupérer les étudiants non affectés pour l'onglet d'affectation (tous statuts)
-            $unassignedStudents = User::whereIn('role', ['student', 'eleve'])
+            // Récupérer les étudiants non affectés pour l'onglet d'affectation (tous statuts).
+            // Plafonné : l'affectation en masse sélectionne des cases à cocher sur toute la
+            // liste affichée en une seule soumission (pas de pagination possible sans casser
+            // ce flux) — un plafond évite de charger un nombre illimité de lignes en mémoire.
+            $unassignedStudentsQuery = User::whereIn('role', ['student', 'eleve'])
                 ->whereNull('class_id')
                 ->with('class')
-                ->orderBy('name')
-                ->get();
+                ->orderBy('name');
+            $unassignedStudentsTotal = (clone $unassignedStudentsQuery)->count();
+            $unassignedStudents = $unassignedStudentsQuery->limit(500)->get();
+            $unassignedStudentsTruncated = $unassignedStudentsTotal > $unassignedStudents->count();
 
             // Récupérer toutes les classes avec leurs relations et le nombre d'élèves
             $classes = SchoolClass::with(['level', 'academicYear'])
@@ -108,6 +113,8 @@ class StudentController extends Controller
             return view('admin.students.index', [
                 'students' => $students,
                 'unassignedStudents' => $unassignedStudents,
+                'unassignedStudentsTotal' => $unassignedStudentsTotal,
+                'unassignedStudentsTruncated' => $unassignedStudentsTruncated,
                 'classes' => $classes,
                 'studentsByClass' => $studentsByClass,
                 'active_tab' => $activeTab,
