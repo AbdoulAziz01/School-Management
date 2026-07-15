@@ -496,12 +496,11 @@ class TeacherGradesController extends Controller
     {
         $recipients = User::where('school_id', $grade->school_id)
             ->whereIn('role', User::ROLE_SCHOOL_STAFF)
-            ->whereNotNull('email')
             ->get();
 
         foreach ($recipients as $recipient) {
-            \Mail::to($recipient->email)->queue(
-                new \App\Mail\GradeEditedByTeacherMail($grade, $teacher, $oldGrade, $newGrade)
+            $recipient->notify(
+                new \App\Notifications\GradeEditedByTeacherNotification($grade, $teacher, $oldGrade, $newGrade)
             );
         }
     }

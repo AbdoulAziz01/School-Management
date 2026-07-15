@@ -66,6 +66,49 @@
 
         <div class="portal-navbar-spacer" aria-hidden="true"></div>
 
+        @php
+            $unreadNotifications = $user->unreadNotifications()->latest()->take(8)->get();
+            $unreadNotificationsCount = $user->unreadNotifications()->count();
+        @endphp
+        <div class="portal-navbar-notif dropdown">
+            <button
+                type="button"
+                class="portal-navbar-notif-trigger"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="Notifications{{ $unreadNotificationsCount > 0 ? ' (' . $unreadNotificationsCount . ' non lues)' : '' }}"
+            >
+                <i class="fas fa-bell"></i>
+                @if($unreadNotificationsCount > 0)
+                    <span class="portal-navbar-notif-badge">{{ $unreadNotificationsCount > 99 ? '99+' : $unreadNotificationsCount }}</span>
+                @endif
+            </button>
+            <div class="dropdown-menu dropdown-menu-end shadow border-0 portal-navbar-notif-dropdown">
+                <div class="portal-navbar-notif-header">
+                    <span class="fw-semibold small">Notifications</span>
+                    @if($unreadNotificationsCount > 0)
+                        <form method="POST" action="{{ route('notifications.read-all') }}">
+                            @csrf
+                            <button type="submit" class="btn btn-link btn-sm p-0 small text-decoration-none">Tout marquer comme lu</button>
+                        </form>
+                    @endif
+                </div>
+                <div class="portal-navbar-notif-list">
+                    @forelse($unreadNotifications as $notification)
+                        <form method="POST" action="{{ route('notifications.read', $notification->id) }}">
+                            @csrf
+                            <button type="submit" class="portal-navbar-notif-item">
+                                {{ $notification->data['message'] ?? 'Nouvelle notification' }}
+                                <span class="portal-navbar-notif-item-time">{{ $notification->created_at->diffForHumans() }}</span>
+                            </button>
+                        </form>
+                    @empty
+                        <div class="portal-navbar-notif-empty">Aucune notification.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
         <div class="portal-navbar-user dropdown">
             <button
                 type="button"

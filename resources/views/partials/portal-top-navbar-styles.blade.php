@@ -128,6 +128,101 @@
         flex-shrink: 0;
     }
 
+    .portal-navbar-notif {
+        flex-shrink: 0;
+        margin-right: 0.5rem;
+    }
+
+    .portal-navbar-notif-trigger {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid #e7e5e4;
+        border-radius: 12px;
+        background: #fafaf9;
+        color: #57534e;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .portal-navbar-notif-trigger:hover,
+    .portal-navbar-notif-trigger:focus {
+        background: #fffbeb;
+        outline: none;
+    }
+
+    .portal-navbar-notif-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: #dc2626;
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+        line-height: 18px;
+        text-align: center;
+        border: 2px solid #fff;
+    }
+
+    .portal-navbar-notif-dropdown {
+        width: 340px;
+        max-width: calc(100vw - 2rem);
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .portal-navbar-notif-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f5f5f4;
+        background: #fafaf9;
+    }
+
+    .portal-navbar-notif-list {
+        max-height: 340px;
+        overflow-y: auto;
+    }
+
+    .portal-navbar-notif-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.65rem 1rem;
+        border: none;
+        border-bottom: 1px solid #f5f5f4;
+        background: #fffbeb;
+        font-size: 0.82rem;
+        color: #1c1917;
+        line-height: 1.35;
+    }
+
+    .portal-navbar-notif-item:hover {
+        background: #fef3c7;
+    }
+
+    .portal-navbar-notif-item-time {
+        display: block;
+        margin-top: 0.15rem;
+        font-size: 0.72rem;
+        color: #a8a29e;
+    }
+
+    .portal-navbar-notif-empty {
+        padding: 1.5rem 1rem;
+        text-align: center;
+        font-size: 0.82rem;
+        color: #a8a29e;
+    }
+
     .portal-navbar-user-trigger {
         display: flex;
         align-items: center;

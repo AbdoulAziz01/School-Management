@@ -64,6 +64,12 @@ Route::middleware('auth')->group(function () {
         }
         return redirect()->route('home');
     })->name('dashboard');
+
+    // Notifications en base (badge barre de navigation), communes à tous les rôles
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::post('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('read');
+        Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('read-all');
+    });
 });
 
 // Plateforme super administrateur
