@@ -60,6 +60,7 @@ class GradesTableSeeder extends Seeder
                     $grades[] = [
                         'user_id' => $student->id,
                         'subject_id' => $subject->id,
+                        'school_id' => $student->school_id,
                         'grade' => $grade,
                         'comments' => 'Commentaire pour la note de ' . $subject->name . ' (' . $type . ' du ' . $date->format('d/m/Y') . ')' ,
                         'appreciation' => $appreciations[array_rand($appreciations)],

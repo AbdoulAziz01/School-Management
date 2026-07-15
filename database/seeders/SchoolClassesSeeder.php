@@ -14,29 +14,35 @@ class SchoolClassesSeeder extends Seeder
      */
     public function run(): void
     {
-        // Récupérer l'année scolaire en cours ou en créer une si elle n'existe pas
-        $academicYear = AcademicYear::firstOrCreate(
-            ['is_current' => true],
-            [
-                'name' => '2025-2026',
-                'start_date' => '2025-09-01',
-                'end_date' => '2026-06-30',
-                'is_current' => true
-            ]
-        );
-
         // Récupérer tous les niveaux
         $levels = \App\Models\Level::all();
-        
+
         if ($levels->isEmpty()) {
             $this->command->info('Aucun niveau trouvé. Veuillez d\'abord exécuter le seeder LevelsAndSubjectsSeeder.');
             return;
         }
 
+        // Année scolaire courante par établissement (un niveau peut appartenir
+        // à une école différente ; on ne suppose pas une seule année partagée).
+        $academicYearsBySchool = [];
+
         // Créer 1-3 classes par niveau
         foreach ($levels as $level) {
+            $schoolId = $level->school_id;
+
+            $academicYear = $academicYearsBySchool[$schoolId] ??= AcademicYear::firstOrCreate(
+                ['is_current' => true, 'school_id' => $schoolId],
+                [
+                    'name' => '2025-2026',
+                    'start_date' => '2025-09-01',
+                    'end_date' => '2026-06-30',
+                    'is_current' => true,
+                    'school_id' => $schoolId,
+                ]
+            );
+
             $classCount = rand(1, 3); // 1 à 3 classes par niveau
-            
+
             for ($i = 1; $i <= $classCount; $i++) {
                 SchoolClass::firstOrCreate(
                     [
@@ -45,12 +51,13 @@ class SchoolClassesSeeder extends Seeder
                     ],
                     [
                         'level_id' => $level->id,
+                        'school_id' => $schoolId,
                         'capacity' => 30 // Capacité par défaut
                     ]
                 );
             }
         }
-        
+
         $this->command->info('Classes créées avec succès !');
     }
 }

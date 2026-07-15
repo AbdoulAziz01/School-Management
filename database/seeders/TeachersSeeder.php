@@ -70,8 +70,9 @@ class TeachersSeeder extends Seeder
             ],
         ];
         
-        // Récupérer toutes les classes
+        // Récupérer toutes les classes, et l'école à laquelle rattacher les profs
         $allClasses = DB::table('classes')->pluck('id')->toArray();
+        $schoolId = DB::table('schools')->value('id');
         
         foreach ($teachers as $teacherData) {
             // Vérifier si le professeur existe déjà
@@ -93,6 +94,7 @@ class TeachersSeeder extends Seeder
                     'status' => 'approved',
                     'email_verified_at' => now(),
                     'identifier' => $identifier,
+                    'school_id' => $schoolId,
                 ]);
                 
                 $this->command->info("Professeur créé: {$teacherData['name']} ({$teacherData['email']})");

@@ -11,9 +11,10 @@ class StudentsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Récupérer tous les IDs de classes existantes
-        $classIds = SchoolClass::pluck('id')->toArray();
-        
+        // Récupérer toutes les classes existantes (id => school_id)
+        $classSchoolIds = SchoolClass::pluck('school_id', 'id');
+        $classIds = $classSchoolIds->keys()->toArray();
+
         if (empty($classIds)) {
             $this->command->error('Aucune classe trouvée dans la base de données. Veuillez d\'abord créer des classes.');
             return;
@@ -32,6 +33,7 @@ class StudentsSeeder extends Seeder
             }
 
             // Créer l'élève
+            $classId = $classIds[array_rand($classIds)];
             User::create([
                 'user_id' => 'E' . $studentNumber,
                 'identifier' => 'E' . $studentNumber,
@@ -40,7 +42,8 @@ class StudentsSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'role' => 'eleve',
                 'status' => User::STATUS_APPROVED,
-                'class_id' => $classIds[array_rand($classIds)],
+                'class_id' => $classId,
+                'school_id' => $classSchoolIds[$classId],
                 'email_verified_at' => now(),
             ]);
         }

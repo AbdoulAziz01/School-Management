@@ -48,6 +48,7 @@ class AttendancesTableSeeder extends Seeder
                 
                 Attendance::create([
                     'user_id' => $student->id,
+                    'school_id' => $student->school_id,
                     'date' => $date->format('Y-m-d'),
                     'status' => $status,
                     'reason' => $reason,

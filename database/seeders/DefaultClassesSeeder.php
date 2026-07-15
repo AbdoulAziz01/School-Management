@@ -78,6 +78,7 @@ class DefaultClassesSeeder extends Seeder
                             'name' => $className,
                             'level_id' => $level->id,
                             'academic_year_id' => $currentYear->id,
+                            'school_id' => $level->school_id,
                             'capacity' => rand(25, 40)
                         ]);
                         
@@ -98,6 +99,7 @@ class DefaultClassesSeeder extends Seeder
                             'name' => $className,
                             'level_id' => $level->id,
                             'academic_year_id' => $currentYear->id,
+                            'school_id' => $level->school_id,
                             'capacity' => rand(25, 40)
                         ]);
                         

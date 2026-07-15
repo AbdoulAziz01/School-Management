@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +14,7 @@ class PendingTeachersSeeder extends Seeder
     public function run(): void
     {
         $faker = Faker::create('fr_FR');
+        $schoolId = School::withoutGlobalScopes()->value('id');
         
         // Liste de prénoms et noms africains pour les professeurs
         $africanFirstNames = [
@@ -53,6 +55,7 @@ class PendingTeachersSeeder extends Seeder
                 'status' => 'pending',
                 'subject' => null, // Aucune matière affectée pour l'instant
                 'email_verified_at' => now(),
+                'school_id' => $schoolId,
             ]);
         }
 

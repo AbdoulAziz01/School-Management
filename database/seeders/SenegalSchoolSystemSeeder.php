@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\AcademicYear;
 use App\Models\Grade;
 use App\Models\Level;
+use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
@@ -14,6 +15,9 @@ use Illuminate\Support\Facades\Hash;
 
 class SenegalSchoolSystemSeeder extends Seeder
 {
+    private int $schoolId;
+
+
     /**
      * Coefficients officiels du Sénégal par série
      */
@@ -116,6 +120,17 @@ class SenegalSchoolSystemSeeder extends Seeder
         // Réactiver les contraintes de clé étrangère
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
+        $school = School::withoutGlobalScopes()->firstOrCreate(
+            ['slug' => 'ecole-senegal-demo'],
+            [
+                'name' => 'École Sénégal — Démo',
+                'code' => 'ECOLE-SN-DEMO',
+                'is_active' => true,
+                'establishment_type' => 'lycee',
+            ]
+        );
+        $this->schoolId = $school->id;
+
         // 1. Créer l'année académique 2025-2026 (terminée)
         $academicYear = $this->createAcademicYear();
         $this->command->info('✅ Année académique créée');
@@ -207,6 +222,7 @@ class SenegalSchoolSystemSeeder extends Seeder
             'start_date' => '2025-10-01',
             'end_date' => '2026-06-30',
             'is_current' => true,
+            'school_id' => $this->schoolId,
         ]);
     }
 
@@ -228,6 +244,7 @@ class SenegalSchoolSystemSeeder extends Seeder
                     'order' => $order++,
                     'cycle' => 'lycee',
                     'serie' => $serie,
+                    'school_id' => $this->schoolId,
                 ]);
             }
         }
@@ -267,6 +284,7 @@ class SenegalSchoolSystemSeeder extends Seeder
                 'is_active' => true,
                 'hours_per_week' => rand(2, 5),
                 'is_core_subject' => true,
+                'school_id' => $this->schoolId,
             ]);
         }
 
@@ -312,6 +330,7 @@ class SenegalSchoolSystemSeeder extends Seeder
             'status' => 'approved',
             'phone' => '+221 77 000 00 00',
             'address' => 'Dakar, Sénégal',
+            'school_id' => $this->schoolId,
         ]);
     }
 
@@ -340,6 +359,7 @@ class SenegalSchoolSystemSeeder extends Seeder
                 'phone' => '+221 77 ' . rand(100, 999) . ' ' . rand(10, 99) . ' ' . rand(10, 99),
                 'address' => 'Dakar, Sénégal',
                 'date_of_birth' => now()->subYears(rand(30, 55))->subDays(rand(1, 365)),
+                'school_id' => $this->schoolId,
             ]);
 
             // Associer la matière au professeur
@@ -370,6 +390,7 @@ class SenegalSchoolSystemSeeder extends Seeder
                 'phone' => '+221 77 ' . rand(100, 999) . ' ' . rand(10, 99) . ' ' . rand(10, 99),
                 'address' => 'Dakar, Sénégal',
                 'date_of_birth' => now()->subYears(rand(30, 55))->subDays(rand(1, 365)),
+                'school_id' => $this->schoolId,
             ]);
 
             $teacher->subjects()->attach($randomSubject->id);
@@ -420,6 +441,7 @@ class SenegalSchoolSystemSeeder extends Seeder
                     'academic_year_id' => $academicYear->id,
                     'level_id' => $level->id,
                     'capacity' => 50,
+                    'school_id' => $this->schoolId,
                 ]);
             }
         }
@@ -453,6 +475,7 @@ class SenegalSchoolSystemSeeder extends Seeder
                     'phone' => '+221 78 ' . rand(100, 999) . ' ' . rand(10, 99) . ' ' . rand(10, 99),
                     'address' => $this->getRandomSenegalCity() . ', Sénégal',
                     'date_of_birth' => now()->subYears(rand(15, 19))->subDays(rand(1, 365)),
+                    'school_id' => $this->schoolId,
                 ]);
                 
                 $studentIndex++;
@@ -610,6 +633,7 @@ class SenegalSchoolSystemSeeder extends Seeder
                         $gradesData[] = [
                             'user_id' => $student->id,
                             'subject_id' => $subject->id,
+                            'school_id' => $this->schoolId,
                             'grade' => $grade,
                             'comments' => $this->getComment($grade, $type),
                             'appreciation' => $appreciation,
