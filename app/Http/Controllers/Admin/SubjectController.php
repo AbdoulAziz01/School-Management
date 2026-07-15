@@ -249,7 +249,11 @@ class SubjectController extends Controller
             if ($subject->teacherAssignments()->exists()) {
                 return back()->with('error', 'Cette matière ne peut pas être supprimée car elle est affectée à des enseignants.');
             }
-            
+
+            if ($subject->grades()->exists()) {
+                return back()->with('error', 'Cette matière ne peut pas être supprimée car des notes y sont déjà enregistrées.');
+            }
+
             $subject->levels()->detach();
             $subject->delete();
 

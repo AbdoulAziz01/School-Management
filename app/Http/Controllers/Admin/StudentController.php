@@ -553,13 +553,17 @@ class StudentController extends Controller
     {
         abort_unless($student->isStudent(), 404);
 
+        if ($student->grades()->exists()) {
+            return back()->with('error', 'Impossible de supprimer cet élève : il a des notes enregistrées. Retirez-les d\'abord, ou désactivez plutôt son compte.');
+        }
+
         try {
             DB::beginTransaction();
-            
+
             // Supprimer les relations avant de supprimer l'étudiant
             $student->class_id = null;
             $student->save();
-            
+
             $student->delete();
             
             DB::commit();
