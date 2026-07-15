@@ -83,6 +83,7 @@
                         @if($student->profile_photo_path)
                             <img src="{{ Storage::url($student->profile_photo_path) }}"
                                  alt="Photo"
+                                 loading="lazy"
                                  class="rounded-circle mb-2 border border-2"
                                  style="width:64px;height:64px;object-fit:cover;border-color:#f59e0b!important;">
                         @else
