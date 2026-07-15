@@ -29,16 +29,25 @@
                 <div class="list-group">
                     @foreach($students as $student)
                         <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fw-semibold">{{ $student->name }}</div>
-                                <div class="small text-muted">
-                                    {{ $student->identifier ?? '—' }}
-                                    @if($student->schoolClass) · {{ $student->schoolClass->name }} @endif
+                            <a href="{{ route('caisse.students.situation', $student) }}" class="d-flex align-items-center gap-3 text-decoration-none text-reset flex-grow-1">
+                                @if($student->profile_photo_path)
+                                    <img src="{{ Storage::url($student->profile_photo_path) }}" alt="" class="rounded-circle" style="width:44px;height:44px;object-fit:cover;">
+                                @else
+                                    <span class="rounded-circle bg-warning bg-opacity-25 text-warning d-flex align-items-center justify-content-center fw-semibold" style="width:44px;height:44px;">
+                                        {{ strtoupper(substr($student->name, 0, 1)) }}
+                                    </span>
+                                @endif
+                                <div>
+                                    <div class="fw-semibold">{{ $student->name }}</div>
+                                    <div class="small text-muted">
+                                        {{ $student->identifier ?? '—' }}
+                                        @if($student->schoolClass) · {{ $student->schoolClass->name }} @endif
+                                    </div>
                                 </div>
-                            </div>
+                            </a>
                             <div class="d-flex gap-2">
                                 <a href="{{ route('caisse.students.situation', $student) }}" class="btn btn-sm btn-outline-secondary">
-                                    Situation
+                                    Profil
                                 </a>
                                 <a href="{{ route('caisse.students.show', $student) }}" class="btn btn-sm btn-primary">
                                     Encaisser

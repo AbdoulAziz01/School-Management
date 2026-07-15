@@ -6,13 +6,7 @@
 @section('title', 'Situation financière — '.$student->name)
 
 @section('content')
-<div class="mb-4">
-    <h1 class="h4 mb-0">{{ $student->name }}</h1>
-    <p class="text-muted mb-0">
-        {{ $student->identifier ?? '—' }}
-        @if($student->schoolClass) · {{ $student->schoolClass->name }} @endif
-    </p>
-</div>
+@include('accounting.shared.students._profile-header', ['student' => $student])
 
 <div class="row g-4">
     <div class="col-lg-7">

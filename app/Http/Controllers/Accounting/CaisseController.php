@@ -214,6 +214,8 @@ class CaisseController extends Controller
     {
         abort_unless($student->isStudent(), 404, 'Élève introuvable.');
 
+        $student->load(['schoolClass.level']);
+
         $invoices = StudentInvoice::where('student_id', $student->id)
             ->orderByDesc('due_date')
             ->get();
