@@ -443,6 +443,12 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
         // permission paiement.annuler pour ce rôle, voir AccountingRoles).
         Route::get('/payments', [\App\Http\Controllers\Accounting\PaymentCorrectionController::class, 'index'])->name('payments.index');
 
+        // Personnel & élèves — vue d'ensemble en lecture seule (transparence)
+        Route::prefix('personnel')->name('personnel.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\PersonnelController::class, 'index'])->name('index');
+            Route::get('/{group}', [\App\Http\Controllers\Accounting\PersonnelController::class, 'show'])->name('show');
+        });
+
         Route::get('/', fn () => redirect()->route('directeur.dashboard'));
     });
 

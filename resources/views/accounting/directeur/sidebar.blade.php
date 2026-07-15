@@ -90,6 +90,20 @@
 
     <div class="menu-separator"></div>
     <div class="menu-section">
+        <i class="fas fa-users me-1"></i> Établissement
+    </div>
+
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a href="{{ route('directeur.personnel.index') }}" class="nav-link {{ request()->routeIs('directeur.personnel.*') ? 'active' : '' }}">
+                <i class="fas fa-address-book"></i>
+                <span>Personnel & Élèves</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="menu-separator"></div>
+    <div class="menu-section">
         <i class="fas fa-file-export me-1"></i> Rapports
     </div>
 
