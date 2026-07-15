@@ -20,6 +20,11 @@
                     <option value="">Tout</option>
                     <option value="App\Models\User" @selected(request('type') === 'App\Models\User')>Élèves</option>
                     <option value="App\Models\Grade" @selected(request('type') === 'App\Models\Grade')>Notes</option>
+                    <option value="App\Models\Attendance" @selected(request('type') === 'App\Models\Attendance')>Présences</option>
+                    <option value="App\Models\SchoolClass" @selected(request('type') === 'App\Models\SchoolClass')>Classes</option>
+                    <option value="App\Models\Subject" @selected(request('type') === 'App\Models\Subject')>Matières</option>
+                    <option value="App\Models\AcademicYear" @selected(request('type') === 'App\Models\AcademicYear')>Années scolaires</option>
+                    <option value="App\Models\School" @selected(request('type') === 'App\Models\School')>Établissement</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -59,7 +64,7 @@
                         <th>Événement</th>
                         <th>Ressource</th>
                         <th>Par</th>
-                        <th>Champs modifiés</th>
+                        <th>Description</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -78,15 +83,7 @@
                             </span>
                         </td>
                         <td>
-                            @php
-                                $subjectLabel = match($log->subject_type) {
-                                    'App\Models\User'  => 'Élève',
-                                    'App\Models\Grade' => 'Note',
-                                    default            => class_basename($log->subject_type ?? ''),
-                                };
-                            @endphp
-                            <span class="badge bg-secondary">{{ $subjectLabel }}</span>
-                            <small class="text-muted ms-1">#{{ $log->subject_id }}</small>
+                            <span class="badge bg-secondary">{{ \App\Support\ActivityLogPresenter::resourceLabel($log->subject_type) }}</span>
                         </td>
                         <td>
                             @if ($log->causer)
@@ -96,27 +93,8 @@
                                 <span class="text-muted">Système</span>
                             @endif
                         </td>
-                        <td>
-                            @php
-                                $new = $log->properties['attributes'] ?? [];
-                                $old = $log->properties['old'] ?? [];
-                            @endphp
-                            @if (count($new))
-                                <div style="max-width:380px; font-size:0.8rem;">
-                                    @foreach ($new as $field => $value)
-                                        <div>
-                                            <strong>{{ $field }}</strong> :
-                                            @if (isset($old[$field]))
-                                                <span class="text-danger">{{ is_array($old[$field]) ? json_encode($old[$field]) : $old[$field] }}</span>
-                                                <i class="fas fa-arrow-right mx-1 text-muted"></i>
-                                            @endif
-                                            <span class="text-success">{{ is_array($value) ? json_encode($value) : $value }}</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
+                        <td style="max-width:420px;">
+                            {{ \App\Support\ActivityLogPresenter::describe($log) }}
                         </td>
                     </tr>
                     @empty

@@ -10,6 +10,10 @@ class AuditLogController extends Controller
 {
     public function index(Request $request)
     {
+        // Consulter le journal vaut prise de connaissance : les notifications
+        // en attente (badge cloche / sidebar) sont marquées comme lues.
+        $request->user()?->unreadNotifications->markAsRead();
+
         $query = Activity::with('causer', 'subject')
             ->latest();
 
