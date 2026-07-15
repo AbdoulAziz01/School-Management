@@ -267,6 +267,20 @@
                 });
             });
         });
+
+        // Empêche la double soumission (double-clic sur "Confirmer"/"Rejeter"
+        // dans les modals) : désactive uniquement le bouton submit cliqué,
+        // le formulaire continue de s'envoyer normalement.
+        document.querySelectorAll('form').forEach(function(form) {
+            form.addEventListener('submit', function() {
+                var submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Envoi...';
+                }
+            });
+        });
     });
 </script>
 @endpush

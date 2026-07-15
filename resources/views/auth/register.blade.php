@@ -47,7 +47,7 @@
                         <p class="text-muted">Rejoignez notre système de gestion scolaire</p>
                     </div>
 
-                    <form method="POST" action="{{ route('register') }}">
+                    <form method="POST" action="{{ route('register') }}" id="registration-form">
                         @csrf
 
                         <div class="mb-3">
@@ -185,7 +185,7 @@
 
                         <!-- Bouton d'inscription -->
                         <div class="mb-3 d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
+                            <button type="submit" class="btn btn-primary btn-lg" id="registration-submit">
                                 Créer mon compte
                             </button>
                         </div>
@@ -308,6 +308,18 @@
         schoolCodeInput.addEventListener('blur', loadSchoolSubjects);
         if (schoolCodeInput.value) {
             loadSchoolSubjects();
+        }
+
+        // Empêche la double soumission (double-clic, connexion lente) : le
+        // formulaire natif continue de se soumettre normalement, seul le
+        // bouton est désactivé pour éviter un second clic pendant l'envoi.
+        const registrationForm = document.getElementById('registration-form');
+        const registrationSubmit = document.getElementById('registration-submit');
+        if (registrationForm && registrationSubmit) {
+            registrationForm.addEventListener('submit', function() {
+                registrationSubmit.disabled = true;
+                registrationSubmit.textContent = 'Création en cours...';
+            });
         }
     });
     </script>
