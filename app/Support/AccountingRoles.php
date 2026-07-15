@@ -48,11 +48,13 @@ class AccountingRoles
             self::COMPTABLE => [
                 'ecriture.creer', 'ecriture.consulter',
                 'journal.consulter', 'grand_livre.consulter', 'balance.consulter',
-                'fournisseur.gerer', 'depense.creer', 'recette.creer',
+                'fournisseur.gerer', 'depense.creer', 'depense.annuler', 'recette.creer',
+                'paiement.annuler', 'salaire.generer', 'salaire.payer', 'salaire.annuler',
                 'rapport_financier.consulter', 'rapport_financier.exporter',
             ],
             self::CAISSIER => [
-                'caisse.consulter', 'caisse.encaisser', 'caisse.decaisser',
+                'caisse.consulter', 'caisse.ouvrir', 'caisse.cloturer',
+                'caisse.encaisser', 'caisse.decaisser',
                 'recette.creer', 'penalite.appliquer',
             ],
             self::TRESORIER => [

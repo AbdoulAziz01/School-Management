@@ -39,6 +39,8 @@ class CaisseController extends Controller
 
     public function openSession(Request $request)
     {
+        abort_unless($request->user()->can('caisse.ouvrir'), 403);
+
         $validated = $request->validate([
             'opening_balance' => ['required', 'numeric', 'min:0'],
         ]);
@@ -68,6 +70,8 @@ class CaisseController extends Controller
 
     public function closeSession(Request $request)
     {
+        abort_unless($request->user()->can('caisse.cloturer'), 403);
+
         $session = $this->sessions->currentOpenSession($request->user());
 
         if (! $session) {
@@ -141,6 +145,7 @@ class CaisseController extends Controller
     public function pay(Request $request, User $student)
     {
         abort_unless($student->isStudent(), 404, 'Élève introuvable.');
+        abort_unless($request->user()->can('caisse.encaisser'), 403);
 
         $session = $this->sessions->currentOpenSession($request->user());
 

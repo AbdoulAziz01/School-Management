@@ -63,6 +63,7 @@ class EmployeeSalaryController extends Controller
     public function update(Request $request, User $employee)
     {
         abort_unless(in_array($employee->role, self::EMPLOYEE_ROLES, true), 404, 'Employé introuvable.');
+        abort_unless($request->user()->can('parametrage.salaires'), 403);
 
         $validated = $request->validate([
             'monthly_amount' => ['required', 'numeric', 'min:0'],

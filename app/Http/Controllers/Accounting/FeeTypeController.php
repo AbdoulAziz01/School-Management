@@ -40,6 +40,8 @@ class FeeTypeController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()->can('parametrage.frais'), 403);
+
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:50', Rule::unique('fee_types', 'code')],
             'name' => ['required', 'string', 'max:255'],
@@ -64,6 +66,8 @@ class FeeTypeController extends Controller
 
     public function update(Request $request, FeeType $feeType)
     {
+        abort_unless($request->user()->can('parametrage.frais'), 403);
+
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:50', Rule::unique('fee_types', 'code')->ignore($feeType->id)],
             'name' => ['required', 'string', 'max:255'],
@@ -78,8 +82,10 @@ class FeeTypeController extends Controller
             ->with('success', 'Type de frais mis à jour.');
     }
 
-    public function destroy(FeeType $feeType)
+    public function destroy(Request $request, FeeType $feeType)
     {
+        abort_unless($request->user()->can('parametrage.frais'), 403);
+
         if ($feeType->amounts()->exists()) {
             return back()->with('error', 'Impossible de supprimer un type de frais pour lequel des montants ont déjà été configurés.');
         }
@@ -114,6 +120,8 @@ class FeeTypeController extends Controller
 
     public function updateAmounts(Request $request, FeeType $feeType)
     {
+        abort_unless($request->user()->can('parametrage.frais'), 403);
+
         $academicYear = AcademicYear::where('is_current', true)->first();
 
         if (! $academicYear) {
@@ -126,19 +134,7 @@ class FeeTypeController extends Controller
             'amounts.*' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $amounts = $validated['amounts'];
-
-        if (array_key_exists('all', $amounts) && $amounts['all'] !== null && $amounts['all'] !== '') {
-            $this->fees->setAmount($feeType, $academicYear, null, (float) $amounts['all']);
-        }
-
-        foreach ($amounts as $key => $value) {
-            if ($key === 'all' || $value === null || $value === '') {
-                continue;
-            }
-
-            $this->fees->setAmount($feeType, $academicYear, (int) $key, (float) $value);
-        }
+        $this->fees->updateAmounts($feeType, $academicYear, $validated['amounts']);
 
         return redirect()
             ->route('directeur.fee-types.amounts', $feeType)

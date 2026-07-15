@@ -30,33 +30,43 @@ class SalaryPaymentService
             ->where('effective_from', '<=', $period->copy()->endOfMonth())
             ->get();
 
-        $created = collect();
+        // Un crash en plein milieu de la boucle ne doit jamais laisser un
+        // établissement avec des salaires générés pour certains employés et
+        // pas pour d'autres sur la même période.
+        return DB::transaction(function () use ($school, $period, $activeProfiles) {
+            $created = collect();
 
-        foreach ($activeProfiles as $profile) {
-            $created->push(SalaryPayment::firstOrCreate(
-                [
-                    'user_id' => $profile->user_id,
-                    'period' => $period,
-                ],
-                [
-                    'school_id' => $school->id,
-                    'employee_salary_profile_id' => $profile->id,
-                    'amount_due' => $profile->monthly_amount,
-                    'status' => SalaryPayment::STATUS_PENDING,
-                ]
-            ));
-        }
+            foreach ($activeProfiles as $profile) {
+                $created->push(SalaryPayment::firstOrCreate(
+                    [
+                        'user_id' => $profile->user_id,
+                        'period' => $period,
+                    ],
+                    [
+                        'school_id' => $school->id,
+                        'employee_salary_profile_id' => $profile->id,
+                        'amount_due' => $profile->monthly_amount,
+                        'status' => SalaryPayment::STATUS_PENDING,
+                    ]
+                ));
+            }
 
-        return $created;
+            return $created;
+        });
     }
 
     public function pay(SalaryPayment $payment, float $amount, string $method, User $paidBy, ?CashSession $session = null): SalaryPayment
     {
-        if ($amount > $payment->balanceDue() + 0.01) {
-            throw new \RuntimeException('Le montant dépasse le solde dû.');
-        }
-
         return DB::transaction(function () use ($payment, $amount, $method, $paidBy, $session) {
+            // Reverrouille la ligne à l'intérieur de la transaction : deux
+            // paiements partiels concurrents sur le même salaire ne doivent
+            // jamais se marcher dessus (lost update).
+            $payment = SalaryPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+            if ($amount > $payment->balanceDue() + 0.01) {
+                throw new \RuntimeException('Le montant dépasse le solde dû.');
+            }
+
             $newPaid = round($payment->amount_paid + $amount, 2);
 
             $payment->update([

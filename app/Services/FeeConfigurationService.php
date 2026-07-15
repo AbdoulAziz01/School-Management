@@ -6,6 +6,7 @@ use App\Models\AcademicYear;
 use App\Models\FeeAmount;
 use App\Models\FeeType;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Configuration des frais scolaires (types + montants par niveau/année) —
@@ -58,6 +59,31 @@ class FeeConfigurationService
                 'amount' => $amount,
             ]
         );
+    }
+
+    /**
+     * Enregistre plusieurs montants (un par niveau + "tous niveaux") pour un
+     * même type de frais/année en une seule transaction — soit tous les
+     * montants soumis sont enregistrés, soit aucun (formulaire à plusieurs
+     * lignes, voir accounting.directeur.fee-types.amounts).
+     *
+     * @param  array<string, mixed>  $amounts  clé "all" ou level_id => montant
+     */
+    public function updateAmounts(FeeType $feeType, AcademicYear $academicYear, array $amounts): void
+    {
+        DB::transaction(function () use ($feeType, $academicYear, $amounts) {
+            if (array_key_exists('all', $amounts) && $amounts['all'] !== null && $amounts['all'] !== '') {
+                $this->setAmount($feeType, $academicYear, null, (float) $amounts['all']);
+            }
+
+            foreach ($amounts as $key => $value) {
+                if ($key === 'all' || $value === null || $value === '') {
+                    continue;
+                }
+
+                $this->setAmount($feeType, $academicYear, (int) $key, (float) $value);
+            }
+        });
     }
 
     /** @return Collection<int, FeeAmount> montants existants, indexés par level_id (0 = "tous niveaux") */

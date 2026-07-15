@@ -51,6 +51,8 @@ class ExpenseController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()->can('depense.creer'), 403);
+
         $validated = $request->validate([
             'category' => ['required', Rule::in(array_keys(Expense::CATEGORIES))],
             'beneficiary' => ['required', 'string', 'max:255'],
@@ -70,6 +72,8 @@ class ExpenseController extends Controller
 
     public function cancel(Request $request, Expense $expense)
     {
+        abort_unless($request->user()->can('depense.annuler'), 403);
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'max:500'],
         ]);

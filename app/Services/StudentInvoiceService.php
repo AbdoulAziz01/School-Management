@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\SchoolModules;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Génère automatiquement les factures d'un élève (jamais de saisie
@@ -39,20 +40,26 @@ class StudentInvoiceService
             : null;
 
         $feeTypes = FeeType::where('school_id', $student->school_id)->get();
-        $created = collect();
 
-        foreach ($feeTypes as $feeType) {
-            if ($feeType->is_recurring) {
-                $created = $created->merge($this->generateRecurringInvoices($student, $feeType, $academicYear, $levelId));
-            } else {
-                $invoice = $this->generateSingleInvoice($student, $feeType, $academicYear, $levelId);
-                if ($invoice) {
-                    $created->push($invoice);
+        // Un élève ne doit jamais se retrouver avec une partie de ses
+        // factures générées et l'autre non (ex. interruption réseau/BDD en
+        // plein milieu de la boucle des mensualités).
+        return DB::transaction(function () use ($student, $academicYear, $levelId, $feeTypes) {
+            $created = collect();
+
+            foreach ($feeTypes as $feeType) {
+                if ($feeType->is_recurring) {
+                    $created = $created->merge($this->generateRecurringInvoices($student, $feeType, $academicYear, $levelId));
+                } else {
+                    $invoice = $this->generateSingleInvoice($student, $feeType, $academicYear, $levelId);
+                    if ($invoice) {
+                        $created->push($invoice);
+                    }
                 }
             }
-        }
 
-        return $created;
+            return $created;
+        });
     }
 
     private function generateSingleInvoice(User $student, FeeType $feeType, AcademicYear $academicYear, ?int $levelId): ?StudentInvoice

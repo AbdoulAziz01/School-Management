@@ -40,6 +40,8 @@ class PaymentCorrectionController extends Controller
 
     public function cancel(Request $request, Payment $payment)
     {
+        abort_unless($request->user()->can('paiement.annuler'), 403);
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'max:500'],
         ]);

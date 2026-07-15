@@ -39,6 +39,8 @@ class SalaryPaymentController extends Controller
 
     public function generate(Request $request)
     {
+        abort_unless($request->user()->can('salaire.generer'), 403);
+
         $period = $this->resolvePeriod($request);
         $school = School::find($request->user()->school_id);
 
@@ -51,6 +53,8 @@ class SalaryPaymentController extends Controller
 
     public function pay(Request $request, SalaryPayment $salaryPayment)
     {
+        abort_unless($request->user()->can('salaire.payer'), 403);
+
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
             'payment_method' => ['required', Rule::in(array_keys(Payment::METHOD_LABELS))],
@@ -72,6 +76,8 @@ class SalaryPaymentController extends Controller
 
     public function cancel(Request $request, SalaryPayment $salaryPayment)
     {
+        abort_unless($request->user()->can('salaire.annuler'), 403);
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'max:500'],
         ]);
