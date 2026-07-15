@@ -23,6 +23,9 @@ class ActivityLogPresenter
         'App\\Models\\School' => 'Établissement',
         'App\\Models\\AcademicYear' => 'Année scolaire',
         'App\\Models\\Subject' => 'Matière',
+        'App\\Models\\FeeType' => 'Type de frais',
+        'App\\Models\\FeeAmount' => 'Montant de frais',
+        'App\\Models\\EmployeeSalaryProfile' => 'Salaire employé',
     ];
 
     private const FIELD_LABELS = [
@@ -52,6 +55,13 @@ class ActivityLogPresenter
         'user_id' => 'Élève',
         'teacher_id' => 'Enseignant',
         'school_id' => 'Établissement',
+        'amount' => 'Montant',
+        'monthly_amount' => 'Salaire mensuel',
+        'is_recurring' => 'Récurrent',
+        'category' => 'Catégorie',
+        'effective_from' => 'Applicable à partir du',
+        'effective_to' => 'Applicable jusqu\'au',
+        'fee_type_id' => 'Type de frais',
     ];
 
     /** Champs volontairement masqués : techniques ou déjà exprimés ailleurs dans la phrase. */

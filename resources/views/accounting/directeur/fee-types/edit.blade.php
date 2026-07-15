@@ -1,0 +1,49 @@
+@extends('admin.layouts.app', ['sidebarView' => 'accounting.directeur.sidebar', 'navbarView' => 'accounting.directeur.navbar'])
+
+@section('title', 'Modifier — '.$feeType->name)
+
+@section('content')
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Modifier le type de frais</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('directeur.fee-types.update', $feeType) }}">
+                    @csrf
+                    @method('PUT')
+
+                    <x-admin.form-field type="text" name="code" label="Code" :value="$feeType->code" required />
+                    <x-admin.form-field type="text" name="name" label="Nom" :value="$feeType->name" required />
+
+                    <x-admin.form-field type="select" name="category" label="Catégorie" required>
+                        @foreach($categories as $value => $label)
+                            <option value="{{ $value }}" {{ old('category', $feeType->category) === $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </x-admin.form-field>
+
+                    <div class="form-check form-switch mb-3">
+                        <input type="hidden" name="is_recurring" value="0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="is_recurring" name="is_recurring" value="1"
+                               @checked(old('is_recurring', $feeType->is_recurring))>
+                        <label class="form-check-label" for="is_recurring">
+                            Frais récurrent (dû chaque mois, ex. mensualité)
+                        </label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Enregistrer
+                        </button>
+                        <a href="{{ route('directeur.fee-types.amounts', $feeType) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-coins me-1"></i> Voir les montants
+                        </a>
+                        <a href="{{ route('directeur.fee-types.index') }}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

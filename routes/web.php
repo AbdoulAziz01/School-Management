@@ -413,6 +413,25 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');
             Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
         });
+
+        // Paramétrage financier (Phase 6.2)
+        Route::prefix('fee-types')->name('fee-types.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'store'])->name('store');
+            Route::get('/{feeType}/edit', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'edit'])->name('edit');
+            Route::put('/{feeType}', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'update'])->name('update');
+            Route::delete('/{feeType}', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'destroy'])->name('destroy');
+            Route::get('/{feeType}/amounts', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'amounts'])->name('amounts');
+            Route::put('/{feeType}/amounts', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'updateAmounts'])->name('amounts.update');
+        });
+
+        Route::prefix('salaries')->name('salaries.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'index'])->name('index');
+            Route::get('/{employee}/edit', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'edit'])->name('edit');
+            Route::put('/{employee}', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'update'])->name('update');
+        });
+
         Route::get('/', fn () => redirect()->route('directeur.dashboard'));
     });
 

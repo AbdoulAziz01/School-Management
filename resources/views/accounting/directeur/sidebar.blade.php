@@ -14,6 +14,18 @@
                 <span>Tableau de bord</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.fee-types.index') }}" class="nav-link {{ request()->routeIs('directeur.fee-types.*') ? 'active' : '' }}">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>Frais scolaires</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.salaries.index') }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') ? 'active' : '' }}">
+                <i class="fas fa-money-check-alt"></i>
+                <span>Salaires</span>
+            </a>
+        </li>
     </ul>
 
     <div class="menu-separator"></div>
