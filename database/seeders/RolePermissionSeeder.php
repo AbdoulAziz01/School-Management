@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\AccountingRoles;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -56,19 +57,23 @@ class RolePermissionSeeder extends Seeder
     {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $allPermissions = collect($this->permissionMatrix())->flatten()->unique();
+        // Matrice pédagogique (rôles réellement assignables aujourd'hui) +
+        // catalogue comptable (fondation future — voir AccountingRoles).
+        $fullMatrix = [...$this->permissionMatrix(), ...AccountingRoles::permissionMatrix()];
+
+        $allPermissions = collect($fullMatrix)->flatten()->unique();
         foreach ($allPermissions as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
         // super_admin n'a pas de permissions listées explicitement : il passe
         // par le bypass Gate::before() (voir AppServiceProvider::boot()).
-        $roleNames = [User::ROLE_SUPER_ADMIN, ...array_keys($this->permissionMatrix())];
+        $roleNames = [User::ROLE_SUPER_ADMIN, ...array_keys($fullMatrix)];
         foreach ($roleNames as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
 
-        foreach ($this->permissionMatrix() as $roleName => $permissions) {
+        foreach ($fullMatrix as $roleName => $permissions) {
             $role = Role::where('name', $roleName)->where('guard_name', 'web')->first();
             $role?->syncPermissions($permissions);
         }
