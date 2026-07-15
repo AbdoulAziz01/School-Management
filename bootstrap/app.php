@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'school.admin' => \App\Http\Middleware\EnsureSchoolAdmin::class,
             'school.active' => \App\Http\Middleware\EnsureSchoolIsActive::class,
+            'module' => \App\Http\Middleware\EnsureSchoolModuleEnabled::class,
         ]);
         
         $middleware->append(\App\Http\Middleware\TrustProxies::class);

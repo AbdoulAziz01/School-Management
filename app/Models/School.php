@@ -16,7 +16,7 @@ class School extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'slug', 'code', 'is_active', 'establishment_type'])
+            ->logOnly(['name', 'slug', 'code', 'is_active', 'establishment_type', 'establishment_category'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Établissement {$eventName}");
@@ -38,6 +38,20 @@ class School extends Model
         self::TYPE_LYCEE     => 'Lycée',
         self::TYPE_MIXTE     => 'Mixte (primaire + collège + lycée)',
         self::TYPE_FORMATION => 'École de formation professionnelle',
+    ];
+
+    /**
+     * Axe juridique/statutaire, indépendant de establishment_type (qui est
+     * purement pédagogique). Conditionne les modules activables par défaut
+     * (ex. comptabilité complète pour le privé) — voir App\Support\SchoolModules.
+     */
+    public const CATEGORY_PUBLIC = 'public';
+
+    public const CATEGORY_PRIVATE = 'private';
+
+    public const ESTABLISHMENT_CATEGORIES = [
+        self::CATEGORY_PUBLIC => 'Public',
+        self::CATEGORY_PRIVATE => 'Privé',
     ];
 
     public const TIMEZONES = [
@@ -66,6 +80,8 @@ class School extends Model
         'department',
         'district',
         'establishment_type',
+        'establishment_category',
+        'enabled_modules',
         'motto',
         'authorization_number',
         'director_name',
@@ -91,6 +107,7 @@ class School extends Model
         'formation_use_lmd' => 'boolean',
         'login_credentials_snapshot' => 'array',
         'card_settings' => 'array',
+        'enabled_modules' => 'array',
     ];
 
     protected $attributes = [
@@ -223,6 +240,21 @@ class School extends Model
     public function isPrimaireEstablishment(): bool
     {
         return $this->establishment_type === self::TYPE_PRIMAIRE;
+    }
+
+    public function establishmentCategoryLabel(): ?string
+    {
+        return self::ESTABLISHMENT_CATEGORIES[$this->establishment_category] ?? null;
+    }
+
+    public function isPublicEstablishment(): bool
+    {
+        return $this->establishment_category === self::CATEGORY_PUBLIC;
+    }
+
+    public function isPrivateEstablishment(): bool
+    {
+        return $this->establishment_category === self::CATEGORY_PRIVATE;
     }
 
     /** Formation pro avec calcul des moyennes LMD (CC + examen par module). */
