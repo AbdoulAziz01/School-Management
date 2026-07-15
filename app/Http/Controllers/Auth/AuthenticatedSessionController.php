@@ -106,6 +106,12 @@ class AuthenticatedSessionController extends Controller
             $route = 'teacher.dashboard';
         } elseif (in_array($role, User::ROLE_STUDENT_ALIASES, true)) {
             $route = 'student.dashboard';
+        } elseif ($role === User::ROLE_DIRECTEUR) {
+            $route = 'directeur.dashboard';
+        } elseif ($role === User::ROLE_COMPTABLE) {
+            $route = 'comptable.dashboard';
+        } elseif ($role === User::ROLE_CAISSIER) {
+            $route = 'caisse.dashboard';
         } else {
             $route = 'home';
         }

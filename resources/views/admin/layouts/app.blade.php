@@ -574,7 +574,7 @@
     
     <div class="wrapper d-flex">
         <!-- Sidebar -->
-        @include('admin.components.sidebar')
+        @include($sidebarView ?? 'admin.components.sidebar')
         <script>
             (function () {
                 var saved = sessionStorage.getItem('adminSidebarScrollTop');
@@ -586,7 +586,7 @@
 
         <!-- Main content -->
         <main class="main-content">
-            @include('admin.components.navbar')
+            @include($navbarView ?? 'admin.components.navbar')
 
             <div class="admin-page-body">
             @if(session('success'))

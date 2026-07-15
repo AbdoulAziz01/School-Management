@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'school.admin' => \App\Http\Middleware\EnsureSchoolAdmin::class,
             'school.active' => \App\Http\Middleware\EnsureSchoolIsActive::class,
             'module' => \App\Http\Middleware\EnsureSchoolModuleEnabled::class,
+            'accounting.role' => \App\Http\Middleware\EnsureAccountingRole::class,
         ]);
         
         $middleware->append(\App\Http\Middleware\TrustProxies::class);

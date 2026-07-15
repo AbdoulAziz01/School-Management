@@ -61,6 +61,12 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('student.dashboard');
         } elseif (in_array(auth()->user()->role, ['professeur', 'teacher'])) {
             return redirect()->route('teacher.dashboard');
+        } elseif (auth()->user()->role === 'directeur') {
+            return redirect()->route('directeur.dashboard');
+        } elseif (auth()->user()->role === 'comptable') {
+            return redirect()->route('comptable.dashboard');
+        } elseif (auth()->user()->role === 'caissier') {
+            return redirect()->route('caisse.dashboard');
         }
         return redirect()->route('home');
     })->name('dashboard');
@@ -374,6 +380,18 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::get('/audit-log', [\App\Http\Controllers\Admin\AuditLogController::class, 'index'])
         ->name('admin.audit-log.index');
 
+    // Comptes du module Comptabilité (directeur/comptable/caissier) — établissements privés uniquement
+    Route::middleware('module:accounting')->prefix('accounting-staff')->name('admin.accounting-staff.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'store'])->name('store');
+        Route::get('/{accountingStaff}', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'show'])->name('show');
+        Route::get('/{accountingStaff}/edit', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'edit'])->name('edit');
+        Route::put('/{accountingStaff}', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'update'])->name('update');
+        Route::post('/{accountingStaff}/regenerate-credentials', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'regenerateCredentials'])->name('regenerate-credentials');
+        Route::delete('/{accountingStaff}', [\App\Http\Controllers\Admin\AccountingStaffController::class, 'destroy'])->name('destroy');
+    });
+
     // Rapports admin : PDF bulletins, fin d'année, exports CSV
     Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
     Route::get('/reports/semester-pdf', [ReportController::class, 'semesterBulletinsPdf'])->name('admin.reports.semester-pdf');
@@ -382,6 +400,42 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::get('/reports/annual-csv', [ReportController::class, 'annualSummaryCsv'])->name('admin.reports.annual-csv');
     Route::get('/reports/grades-csv', [ReportController::class, 'gradesCsv'])->name('admin.reports.grades-csv');
 });
+
+// Module Comptabilité — 3 portails dédiés (établissements privés uniquement,
+// voir module:accounting / SchoolModules). Même structure que les groupes
+// admin/teacher/student ci-dessus : préfixe + middleware de rôle dédié.
+Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.role:directeur'])
+    ->prefix('directeur')->name('directeur.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Accounting\DirecteurDashboardController::class, 'index'])->name('dashboard');
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'edit'])->name('edit');
+            Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');
+            Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
+        });
+        Route::get('/', fn () => redirect()->route('directeur.dashboard'));
+    });
+
+Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.role:comptable'])
+    ->prefix('comptable')->name('comptable.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Accounting\ComptableDashboardController::class, 'index'])->name('dashboard');
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'edit'])->name('edit');
+            Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');
+            Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
+        });
+        Route::get('/', fn () => redirect()->route('comptable.dashboard'));
+    });
+
+Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.role:caissier'])
+    ->prefix('caisse')->name('caisse.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Accounting\CaisseDashboardController::class, 'index'])->name('dashboard');
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'edit'])->name('edit');
+            Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');
+            Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
+        });
+        Route::get('/', fn () => redirect()->route('caisse.dashboard'));
+    });
 
 // En cas de route non trouvée
 Route::fallback(function () {

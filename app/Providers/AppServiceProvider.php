@@ -102,6 +102,9 @@ class AppServiceProvider extends ServiceProvider
             'layouts.student',
             'teacher.components.sidebar',
             'student.*',
+            'accounting.directeur.sidebar',
+            'accounting.comptable.sidebar',
+            'accounting.layouts.caisse',
         ], SchoolBrandingComposer::class);
 
         View::share('platformName', config('platform.name', 'EduManager'));

@@ -12,6 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use App\Models\SchoolClass;
 use App\Models\Grade;
+use App\Support\AccountingRoles;
 
 class User extends Authenticatable
 {
@@ -42,6 +43,17 @@ class User extends Authenticatable
 
     /** Comptes avec accès au panneau /admin de l'établissement */
     public const ROLE_SCHOOL_STAFF = [self::ROLE_ADMIN, self::ROLE_SURVEILLANT];
+
+    // Rôles du module Comptabilité (établissements privés uniquement, voir
+    // SchoolModules::ACCOUNTING). Les valeurs viennent d'AccountingRoles pour
+    // que la colonne users.role et le rôle Spatie synchronisé par
+    // syncRoleFromColumn() ne divergent jamais.
+    public const ROLE_DIRECTEUR = AccountingRoles::DIRECTEUR;
+    public const ROLE_COMPTABLE = AccountingRoles::COMPTABLE;
+    public const ROLE_CAISSIER = AccountingRoles::CAISSIER;
+
+    /** Comptes du module Comptabilité, chacun avec son propre portail dédié. */
+    public const ROLE_ACCOUNTING_STAFF = [self::ROLE_DIRECTEUR, self::ROLE_COMPTABLE, self::ROLE_CAISSIER];
 
     // Aliases historiques tolérés dans les vérifications de rôle
     public const ROLE_TEACHER_ALIASES = ['teacher', 'professeur'];
@@ -232,6 +244,26 @@ class User extends Authenticatable
         return in_array($this->role, self::ROLE_TEACHER_ALIASES, true);
     }
 
+    public function isDirecteur(): bool
+    {
+        return $this->role === self::ROLE_DIRECTEUR;
+    }
+
+    public function isComptable(): bool
+    {
+        return $this->role === self::ROLE_COMPTABLE;
+    }
+
+    public function isCaissier(): bool
+    {
+        return $this->role === self::ROLE_CAISSIER;
+    }
+
+    public function isAccountingStaff(): bool
+    {
+        return in_array($this->role, self::ROLE_ACCOUNTING_STAFF, true);
+    }
+
     public function isStudent(): bool
     {
         return in_array($this->role, self::ROLE_STUDENT_ALIASES, true);
@@ -247,6 +279,9 @@ class User extends Authenticatable
             $this->role === self::ROLE_SUPER_ADMIN => self::ROLE_SUPER_ADMIN,
             $this->role === self::ROLE_ADMIN => self::ROLE_ADMIN,
             $this->role === self::ROLE_SURVEILLANT => self::ROLE_SURVEILLANT,
+            $this->role === self::ROLE_DIRECTEUR => self::ROLE_DIRECTEUR,
+            $this->role === self::ROLE_COMPTABLE => self::ROLE_COMPTABLE,
+            $this->role === self::ROLE_CAISSIER => self::ROLE_CAISSIER,
             in_array($this->role, self::ROLE_TEACHER_ALIASES, true) => self::ROLE_TEACHER,
             in_array($this->role, self::ROLE_STUDENT_ALIASES, true) => self::ROLE_STUDENT,
             default => null,

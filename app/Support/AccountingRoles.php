@@ -4,36 +4,47 @@ namespace App\Support;
 
 /**
  * Catalogue de rôles/permissions comptables (spatie/laravel-permission),
- * préparé en fondation pour le futur module Comptabilité — voir l'audit de
- * préparation ("séparation des tâches : comptable/caissier/trésorier").
+ * séparation des tâches : directeur/comptable/caissier/trésorier.
  *
- * Volontairement PAS encore ajouté à User::ROLE_* / la colonne users.role :
- * aucun compte réel ne peut aujourd'hui porter un de ces rôles (pas de
- * tableau de bord, pas de route, pas de middleware qui les reconnaît). Ce
- * catalogue existe pour que RolePermissionSeeder puisse créer les
- * permissions Spatie à l'avance, prêtes à être assignées le jour où le
- * module Comptabilité (et ses écrans de gestion des comptes) sera construit.
+ * DIRECTEUR, COMPTABLE et CAISSIER sont de vrais rôles assignables depuis le
+ * module Comptabilité (Phase 6.1) — voir User::ROLE_DIRECTEUR/ROLE_COMPTABLE/
+ * ROLE_CAISSIER, qui référencent directement ces constantes pour que les deux
+ * systèmes (colonne users.role et rôle Spatie synchronisé par
+ * User::syncRoleFromColumn()) ne divergent jamais.
+ *
+ * TRESORIER reste une fondation dormante : aucun compte, tableau de bord ou
+ * route ne le reconnaît encore (hors périmètre du besoin actuel, qui ne
+ * demande pas de validation d'écriture séparée).
  */
 class AccountingRoles
 {
+    public const DIRECTEUR = 'directeur';
+
     public const COMPTABLE = 'comptable';
 
     public const CAISSIER = 'caissier';
 
     public const TRESORIER = 'tresorier';
 
-    public const ALL = [self::COMPTABLE, self::CAISSIER, self::TRESORIER];
+    public const ALL = [self::DIRECTEUR, self::COMPTABLE, self::CAISSIER, self::TRESORIER];
 
     /**
      * Séparation des tâches : celui qui saisit une écriture (comptable) ne
      * peut pas la valider (trésorier) ; celui qui encaisse (caissier) ne
-     * gère ni les écritures ni le rapprochement bancaire.
+     * gère ni les écritures ni le rapprochement bancaire ; le directeur
+     * paramètre et pilote mais n'effectue aucune opération quotidienne.
      *
      * @return array<string, list<string>>
      */
     public static function permissionMatrix(): array
     {
         return [
+            self::DIRECTEUR => [
+                'parametrage.frais', 'parametrage.salaires', 'parametrage.modules',
+                'ecriture.consulter', 'journal.consulter', 'grand_livre.consulter', 'balance.consulter',
+                'caisse.consulter', 'personnel.compta.gerer',
+                'rapport_financier.consulter', 'rapport_financier.exporter',
+            ],
             self::COMPTABLE => [
                 'ecriture.creer', 'ecriture.consulter',
                 'journal.consulter', 'grand_livre.consulter', 'balance.consulter',
