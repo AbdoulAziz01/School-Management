@@ -131,6 +131,15 @@
                 {{ $school->is_active ? 'Désactiver' : 'Activer' }}
             </button>
         </form>
+        @php $accountingEnabled = \App\Support\SchoolModules::isEnabled($school, \App\Support\SchoolModules::ACCOUNTING); @endphp
+        @if($accountingEnabled || $school->isPrivateEstablishment())
+            <form method="POST" action="{{ route('platform.schools.toggle-accounting-module', $school) }}">
+                @csrf @method('PATCH')
+                <button type="submit" class="btn btn-sm {{ $accountingEnabled ? 'btn-outline-warning' : 'btn-outline-success' }}">
+                    <i class="fas fa-coins me-1"></i>{{ $accountingEnabled ? 'Désactiver' : 'Activer' }} Comptabilité
+                </button>
+            </form>
+        @endif
     </div>
 </div>
 

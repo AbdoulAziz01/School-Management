@@ -294,6 +294,25 @@ class SchoolController extends Controller
         return back()->with('success', $message);
     }
 
+    public function toggleAccountingModule(School $school): RedirectResponse
+    {
+        $enabled = \App\Support\SchoolModules::isEnabled($school, \App\Support\SchoolModules::ACCOUNTING);
+
+        if (! $enabled && ! $school->isPrivateEstablishment()) {
+            return back()->with('error', 'Le module Comptabilité est réservé aux établissements de statut « Privé ».');
+        }
+
+        if ($enabled) {
+            \App\Support\SchoolModules::disable($school, \App\Support\SchoolModules::ACCOUNTING);
+            $message = "Module Comptabilité désactivé pour « {$school->name} ».";
+        } else {
+            \App\Support\SchoolModules::enable($school, \App\Support\SchoolModules::ACCOUNTING);
+            $message = "Module Comptabilité activé pour « {$school->name} ».";
+        }
+
+        return back()->with('success', $message);
+    }
+
     public function regenerateCode(School $school): RedirectResponse
     {
         $school->update(['code' => School::generateUniqueCode()]);

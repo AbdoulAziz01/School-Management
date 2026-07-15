@@ -16,6 +16,7 @@ class SchoolProfile
         return [
             'name'                 => ['required', 'string', 'max:255'],
             'establishment_type'   => ['required', Rule::in(array_keys(School::ESTABLISHMENT_TYPES))],
+            'establishment_category' => ['required', Rule::in(array_keys(School::ESTABLISHMENT_CATEGORIES))],
             'formation_use_lmd'    => ['sometimes', 'boolean'],
             'motto'                => ['nullable', 'string', 'max:255'],
             'authorization_number' => ['nullable', 'string', 'max:100'],

@@ -94,6 +94,7 @@ Route::prefix('platform')->middleware(['auth', 'super_admin'])->name('platform.'
     Route::resource('schools', \App\Http\Controllers\Platform\SchoolController::class);
     Route::post('schools/{school}/students/{user}/assign-class', [\App\Http\Controllers\Platform\SchoolController::class, 'assignStudentToClass'])->name('schools.students.assign-class');
     Route::patch('schools/{school}/toggle-active', [\App\Http\Controllers\Platform\SchoolController::class, 'toggleActive'])->name('schools.toggle-active');
+    Route::patch('schools/{school}/toggle-accounting-module', [\App\Http\Controllers\Platform\SchoolController::class, 'toggleAccountingModule'])->name('schools.toggle-accounting-module');
     Route::patch('schools/{school}/regenerate-code', [\App\Http\Controllers\Platform\SchoolController::class, 'regenerateCode'])->name('schools.regenerate-code');
     Route::prefix('schools/{school}/cycles')->name('schools.cycles.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Platform\SchoolLevelController::class, 'index'])->name('index');

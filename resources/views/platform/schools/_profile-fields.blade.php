@@ -20,6 +20,17 @@
         {{ \App\Support\SchoolLevelProvisioner::defaultLevelsHintForType(old('establishment_type', $school->establishment_type)) }}
     </div>
 </div>
+<div class="col-md-4">
+    <label for="establishment_category" class="form-label">Statut *</label>
+    <select id="establishment_category" name="establishment_category" class="form-select @error('establishment_category') is-invalid @enderror" required>
+        <option value="" disabled @selected(!old('establishment_category', $school->establishment_category))>— Choisir —</option>
+        @foreach(\App\Models\School::ESTABLISHMENT_CATEGORIES as $value => $label)
+            <option value="{{ $value }}" @selected(old('establishment_category', $school->establishment_category) === $value)>{{ $label }}</option>
+        @endforeach
+    </select>
+    @error('establishment_category')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    <div class="form-text">Axe indépendant du type pédagogique — conditionne l'accès au module Comptabilité (privé uniquement).</div>
+</div>
 <div class="col-md-8" id="formation-lmd-option" style="{{ old('establishment_type', $school->establishment_type) === \App\Models\School::TYPE_FORMATION ? '' : 'display:none' }}">
     <div class="form-check form-switch mt-4">
         <input type="hidden" name="formation_use_lmd" value="0">
