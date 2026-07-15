@@ -23,7 +23,7 @@
 
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a href="{{ route('caisse.students.search') }}" class="nav-link {{ request()->routeIs('caisse.students.search') ? 'active' : '' }}">
+            <a href="{{ route('caisse.students.search') }}" class="nav-link {{ request()->routeIs('caisse.students.search') && ! request()->filled('intent') ? 'active' : '' }}">
                 <i class="fas fa-cash-register"></i>
                 <span>Nouveau paiement</span>
             </a>
@@ -55,19 +55,19 @@
 
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a href="{{ route('caisse.students.search') }}" class="nav-link {{ request()->routeIs('caisse.students.search') ? 'active' : '' }}">
+            <a href="{{ route('caisse.students.search') }}" class="nav-link {{ request()->routeIs('caisse.students.search') && ! request()->filled('intent') ? 'active' : '' }}">
                 <i class="fas fa-search"></i>
                 <span>Rechercher un élève</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ route('caisse.students.search') }}?intent=situation" class="nav-link {{ request()->routeIs('caisse.students.situation') ? 'active' : '' }}">
+            <a href="{{ route('caisse.students.search', ['intent' => 'situation']) }}" class="nav-link {{ request()->routeIs('caisse.students.search') && request('intent') === 'situation' ? 'active' : '' }}">
                 <i class="fas fa-file-invoice"></i>
                 <span>Situation financière</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ route('caisse.students.search') }}?intent=history" class="nav-link">
+            <a href="{{ route('caisse.students.search', ['intent' => 'history']) }}" class="nav-link {{ request()->routeIs('caisse.students.search') && request('intent') === 'history' ? 'active' : '' }}">
                 <i class="fas fa-history"></i>
                 <span>Historique des paiements</span>
             </a>
