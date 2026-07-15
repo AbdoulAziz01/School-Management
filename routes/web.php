@@ -448,14 +448,34 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
 
 Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.role:caissier'])
     ->prefix('caisse')->name('caisse.')->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Accounting\CaisseDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard', [\App\Http\Controllers\Accounting\CaisseController::class, 'index'])->name('dashboard');
         Route::prefix('profile')->name('profile.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'edit'])->name('edit');
             Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');
             Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
         });
+
+        // Session de caisse (Phase 6.3)
+        Route::post('/session/open', [\App\Http\Controllers\Accounting\CaisseController::class, 'openSession'])->name('session.open');
+        Route::get('/session/close', [\App\Http\Controllers\Accounting\CaisseController::class, 'closeSessionForm'])->name('session.close-form');
+        Route::post('/session/close', [\App\Http\Controllers\Accounting\CaisseController::class, 'closeSession'])->name('session.close');
+
+        // Recherche et encaissement élève
+        Route::get('/students/search', [\App\Http\Controllers\Accounting\CaisseController::class, 'search'])->name('students.search');
+        Route::get('/students/{student}', [\App\Http\Controllers\Accounting\CaisseController::class, 'showStudent'])->name('students.show');
+        Route::post('/students/{student}/pay', [\App\Http\Controllers\Accounting\CaisseController::class, 'pay'])->name('students.pay');
+
+        // Reçus et historique
+        Route::get('/receipts/{payment}', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'show'])->name('receipts.show');
+        Route::get('/receipts/{payment}/pdf', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'pdf'])->name('receipts.pdf');
+        Route::get('/history', [\App\Http\Controllers\Accounting\CaisseController::class, 'history'])->name('history');
+
         Route::get('/', fn () => redirect()->route('caisse.dashboard'));
     });
+
+// Vérification publique d'un reçu de paiement (lien QR Code — aucune auth requise)
+Route::get('/payment-receipt/verify', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'verify'])
+    ->name('payment.receipt.verify');
 
 // En cas de route non trouvée
 Route::fallback(function () {

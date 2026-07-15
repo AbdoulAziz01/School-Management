@@ -26,6 +26,9 @@ class ActivityLogPresenter
         'App\\Models\\FeeType' => 'Type de frais',
         'App\\Models\\FeeAmount' => 'Montant de frais',
         'App\\Models\\EmployeeSalaryProfile' => 'Salaire employé',
+        'App\\Models\\StudentInvoice' => 'Facture élève',
+        'App\\Models\\Payment' => 'Paiement',
+        'App\\Models\\CashSession' => 'Session de caisse',
     ];
 
     private const FIELD_LABELS = [
