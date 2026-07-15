@@ -25,6 +25,14 @@ Un ancien mode de déploiement plaçant tout le dépôt à la racine du document
 
 ---
 
+## 🗄️ Migrations — ne jamais réécrire une migration déjà exécutée
+
+Une fois qu'une migration a tourné sur un environnement partagé (staging, production), **ne la modifiez plus** : créez une nouvelle migration pour tout changement de schéma supplémentaire, même correctif. Réécrire une migration existante casse la garantie que l'historique des migrations exécutées correspond au contenu réel du fichier — deux environnements ayant migré à des moments différents peuvent alors diverger silencieusement.
+
+Quelques migrations plus anciennes de ce projet (ex. `2026_02_11_000001_add_semester_to_grades_table.php`) ont été patchées après coup et contiennent des gardes défensives (`Schema::hasColumn`, vérification manuelle de contraintes existantes) pour rester ré-exécutables sans erreur malgré ça. Elles sont laissées telles quelles pour ne pas casser un environnement déjà migré dessus, mais ce style n'est plus la pratique à suivre : à partir de maintenant, un correctif de schéma = une nouvelle migration.
+
+---
+
 ## 🔧 Corrections et améliorations apportées
 
 ### Corrections de bugs
