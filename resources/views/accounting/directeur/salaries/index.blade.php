@@ -4,12 +4,13 @@
 
 @php
     $roleLabels = ['teacher' => 'Enseignant', 'professeur' => 'Enseignant', 'surveillant' => 'Surveillant', 'admin' => 'Administrateur'];
+    $roleGroupLabels = ['teachers' => 'Enseignants', 'surveillants' => 'Surveillants', 'admin' => 'Administration'];
 @endphp
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-0"><i class="fas fa-money-check-alt me-2"></i>Salaires du personnel</h1>
+        <h1 class="h3 mb-0"><i class="fas fa-money-check-alt me-2"></i>Salaires du personnel @if($roleGroup && isset($roleGroupLabels[$roleGroup])) — {{ $roleGroupLabels[$roleGroup] }} @endif</h1>
         <p class="text-muted mb-0">Enseignants, surveillants et administratifs</p>
     </div>
 </div>
@@ -17,10 +18,13 @@
 <div class="card">
     <div class="card-header">
         <form method="GET" action="{{ route('directeur.salaries.index') }}" class="d-flex gap-2">
+            @if($roleGroup)
+                <input type="hidden" name="role_group" value="{{ $roleGroup }}">
+            @endif
             <input type="text" name="search" class="form-control form-control-sm" placeholder="Rechercher..." value="{{ request('search') }}" style="max-width: 260px;">
             <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-search"></i></button>
             @if(request('search'))
-                <a href="{{ route('directeur.salaries.index') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times"></i></a>
+                <a href="{{ route('directeur.salaries.index', ['role_group' => $roleGroup]) }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times"></i></a>
             @endif
         </form>
     </div>

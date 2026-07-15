@@ -439,6 +439,9 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::get('/debtors', [\App\Http\Controllers\Accounting\StudentFinanceController::class, 'debtors'])->name('debtors');
             Route::get('/{student}', [\App\Http\Controllers\Accounting\StudentFinanceController::class, 'show'])->name('show');
         });
+        // Lecture seule : pas de route cancel pour le directeur (aucune
+        // permission paiement.annuler pour ce rôle, voir AccountingRoles).
+        Route::get('/payments', [\App\Http\Controllers\Accounting\PaymentCorrectionController::class, 'index'])->name('payments.index');
 
         Route::get('/', fn () => redirect()->route('directeur.dashboard'));
     });

@@ -20,13 +20,23 @@ class EmployeeSalaryController extends Controller
         User::ROLE_ADMIN,
     ];
 
+    /** @var array<string, list<string>> filtre du menu "Gestion des salaires" par catégorie de personnel */
+    private const ROLE_GROUPS = [
+        'teachers' => ['teacher', 'professeur'],
+        'surveillants' => ['surveillant'],
+        'admin' => ['admin'],
+    ];
+
     public function __construct(
         private EmployeeSalaryProfileService $salaries
     ) {}
 
     public function index(Request $request)
     {
-        $query = User::whereIn('role', self::EMPLOYEE_ROLES);
+        $roleGroup = $request->query('role_group');
+        $roles = ($roleGroup && isset(self::ROLE_GROUPS[$roleGroup])) ? self::ROLE_GROUPS[$roleGroup] : self::EMPLOYEE_ROLES;
+
+        $query = User::whereIn('role', $roles);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -46,6 +56,7 @@ class EmployeeSalaryController extends Controller
         return view('accounting.directeur.salaries.index', [
             'employees' => $employees,
             'currentSalaries' => $currentSalaries,
+            'roleGroup' => $roleGroup,
         ]);
     }
 

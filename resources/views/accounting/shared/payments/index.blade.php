@@ -1,4 +1,8 @@
-@extends('admin.layouts.app', ['sidebarView' => 'accounting.comptable.sidebar', 'navbarView' => 'accounting.comptable.navbar'])
+@php
+    $portalPrefix = auth()->user()->role === \App\Models\User::ROLE_DIRECTEUR ? 'directeur' : 'comptable';
+    $canCancel = auth()->user()->can('paiement.annuler');
+@endphp
+@extends('admin.layouts.app', ['sidebarView' => "accounting.{$portalPrefix}.sidebar", 'navbarView' => "accounting.{$portalPrefix}.navbar"])
 
 @section('title', 'Paiements élèves')
 
@@ -6,13 +10,13 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0"><i class="fas fa-receipt me-2"></i>Paiements élèves</h1>
-        <p class="text-muted mb-0">Toutes les recettes — correction et annulation tracées</p>
+        <p class="text-muted mb-0">Toutes les recettes{{ $canCancel ? ' — correction et annulation tracées' : '' }}</p>
     </div>
 </div>
 
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" action="{{ route('comptable.payments.index') }}" class="row g-2 align-items-end">
+        <form method="GET" action="{{ route($portalPrefix.'.payments.index') }}" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small">Recherche</label>
                 <input type="text" name="search" class="form-control form-control-sm" placeholder="N° reçu ou nom élève" value="{{ request('search') }}">
@@ -27,7 +31,7 @@
             </div>
             <div class="col-md-4">
                 <button type="submit" class="btn btn-sm btn-primary">Filtrer</button>
-                <a href="{{ route('comptable.payments.index') }}" class="btn btn-sm btn-outline-secondary">Réinitialiser</a>
+                <a href="{{ route($portalPrefix.'.payments.index') }}" class="btn btn-sm btn-outline-secondary">Réinitialiser</a>
             </div>
         </form>
     </div>
@@ -69,14 +73,14 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if(!$payment->isCancelled())
+                                    @if(!$payment->isCancelled() && $canCancel)
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelPayment{{ $payment->id }}">
                                             <i class="fas fa-undo"></i>
                                         </button>
                                         <div class="modal fade" id="cancelPayment{{ $payment->id }}" tabindex="-1">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
-                                                    <form method="POST" action="{{ route('comptable.payments.cancel', $payment) }}">
+                                                    <form method="POST" action="{{ route($portalPrefix.'.payments.cancel', $payment) }}">
                                                         @csrf
                                                         <div class="modal-header">
                                                             <h5 class="modal-title">Annuler / rembourser ce paiement ?</h5>

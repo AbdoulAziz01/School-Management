@@ -90,6 +90,26 @@
 
     <div class="menu-separator"></div>
     <div class="menu-section">
+        <i class="fas fa-vault me-1"></i> Trésorerie
+    </div>
+
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a href="{{ route('comptable.dashboard') }}" class="nav-link">
+                <i class="fas fa-coins"></i>
+                <span>Solde</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('comptable.ledger.index') }}" class="nav-link {{ request()->routeIs('comptable.ledger.*') ? 'active' : '' }}">
+                <i class="fas fa-right-left"></i>
+                <span>Mouvements</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="menu-separator"></div>
+    <div class="menu-section">
         <i class="fas fa-user-graduate me-1"></i> Élèves
     </div>
 
@@ -98,6 +118,12 @@
             <a href="{{ route('comptable.students.debtors') }}" class="nav-link {{ request()->routeIs('comptable.students.*') ? 'active' : '' }}">
                 <i class="fas fa-user-clock"></i>
                 <span>Élèves débiteurs</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('comptable.payments.index') }}" class="nav-link">
+                <i class="fas fa-receipt"></i>
+                <span>Paiements</span>
             </a>
         </li>
     </ul>

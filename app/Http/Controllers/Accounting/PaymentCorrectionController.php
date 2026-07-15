@@ -8,8 +8,10 @@ use App\Services\PaymentService;
 use Illuminate\Http\Request;
 
 /**
- * Consultation et correction (annulation tracée / remboursement) des
- * paiements élèves par le comptable — voir PaymentService::cancel().
+ * Consultation de tous les paiements élèves — comptable (avec correction/
+ * annulation tracée, voir PaymentService::cancel()) et directeur (lecture
+ * seule : la vue masque l'action d'annulation faute de la permission
+ * paiement.annuler, jamais accordée au rôle directeur).
  */
 class PaymentCorrectionController extends Controller
 {
@@ -35,7 +37,7 @@ class PaymentCorrectionController extends Controller
 
         $payments = $query->paginate(20)->withQueryString();
 
-        return view('accounting.comptable.payments.index', ['payments' => $payments]);
+        return view('accounting.shared.payments.index', ['payments' => $payments]);
     }
 
     public function cancel(Request $request, Payment $payment)

@@ -34,10 +34,36 @@
                 <span>Frais scolaires</span>
             </a>
         </li>
+    </ul>
+
+    <div class="menu-separator"></div>
+    <div class="menu-section">
+        <i class="fas fa-money-check-alt me-1"></i> Gestion des salaires
+    </div>
+
+    <ul class="nav flex-column">
         <li class="nav-item">
-            <a href="{{ route('directeur.salaries.index') }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') ? 'active' : '' }}">
-                <i class="fas fa-money-check-alt"></i>
-                <span>Salaires du personnel</span>
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'teachers']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && request('role_group') === 'teachers' ? 'active' : '' }}">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>Enseignants</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'surveillants']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && request('role_group') === 'surveillants' ? 'active' : '' }}">
+                <i class="fas fa-user-shield"></i>
+                <span>Surveillants</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'admin']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && request('role_group') === 'admin' ? 'active' : '' }}">
+                <i class="fas fa-user-tie"></i>
+                <span>Personnel administratif</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.salaries.index') }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && ! request()->has('role_group') ? 'active' : '' }}">
+                <i class="fas fa-list"></i>
+                <span>Tout le personnel</span>
             </a>
         </li>
     </ul>
@@ -48,6 +74,12 @@
     </div>
 
     <ul class="nav flex-column">
+        <li class="nav-item">
+            <a href="{{ route('directeur.payments.index') }}" class="nav-link {{ request()->routeIs('directeur.payments.*') ? 'active' : '' }}">
+                <i class="fas fa-receipt"></i>
+                <span>Paiements</span>
+            </a>
+        </li>
         <li class="nav-item">
             <a href="{{ route('directeur.students.debtors') }}" class="nav-link {{ request()->routeIs('directeur.students.*') ? 'active' : '' }}">
                 <i class="fas fa-user-clock"></i>
