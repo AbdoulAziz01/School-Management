@@ -10,6 +10,7 @@ use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class StudentClassPromotionService
 {
@@ -592,18 +593,26 @@ class StudentClassPromotionService
     public function processClass(SchoolClass $class, ?AcademicYear $academicYear = null): array
     {
         $academicYear ??= AcademicYear::where('is_current', true)->first();
-        $results = [];
 
         $students = User::where('class_id', $class->id)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where('status', User::STATUS_APPROVED)
             ->get();
 
-        foreach ($students as $student) {
-            $results[] = $this->tryPromote($student, $academicYear);
-        }
+        // Transaction par classe : une interruption (perte de connexion DB,
+        // timeout) ne doit jamais laisser une classe à moitié promue. Le
+        // découpage par classe (plutôt qu'une transaction globale dans
+        // processAllClasses()) reste volontaire : l'échec d'une classe ne
+        // doit pas annuler les promotions déjà validées des autres classes.
+        return DB::transaction(function () use ($students, $academicYear) {
+            $results = [];
 
-        return $results;
+            foreach ($students as $student) {
+                $results[] = $this->tryPromote($student, $academicYear);
+            }
+
+            return $results;
+        });
     }
 
     /**
