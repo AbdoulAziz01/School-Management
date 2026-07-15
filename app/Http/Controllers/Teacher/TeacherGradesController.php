@@ -499,9 +499,18 @@ class TeacherGradesController extends Controller
             ->get();
 
         foreach ($recipients as $recipient) {
+            // Badge : écrit en base tout de suite, sans passer par la file
+            // d'attente (voir GradeEditedByTeacherNotification).
             $recipient->notify(
                 new \App\Notifications\GradeEditedByTeacherNotification($grade, $teacher, $oldGrade, $newGrade)
             );
+
+            // Email : mis en file pour ne pas bloquer la requête de l'enseignant.
+            if ($recipient->email) {
+                \Mail::to($recipient->email)->queue(
+                    new \App\Mail\GradeEditedByTeacherMail($grade, $teacher, $oldGrade, $newGrade)
+                );
+            }
         }
     }
 }

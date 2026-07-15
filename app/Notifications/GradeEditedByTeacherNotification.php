@@ -4,20 +4,18 @@ namespace App\Notifications;
 
 use App\Models\Grade;
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Avertit admins/surveillants qu'un enseignant a utilisé sa correction
- * unique sur une note — par email et par notification en base (badge dans
- * la barre de navigation).
+ * Notification en base uniquement (badge dans la barre de navigation).
+ * Volontairement NON mise en file : le badge doit apparaître immédiatement
+ * après la correction, sans dépendre d'un worker de file d'attente actif.
+ * L'email correspondant est envoyé séparément, en file (voir
+ * TeacherGradesController::notifySchoolStaffOfGradeEdit()), pour ne pas
+ * bloquer la requête de l'enseignant sur l'envoi SMTP.
  */
-class GradeEditedByTeacherNotification extends Notification implements ShouldQueue
+class GradeEditedByTeacherNotification extends Notification
 {
-    use Queueable;
-
     public function __construct(
         public Grade $grade,
         public User $teacher,
@@ -25,28 +23,10 @@ class GradeEditedByTeacherNotification extends Notification implements ShouldQue
         public string $newGrade,
     ) {}
 
-    /**
-     * database est toujours inclus (badge dans la barre de navigation) ;
-     * mail seulement si le destinataire a une adresse, pour ne pas faire
-     * échouer tout le job en file (mail + database) sur un compte sans email.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function via(object $notifiable): array
     {
-        return $notifiable->email ? ['mail', 'database'] : ['database'];
-    }
-
-    public function toMail(object $notifiable): MailMessage
-    {
-        return (new MailMessage)
-            ->subject(config('app.name').' — Correction de note par un enseignant')
-            ->markdown('emails.grade-edited-by-teacher', [
-                'grade' => $this->grade,
-                'teacher' => $this->teacher,
-                'oldGrade' => $this->oldGrade,
-                'newGrade' => $this->newGrade,
-            ]);
+        return ['database'];
     }
 
     /** @return array<string, mixed> */
