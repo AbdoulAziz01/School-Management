@@ -701,58 +701,60 @@ class ClassController extends Controller
         }
 
         try {
-            $department = $this->resolveFormationDepartment($request, $school);
+            DB::transaction(function () use ($request, $class, $school, $validated) {
+                $department = $this->resolveFormationDepartment($request, $school);
 
-            $level = FormationLevelResolver::resolve(
-                $school->id,
-                $validated['formation_year'],
-                $validated['filiere'],
-                $validated['diploma_type']
-            );
+                $level = FormationLevelResolver::resolve(
+                    $school->id,
+                    $validated['formation_year'],
+                    $validated['filiere'],
+                    $validated['diploma_type']
+                );
 
-            $promotion = $class->formationPromotion ?? FormationPromotion::create([
-                'school_id' => $school->id,
-                'formation_department_id' => $department->id,
-                'academic_year_id' => $validated['academic_year_id'],
-                'name' => $validated['promotion_name'],
-                'filiere' => $validated['filiere'],
-                'diploma_type' => $validated['diploma_type'],
-                'formation_year' => $validated['formation_year'],
-                'description' => $validated['description'] ?? null,
-            ]);
+                $promotion = $class->formationPromotion ?? FormationPromotion::create([
+                    'school_id' => $school->id,
+                    'formation_department_id' => $department->id,
+                    'academic_year_id' => $validated['academic_year_id'],
+                    'name' => $validated['promotion_name'],
+                    'filiere' => $validated['filiere'],
+                    'diploma_type' => $validated['diploma_type'],
+                    'formation_year' => $validated['formation_year'],
+                    'description' => $validated['description'] ?? null,
+                ]);
 
-            $promotion->update([
-                'formation_department_id' => $department->id,
-                'academic_year_id' => $validated['academic_year_id'],
-                'name' => $validated['promotion_name'],
-                'filiere' => $validated['filiere'],
-                'diploma_type' => $validated['diploma_type'],
-                'formation_year' => $validated['formation_year'],
-                'description' => $validated['description'] ?? null,
-            ]);
+                $promotion->update([
+                    'formation_department_id' => $department->id,
+                    'academic_year_id' => $validated['academic_year_id'],
+                    'name' => $validated['promotion_name'],
+                    'filiere' => $validated['filiere'],
+                    'diploma_type' => $validated['diploma_type'],
+                    'formation_year' => $validated['formation_year'],
+                    'description' => $validated['description'] ?? null,
+                ]);
 
-            $sharedAttributes = [
-                'promotion_name' => $validated['promotion_name'],
-                'filiere' => $validated['filiere'],
-                'diploma_type' => $validated['diploma_type'],
-                'formation_year' => $validated['formation_year'],
-                'formation_department_id' => $department->id,
-                'formation_promotion_id' => $promotion->id,
-                'academic_year_id' => $validated['academic_year_id'],
-                'level_id' => $level->id,
-                'description' => $validated['description'] ?? null,
-            ];
+                $sharedAttributes = [
+                    'promotion_name' => $validated['promotion_name'],
+                    'filiere' => $validated['filiere'],
+                    'diploma_type' => $validated['diploma_type'],
+                    'formation_year' => $validated['formation_year'],
+                    'formation_department_id' => $department->id,
+                    'formation_promotion_id' => $promotion->id,
+                    'academic_year_id' => $validated['academic_year_id'],
+                    'level_id' => $level->id,
+                    'description' => $validated['description'] ?? null,
+                ];
 
-            SchoolClass::where('formation_promotion_id', $promotion->id)
-                ->where('id', '!=', $class->id)
-                ->update($sharedAttributes);
+                SchoolClass::where('formation_promotion_id', $promotion->id)
+                    ->where('id', '!=', $class->id)
+                    ->update($sharedAttributes);
 
-            $class->update([
-                ...$sharedAttributes,
-                'name' => $validated['name'],
-                'capacity' => $validated['capacity'] ?? $class->capacity,
-                'room_number' => $validated['room_number'] ?? null,
-            ]);
+                $class->update([
+                    ...$sharedAttributes,
+                    'name' => $validated['name'],
+                    'capacity' => $validated['capacity'] ?? $class->capacity,
+                    'room_number' => $validated['room_number'] ?? null,
+                ]);
+            });
 
             return redirect()
                 ->route('admin.classes.show', $class)
