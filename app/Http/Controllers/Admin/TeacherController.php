@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\TeacherCredentialsMail;
 use App\Models\AcademicYear;
 use App\Models\SchoolClass;
 use App\Models\Subject;
+use App\Services\TeacherCredentialService;
 use App\Support\SchoolSubjectProvisioner;
 use App\Support\SchoolUserIdentifier;
 use App\Support\TenantSchool;
@@ -16,16 +16,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class TeacherController extends Controller
 {
     use AuthorizesRequests;
-    
+
+    public function __construct(
+        private TeacherCredentialService $credentials
+    ) {}
+
     /**
      * Affiche la liste des enseignants
      */
@@ -117,10 +119,10 @@ class TeacherController extends Controller
 
             DB::commit();
 
-            $plainPassword = $this->assignTeacherPassword($teacher);
+            $plainPassword = $this->credentials->assignPassword($teacher);
 
-            if ($this->teacherCredentialsEmailEnabled()) {
-                $mailResult = $this->sendTeacherCredentials($teacher, $plainPassword);
+            if ($this->credentials->emailEnabled()) {
+                $mailResult = $this->credentials->send($teacher, $plainPassword);
 
                 if ($mailResult === true) {
                     return redirect()
@@ -154,7 +156,7 @@ class TeacherController extends Controller
             ->with(['assignedClasses.level', 'assignedClasses.academicYear', 'assignedClasses.students', 'subjects'])
             ->findOrFail($id);
 
-        $pendingCredentials = $this->resolveTeacherCredentials($teacher);
+        $pendingCredentials = $this->credentials->resolvePending($teacher);
         $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
 
         return view('admin.teachers.show', compact('teacher', 'pendingCredentials', 'canViewPassword'));
@@ -170,7 +172,7 @@ class TeacherController extends Controller
 
         $teacher->load(['subjects', 'assignedClasses']);
 
-        $pendingCredentials = $this->resolveTeacherCredentials($teacher);
+        $pendingCredentials = $this->credentials->resolvePending($teacher);
         $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
 
         return view('admin.teachers.edit', array_merge(
@@ -237,9 +239,9 @@ class TeacherController extends Controller
                 ->route('admin.teachers.edit', $teacher)
                 ->with('success', 'Les informations de l\'enseignant ont été mises à jour avec succès.');
 
-            if ($request->boolean('send_invitation_email') && $this->teacherCredentialsEmailEnabled()) {
-                $plainPassword = $this->assignTeacherPassword($teacher);
-                $mailResult = $this->sendTeacherCredentials($teacher, $plainPassword);
+            if ($request->boolean('send_invitation_email') && $this->credentials->emailEnabled()) {
+                $plainPassword = $this->credentials->assignPassword($teacher);
+                $mailResult = $this->credentials->send($teacher, $plainPassword);
 
                 if ($mailResult === true) {
                     return $redirect->with(
@@ -273,11 +275,11 @@ class TeacherController extends Controller
     public function sendInvitation(User $teacher)
     {
         abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
-        $this->assertCanManageTeacherCredentials();
+        $this->credentials->assertCanManage();
 
-        $plainPassword = $this->assignTeacherPassword($teacher);
+        $plainPassword = $this->credentials->assignPassword($teacher);
 
-        $result = $this->sendTeacherCredentials($teacher, $plainPassword, manual: true);
+        $result = $this->credentials->send($teacher, $plainPassword, manual: true);
 
         if ($result === true) {
             return back()->with(
@@ -295,9 +297,9 @@ class TeacherController extends Controller
     public function regenerateCredentials(User $teacher)
     {
         abort_unless($teacher->isTeacher(), 404, 'Enseignant introuvable.');
-        $this->assertCanManageTeacherCredentials();
+        $this->credentials->assertCanManage();
 
-        $this->assignTeacherPassword($teacher);
+        $this->credentials->assignPassword($teacher);
 
         return back()->with('success', 'Nouveau mot de passe généré. Il reste visible sur cette fiche.');
     }
@@ -326,122 +328,6 @@ class TeacherController extends Controller
                 'error'      => $e->getMessage(),
             ]);
             return back()->with('error', 'Une erreur est survenue lors de la suppression.');
-        }
-    }
-
-    private function teacherCredentialsEmailEnabled(): bool
-    {
-        return (bool) config('mail.teacher_credentials_email_enabled', false);
-    }
-
-    /**
-     * Affiche les identifiants en clair une seule fois : uniquement juste après leur
-     * génération (création, régénération, envoi), via un flash de session consommé
-     * par la requête suivante. Le mot de passe n'est jamais stocké en clair ni de
-     * façon réversible.
-     */
-    private function flashTeacherCredentials(User $teacher, string $plainPassword): void
-    {
-        session()->flash("credentials_reveal.teacher.{$teacher->id}", [
-            'name' => $teacher->name,
-            'identifier' => $teacher->identifier,
-            'email' => $teacher->email,
-            'password' => $plainPassword,
-        ]);
-    }
-
-    /** @return array{name: string, identifier: string|null, email: string, password: string}|null */
-    private function resolveTeacherCredentials(User $teacher): ?array
-    {
-        if (! auth()->user()?->canViewUserPasswords()) {
-            return null;
-        }
-
-        return session("credentials_reveal.teacher.{$teacher->id}");
-    }
-
-    private function assertCanManageTeacherCredentials(): void
-    {
-        abort_unless(auth()->user()?->canViewUserPasswords(), 403, 'Accès réservé à l\'administrateur.');
-    }
-
-    private function assignTeacherPassword(User $teacher): string
-    {
-        $plainPassword = Str::password(10, symbols: false);
-
-        $teacher->forceFill([
-            'password' => Hash::make($plainPassword),
-        ])->save();
-
-        $this->flashTeacherCredentials($teacher, $plainPassword);
-
-        return $plainPassword;
-    }
-
-    /**
-     * Envoie identifiant + mot de passe par email (si activé dans la config).
-     *
-     * @return bool|string true si envoyé, string = message d'erreur
-     */
-    private function sendTeacherCredentials(User $teacher, ?string $plainPassword = null, bool $manual = false): bool|string
-    {
-        if (! $manual && ! $this->teacherCredentialsEmailEnabled()) {
-            return 'Envoi email désactivé (TEACHER_SEND_CREDENTIALS_EMAIL=false).';
-        }
-
-        if (empty($teacher->email)) {
-            return 'Cet enseignant n\'a pas d\'adresse email.';
-        }
-
-        if (empty($teacher->identifier)) {
-            return 'Cet enseignant n\'a pas d\'identifiant de connexion.';
-        }
-
-        if (config('mail.default') === 'log') {
-            return 'MAIL_MAILER=log : aucun email réel n\'est envoyé. Mettez MAIL_MAILER=smtp dans .env puis php artisan config:clear.';
-        }
-
-        if (empty(config('mail.mailers.smtp.password')) && config('mail.default') === 'smtp') {
-            return 'Configuration incomplète : renseignez MAIL_PASSWORD et MAIL_FROM_ADDRESS dans .env, puis php artisan config:clear.';
-        }
-
-        $plainPassword ??= Str::password(10, symbols: false);
-
-        try {
-            Mail::to($teacher->email)->send(new TeacherCredentialsMail($teacher, $plainPassword));
-
-            $teacher->forceFill([
-                'password' => Hash::make($plainPassword),
-                'invitation_email_sent_at' => now(),
-            ])->save();
-
-            $this->flashTeacherCredentials($teacher, $plainPassword);
-
-            return true;
-        } catch (TransportExceptionInterface $e) {
-            Log::error('Erreur SMTP envoi identifiants enseignant', [
-                'teacher_id' => $teacher->id,
-                'email' => $teacher->email,
-                'message' => $e->getMessage(),
-            ]);
-
-            if (str_contains($e->getMessage(), '535') || str_contains($e->getMessage(), 'Authentication failed')) {
-                return 'Échec connexion Brevo (535) : vérifiez MAIL_PASSWORD (clé xsmtpsib-...) dans .env.';
-            }
-
-            if (str_contains($e->getMessage(), '525') || str_contains($e->getMessage(), 'Unauthorized IP')) {
-                return 'Brevo bloque votre IP (525) : autorisez votre IP dans Brevo → Sécurité → IPs autorisées.';
-            }
-
-            return 'Erreur d\'envoi email : '.$e->getMessage();
-        } catch (\Throwable $e) {
-            Log::error('Erreur envoi identifiants enseignant', [
-                'teacher_id' => $teacher->id,
-                'email' => $teacher->email,
-                'message' => $e->getMessage(),
-            ]);
-
-            return 'Erreur d\'envoi email : '.$e->getMessage();
         }
     }
 

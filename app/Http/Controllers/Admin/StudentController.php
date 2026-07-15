@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Exports\StudentsExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StudentRequest;
-use App\Mail\StudentCredentialsMail;
 use App\Models\AcademicYear;
 use App\Models\Level;
 use App\Models\SchoolClass;
 use App\Models\User;
+use App\Services\StudentCredentialService;
 use App\Support\ClosedAcademicYearGuard;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Support\SchoolUserIdentifier;
@@ -23,14 +23,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class StudentController extends Controller
 {
+    public function __construct(
+        private StudentCredentialService $credentials
+    ) {}
+
     /**
      * Affiche la liste des étudiants
      */
@@ -424,7 +426,7 @@ class StudentController extends Controller
             ]);
             $student->save();
 
-            $this->flashStudentCredentials($student, $plainPassword);
+            $this->credentials->flash($student, $plainPassword);
 
             DB::commit();
 
@@ -458,7 +460,7 @@ class StudentController extends Controller
                 return $class->academicYear->name;
             });
 
-        $pendingCredentials = $this->resolveStudentCredentials($student);
+        $pendingCredentials = $this->credentials->resolvePending($student);
         $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
         $schoolCode = $student->school?->code;
 
@@ -582,7 +584,7 @@ class StudentController extends Controller
         $student->forceFill([
             'password' => Hash::make($validated['password']),
         ])->save();
-        $this->flashStudentCredentials($student, $validated['password']);
+        $this->credentials->flash($student, $validated["password"]);
 
         return redirect()
             ->route('admin.students.show', $student)
@@ -679,10 +681,10 @@ public function pending()
     public function sendCredentials(User $student)
     {
         abort_unless($student->isStudent(), 404);
-        $this->assertCanManageStudentCredentials();
+        $this->credentials->assertCanManage();
 
-        $plainPassword = $this->assignStudentPassword($student);
-        $result = $this->sendStudentCredentials($student, $plainPassword);
+        $plainPassword = $this->credentials->assignPassword($student);
+        $result = $this->credentials->send($student, $plainPassword);
 
         if ($result === true) {
             return back()->with('success', 'Identifiants envoyés à '.$student->email.'.');
@@ -697,9 +699,9 @@ public function pending()
     public function regenerateCredentials(User $student)
     {
         abort_unless($student->isStudent(), 404);
-        $this->assertCanManageStudentCredentials();
+        $this->credentials->assertCanManage();
 
-        $this->assignStudentPassword($student);
+        $this->credentials->assignPassword($student);
 
         return back()->with('success', 'Nouveau mot de passe généré. Il reste visible sur cette fiche.');
     }
@@ -825,7 +827,7 @@ public function pending()
         $academicYearId = $student->class?->academic_year_id;
         $gradeEvolutionJson = StudentGradeEvolution::chartData($student, $academicYearId);
 
-        $pendingCredentials = $this->resolveStudentCredentials($student);
+        $pendingCredentials = $this->credentials->resolvePending($student);
         $canViewPassword = auth()->user()?->canViewUserPasswords() ?? false;
         $schoolCode = $student->school?->code;
 
@@ -858,100 +860,5 @@ public function pending()
         $filename = 'eleves_' . now()->format('Ymd_His') . '.' . $format;
 
         return Excel::download(new StudentsExport($classId), $filename);
-    }
-
-    private function assertCanManageStudentCredentials(): void
-    {
-        abort_unless(auth()->user()?->canViewUserPasswords(), 403, 'Accès réservé à l\'administrateur.');
-    }
-
-    /**
-     * Affiche les identifiants en clair une seule fois : uniquement juste après leur
-     * génération (création, régénération, réinitialisation, envoi), via un flash de
-     * session consommé par la requête suivante. Le mot de passe n'est jamais stocké
-     * en clair ni de façon réversible.
-     */
-    private function flashStudentCredentials(User $student, string $plainPassword): void
-    {
-        session()->flash("credentials_reveal.student.{$student->id}", [
-            'name' => $student->name,
-            'identifier' => $student->identifier,
-            'email' => $student->email,
-            'password' => $plainPassword,
-        ]);
-    }
-
-    /** @return array{name: string, identifier: string|null, email: string|null, password: string}|null */
-    private function resolveStudentCredentials(User $student): ?array
-    {
-        if (! auth()->user()?->canViewUserPasswords()) {
-            return null;
-        }
-
-        return session("credentials_reveal.student.{$student->id}");
-    }
-
-    private function assignStudentPassword(User $student): string
-    {
-        $plainPassword = Str::password(10, symbols: false);
-
-        $student->forceFill([
-            'password' => Hash::make($plainPassword),
-        ])->save();
-
-        $this->flashStudentCredentials($student, $plainPassword);
-
-        return $plainPassword;
-    }
-
-    /** @return bool|string */
-    private function sendStudentCredentials(User $student, ?string $plainPassword = null): bool|string
-    {
-        if (empty($student->email)) {
-            return 'Cet élève n\'a pas d\'adresse email.';
-        }
-
-        if (empty($student->identifier)) {
-            return 'Cet élève n\'a pas d\'identifiant de connexion.';
-        }
-
-        if (config('mail.default') === 'log') {
-            return 'MAIL_MAILER=log : aucun email réel n\'est envoyé. Mettez MAIL_MAILER=smtp dans .env puis php artisan config:clear.';
-        }
-
-        if (empty(config('mail.mailers.smtp.password')) && config('mail.default') === 'smtp') {
-            return 'Configuration incomplète : renseignez MAIL_PASSWORD dans .env.';
-        }
-
-        $plainPassword ??= $this->assignStudentPassword($student);
-
-        try {
-            $student->loadMissing('school');
-            Mail::to($student->email)->send(new StudentCredentialsMail($student, $plainPassword));
-
-            $student->forceFill([
-                'password' => Hash::make($plainPassword),
-                'invitation_email_sent_at' => now(),
-            ])->save();
-
-            $this->flashStudentCredentials($student, $plainPassword);
-
-            return true;
-        } catch (TransportExceptionInterface $e) {
-            Log::error('Erreur SMTP envoi identifiants élève', [
-                'student_id' => $student->id,
-                'email' => $student->email,
-                'message' => $e->getMessage(),
-            ]);
-
-            return 'Erreur d\'envoi email : '.$e->getMessage();
-        } catch (\Throwable $e) {
-            Log::error('Erreur envoi identifiants élève', [
-                'student_id' => $student->id,
-                'message' => $e->getMessage(),
-            ]);
-
-            return 'Erreur d\'envoi email : '.$e->getMessage();
-        }
     }
 }
