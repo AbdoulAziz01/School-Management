@@ -221,6 +221,8 @@
         
         /* Navigation Links - Style Minimal Dark */
         #sidebar .nav-link {
+            display: flex;
+            align-items: center;
             color: #a8a29e !important;
             background: transparent;
             margin: 3px 12px;
@@ -432,10 +434,14 @@
         </li>
 
         <!-- Journal d'activité -->
+        @php $sidebarUnreadNotifCount = Auth::user()?->unreadNotifications()->count() ?? 0; @endphp
         <li class="nav-item">
             <a href="{{ route('admin.audit-log.index') }}" class="nav-link {{ request()->routeIs('admin.audit-log.*') ? 'active' : '' }}">
                 <i class="fas fa-history"></i>
                 <span>Journal d'activité</span>
+                @if($sidebarUnreadNotifCount > 0)
+                    <span class="badge-notif">{{ $sidebarUnreadNotifCount > 99 ? '99+' : $sidebarUnreadNotifCount }}</span>
+                @endif
             </a>
         </li>
 
