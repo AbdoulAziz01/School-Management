@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\StudentsExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StudentRequest;
 use App\Mail\StudentCredentialsMail;
 use App\Models\AcademicYear;
 use App\Models\Level;
@@ -373,21 +374,9 @@ class StudentController extends Controller
     /**
      * Enregistre un nouvel étudiant
      */
-    public function store(Request $request)
+    public function store(StudentRequest $request)
     {
-        $validated = $request->validate([
-            'first_name'        => 'required|string|max:255',
-            'last_name'         => 'required|string|max:255',
-            'email'             => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')],
-            'date_of_birth'     => 'required|date|before:today',
-            'class_id'          => 'nullable|exists:classes,id',
-            'status'            => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
-            'photo'             => ['nullable', 'image', 'max:4096'],
-            'birth_certificate' => ['nullable', 'file', 'mimes:pdf', 'max:8192'],
-            'parent_name'       => 'nullable|string|max:150',
-            'parent_whatsapp'   => 'nullable|string|max:20',
-            'parent_lang'       => ['nullable', Rule::in(['fr_text', 'wo_audio', 'pu_audio'])],
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
@@ -479,23 +468,11 @@ class StudentController extends Controller
     /**
      * Met à jour un étudiant
      */
-    public function update(Request $request, User $student)
+    public function update(StudentRequest $request, User $student)
     {
         abort_unless($student->isStudent(), 404);
 
-        $validated = $request->validate([
-            'first_name'        => 'required|string|max:255',
-            'last_name'         => 'required|string|max:255',
-            'email'             => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')->ignore($student->id)],
-            'date_of_birth'     => 'required|date|before:today',
-            'class_id'          => 'nullable|exists:classes,id',
-            'status'            => ['required', 'string', Rule::in(['pending', 'approved', 'rejected'])],
-            'photo'             => ['nullable', 'image', 'max:4096'],
-            'birth_certificate' => ['nullable', 'file', 'mimes:pdf', 'max:8192'],
-            'parent_name'       => 'nullable|string|max:150',
-            'parent_whatsapp'   => 'nullable|string|max:20',
-            'parent_lang'       => ['nullable', Rule::in(['fr_text', 'wo_audio', 'pu_audio'])],
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
