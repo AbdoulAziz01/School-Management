@@ -79,6 +79,22 @@
             </div>
         </div>
     </div>
+    <div class="col-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="small text-muted mb-1">Taux de paiement des élèves</div>
+                <div class="h5 mb-0">{{ $paymentRate }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="small text-muted mb-1">Salaires en attente ({{ now()->locale('fr')->translatedFormat('F') }})</div>
+                <div class="h5 mb-0 text-warning">{{ $pendingPayroll['count'] }} <span class="fs-6 text-muted">({{ number_format($pendingPayroll['amount'], 0, ',', ' ') }} FCFA)</span></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4">
@@ -128,6 +144,60 @@
                             </li>
                         @endforeach
                     </ul>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Répartition des dépenses ({{ now()->locale('fr')->translatedFormat('F Y') }})</h5>
+            </div>
+            <div class="card-body">
+                @if(empty($expenseBreakdown['labels']))
+                    <p class="text-muted mb-0">Aucune dépense ce mois-ci.</p>
+                @else
+                    <canvas id="expenseChart" aria-label="Répartition des dépenses par catégorie" height="200"></canvas>
+                    <table class="visually-hidden">
+                        <caption>Dépenses par catégorie</caption>
+                        <thead><tr><th>Catégorie</th><th>Montant</th></tr></thead>
+                        <tbody>
+                            @foreach($expenseBreakdown['labels'] as $i => $label)
+                                <tr><td>{{ $label }}</td><td>{{ $expenseBreakdown['amounts'][$i] }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Principaux élèves débiteurs</h5>
+            </div>
+            <div class="card-body p-0">
+                @if($topDebtors->isEmpty())
+                    <p class="text-muted p-3 mb-0">Aucun élève débiteur.</p>
+                @else
+                    <ul class="list-group list-group-flush">
+                        @foreach($topDebtors as $row)
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="small fw-semibold">{{ $row['student']->name }}</div>
+                                    <div class="text-muted" style="font-size:.75rem">{{ $row['student']->schoolClass?->name ?? '—' }}</div>
+                                </div>
+                                <span class="text-danger fw-semibold small">{{ number_format($row['total_due'], 0, ',', ' ') }} FCFA</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <div class="p-2 text-center border-top">
+                        <a href="{{ route('directeur.students.debtors') }}" class="small">Voir tous les élèves débiteurs</a>
+                    </div>
                 @endif
             </div>
         </div>
@@ -219,6 +289,39 @@
             },
         },
     });
+
+    const pieCtx = document.getElementById('expenseChart');
+    if (pieCtx && typeof Chart !== 'undefined') {
+        // Palette fixe (ordre catégoriel, jamais recalculée dynamiquement),
+        // dérivée de la palette ambre/cuivre déjà utilisée dans toute l'app.
+        const palette = ['#f59e0b', '#dc2626', '#0891b2', '#7c3aed', '#16a34a', '#d97706', '#64748b', '#be185d'];
+
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @json($expenseBreakdown['labels']),
+                datasets: [{
+                    data: @json($expenseBreakdown['amounts']),
+                    backgroundColor: palette,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (item) {
+                                return item.label + ' : ' + item.parsed.toLocaleString('fr-FR') + ' FCFA';
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
 })();
 </script>
 @endpush

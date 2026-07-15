@@ -85,10 +85,6 @@ class AccountingProfileController extends Controller
     {
         $prefix = $this->routePrefix($user);
 
-        if ($prefix === 'caisse') {
-            return ['layout' => 'accounting.layouts.caisse', 'layoutParams' => []];
-        }
-
         return [
             'layout' => 'admin.layouts.app',
             'layoutParams' => [

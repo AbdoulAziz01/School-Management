@@ -433,6 +433,13 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::put('/{employee}', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'update'])->name('update');
         });
 
+        // Journal des opérations + suivi financier élèves (Phase 7.1)
+        Route::get('/ledger', [\App\Http\Controllers\Accounting\LedgerController::class, 'index'])->name('ledger.index');
+        Route::prefix('students')->name('students.')->group(function () {
+            Route::get('/debtors', [\App\Http\Controllers\Accounting\StudentFinanceController::class, 'debtors'])->name('debtors');
+            Route::get('/{student}', [\App\Http\Controllers\Accounting\StudentFinanceController::class, 'show'])->name('show');
+        });
+
         Route::get('/', fn () => redirect()->route('directeur.dashboard'));
     });
 
@@ -468,6 +475,19 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::post('/{payment}/cancel', [\App\Http\Controllers\Accounting\PaymentCorrectionController::class, 'cancel'])->name('cancel');
         });
 
+        // Reçus, journal des opérations, suivi financier élèves (Phase 7.1)
+        Route::prefix('receipts')->name('receipts.')->group(function () {
+            Route::get('/search', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'search'])->name('search');
+            Route::get('/{payment}', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'show'])->name('show');
+            Route::get('/{payment}/pdf', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'pdf'])->name('pdf');
+        });
+
+        Route::get('/ledger', [\App\Http\Controllers\Accounting\LedgerController::class, 'index'])->name('ledger.index');
+        Route::prefix('students')->name('students.')->group(function () {
+            Route::get('/debtors', [\App\Http\Controllers\Accounting\StudentFinanceController::class, 'debtors'])->name('debtors');
+            Route::get('/{student}', [\App\Http\Controllers\Accounting\StudentFinanceController::class, 'show'])->name('show');
+        });
+
         Route::get('/', fn () => redirect()->route('comptable.dashboard'));
     });
 
@@ -487,13 +507,16 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
 
         // Recherche et encaissement élève
         Route::get('/students/search', [\App\Http\Controllers\Accounting\CaisseController::class, 'search'])->name('students.search');
+        Route::get('/students/{student}/situation', [\App\Http\Controllers\Accounting\CaisseController::class, 'studentSituation'])->name('students.situation');
         Route::get('/students/{student}', [\App\Http\Controllers\Accounting\CaisseController::class, 'showStudent'])->name('students.show');
         Route::post('/students/{student}/pay', [\App\Http\Controllers\Accounting\CaisseController::class, 'pay'])->name('students.pay');
 
         // Reçus et historique
+        Route::get('/receipts/search', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'search'])->name('receipts.search');
         Route::get('/receipts/{payment}', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'show'])->name('receipts.show');
         Route::get('/receipts/{payment}/pdf', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'pdf'])->name('receipts.pdf');
         Route::get('/history', [\App\Http\Controllers\Accounting\CaisseController::class, 'history'])->name('history');
+        Route::get('/sessions', [\App\Http\Controllers\Accounting\CaisseController::class, 'sessionHistory'])->name('sessions.index');
 
         Route::get('/', fn () => redirect()->route('caisse.dashboard'));
     });

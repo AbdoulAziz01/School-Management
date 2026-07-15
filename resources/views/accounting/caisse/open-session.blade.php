@@ -1,4 +1,4 @@
-@extends('accounting.layouts.caisse')
+@extends('admin.layouts.app', ['sidebarView' => 'accounting.caisse.sidebar', 'navbarView' => 'accounting.caisse.navbar'])
 
 @section('title', 'Ouvrir la caisse')
 

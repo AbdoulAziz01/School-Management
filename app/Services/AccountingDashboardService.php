@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\EmployeeSalaryProfile;
+use App\Models\Expense;
 use App\Models\LedgerEntry;
+use App\Models\SalaryPayment;
 use App\Models\School;
 use App\Models\StudentInvoice;
 use App\Models\User;
@@ -117,5 +119,77 @@ class AccountingDashboardService
             ->orderByDesc('recorded_at')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * Élèves ayant au moins une facture en attente/partielle, avec le
+     * montant total dû — pour l'écran "Élèves débiteurs".
+     *
+     * @return Collection<int, array{student: User, total_due: float}>
+     */
+    public function debtorsList(School $school): Collection
+    {
+        return User::where('school_id', $school->id)
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->whereHas('studentInvoices', function ($q) {
+                $q->whereIn('status', [StudentInvoice::STATUS_PENDING, StudentInvoice::STATUS_PARTIAL]);
+            })
+            ->with(['studentInvoices' => function ($q) {
+                $q->whereIn('status', [StudentInvoice::STATUS_PENDING, StudentInvoice::STATUS_PARTIAL]);
+            }, 'schoolClass'])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (User $student) => [
+                'student' => $student,
+                'total_due' => round((float) $student->studentInvoices->sum(
+                    fn (StudentInvoice $invoice) => $invoice->balanceDue()
+                ), 2),
+            ]);
+    }
+
+    /**
+     * Répartition des dépenses par catégorie sur le mois courant, pour le
+     * camembert du dashboard directeur. Lue depuis Expense (pas
+     * ledger_entries, qui ne porte pas la catégorie) — actives uniquement.
+     *
+     * @return array{labels: list<string>, amounts: list<float>}
+     */
+    public function expenseBreakdown(School $school): array
+    {
+        $rows = Expense::where('school_id', $school->id)
+            ->where('status', Expense::STATUS_ACTIVE)
+            ->whereBetween('expense_date', [now()->startOfMonth(), now()->endOfMonth()])
+            ->selectRaw('category, SUM(amount) as total')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->get();
+
+        return [
+            'labels' => $rows->map(fn ($row) => Expense::CATEGORIES[$row->category] ?? $row->category)->all(),
+            'amounts' => $rows->map(fn ($row) => round((float) $row->total, 2))->all(),
+        ];
+    }
+
+    /** Pourcentage d'élèves à jour parmi ceux ayant au moins une facture. */
+    public function paymentRate(School $school): float
+    {
+        $paid = $this->studentsFullyPaidCount($school);
+        $debtors = $this->studentsWithDebtCount($school);
+        $total = $paid + $debtors;
+
+        return $total > 0 ? round(($paid / $total) * 100, 1) : 0.0;
+    }
+
+    /** @return array{count: int, amount: float} salaires du mois en cours non encore soldés */
+    public function pendingPayroll(School $school): array
+    {
+        $query = SalaryPayment::where('school_id', $school->id)
+            ->where('period', now()->startOfMonth()->format('Y-m-d'))
+            ->whereIn('status', [SalaryPayment::STATUS_PENDING, SalaryPayment::STATUS_PARTIAL]);
+
+        return [
+            'count' => (clone $query)->count(),
+            'amount' => round((float) (clone $query)->get()->sum(fn (SalaryPayment $p) => $p->balanceDue()), 2),
+        ];
     }
 }

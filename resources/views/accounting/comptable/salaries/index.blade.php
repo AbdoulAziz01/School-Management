@@ -1,14 +1,20 @@
 @extends('admin.layouts.app', ['sidebarView' => 'accounting.comptable.sidebar', 'navbarView' => 'accounting.comptable.navbar'])
 
+@php
+    $roleGroupLabels = ['teachers' => 'Enseignants', 'surveillants' => 'Surveillants', 'admin' => 'Administration'];
+@endphp
 @section('title', 'Salaires')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-0"><i class="fas fa-money-check-alt me-2"></i>Salaires</h1>
+        <h1 class="h3 mb-0"><i class="fas fa-money-check-alt me-2"></i>Salaires @if($roleGroup && isset($roleGroupLabels[$roleGroup])) — {{ $roleGroupLabels[$roleGroup] }} @endif</h1>
         <p class="text-muted mb-0">{{ $period->locale('fr')->translatedFormat('F Y') }}</p>
     </div>
     <form method="GET" action="{{ route('comptable.salaries.index') }}" class="d-flex gap-2">
+        @if($roleGroup)
+            <input type="hidden" name="role_group" value="{{ $roleGroup }}">
+        @endif
         <input type="month" name="period" class="form-control form-control-sm" value="{{ $period->format('Y-m') }}" onchange="this.form.submit()">
     </form>
 </div>

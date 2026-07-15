@@ -15,6 +15,29 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
  */
 class PaymentReceiptController extends Controller
 {
+    /** Recherche un reçu par numéro ou par élève — même écran pour caissier et comptable. */
+    public function search(Request $request)
+    {
+        $search = trim((string) $request->query('q', ''));
+        $payments = collect();
+
+        if ($search !== '') {
+            $payments = Payment::with('student')
+                ->where(function ($q) use ($search) {
+                    $q->where('receipt_number', 'like', "%{$search}%")
+                        ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', "%{$search}%"));
+                })
+                ->orderByDesc('paid_at')
+                ->limit(30)
+                ->get();
+        }
+
+        return view('accounting.shared.receipts.search', [
+            'payments' => $payments,
+            'search' => $search,
+        ]);
+    }
+
     public function show(Payment $payment)
     {
         $payment->load(['student', 'recordedBy', 'allocations.studentInvoice']);

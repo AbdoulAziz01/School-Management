@@ -1,13 +1,13 @@
-@extends('accounting.layouts.caisse')
+@extends('admin.layouts.app', ['sidebarView' => 'accounting.caisse.sidebar', 'navbarView' => 'accounting.caisse.navbar'])
 
-@section('title', 'Historique de mes paiements')
+@section('title', $scope === 'today' ? 'Paiements du jour' : 'Historique de mes paiements')
 
 @section('content')
 <div class="mb-4">
-    <a href="{{ route('caisse.dashboard') }}" class="text-decoration-none small">
-        <i class="fas fa-arrow-left me-1"></i> Retour au guichet
-    </a>
-    <h1 class="h4 mt-2 mb-0"><i class="fas fa-history me-2"></i>Historique de mes paiements</h1>
+    <h1 class="h4 mb-0"><i class="fas fa-history me-2"></i>{{ $scope === 'today' ? 'Paiements du jour' : 'Historique des paiements' }}</h1>
+    @if($scope === 'today')
+        <p class="text-muted mb-0">{{ now()->locale('fr')->translatedFormat('d F Y') }} — <a href="{{ route('caisse.history') }}">Voir tout l'historique</a></p>
+    @endif
 </div>
 
 <div class="card">

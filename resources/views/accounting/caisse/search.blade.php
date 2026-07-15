@@ -1,4 +1,4 @@
-@extends('accounting.layouts.caisse')
+@extends('admin.layouts.app', ['sidebarView' => 'accounting.caisse.sidebar', 'navbarView' => 'accounting.caisse.navbar'])
 
 @section('title', 'Recherche élève')
 
@@ -28,7 +28,7 @@
             @else
                 <div class="list-group">
                     @foreach($students as $student)
-                        <a href="{{ route('caisse.students.show', $student) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <div class="fw-semibold">{{ $student->name }}</div>
                                 <div class="small text-muted">
@@ -36,8 +36,15 @@
                                     @if($student->schoolClass) · {{ $student->schoolClass->name }} @endif
                                 </div>
                             </div>
-                            <i class="fas fa-chevron-right text-muted"></i>
-                        </a>
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('caisse.students.situation', $student) }}" class="btn btn-sm btn-outline-secondary">
+                                    Situation
+                                </a>
+                                <a href="{{ route('caisse.students.show', $student) }}" class="btn btn-sm btn-primary">
+                                    Encaisser
+                                </a>
+                            </div>
+                        </div>
                     @endforeach
                 </div>
             @endif

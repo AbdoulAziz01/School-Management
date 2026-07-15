@@ -22,6 +22,10 @@ class DirecteurDashboardController extends Controller
             'summary' => $this->dashboard->summary($school),
             'evolution' => $this->dashboard->evolution($school),
             'recentOperations' => $this->dashboard->recentOperations($school),
+            'expenseBreakdown' => $this->dashboard->expenseBreakdown($school),
+            'paymentRate' => $this->dashboard->paymentRate($school),
+            'pendingPayroll' => $this->dashboard->pendingPayroll($school),
+            'topDebtors' => $this->dashboard->debtorsList($school)->sortByDesc('total_due')->take(5),
         ]);
     }
 

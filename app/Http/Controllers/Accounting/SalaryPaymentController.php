@@ -22,18 +22,30 @@ class SalaryPaymentController extends Controller
         private SalaryPaymentService $salaries
     ) {}
 
+    /** @var array<string, list<string>> filtre du menu "Salaires" par catégorie de personnel */
+    private const ROLE_GROUPS = [
+        'teachers' => ['teacher', 'professeur'],
+        'surveillants' => ['surveillant'],
+        'admin' => ['admin'],
+    ];
+
     public function index(Request $request)
     {
         $period = $this->resolvePeriod($request);
+        $roleGroup = $request->query('role_group');
 
-        $payments = SalaryPayment::where('period', $period)
-            ->with('user')
-            ->orderBy('status')
-            ->get();
+        $query = SalaryPayment::where('period', $period)->with('user');
+
+        if ($roleGroup && isset(self::ROLE_GROUPS[$roleGroup])) {
+            $query->whereHas('user', fn ($q) => $q->whereIn('role', self::ROLE_GROUPS[$roleGroup]));
+        }
+
+        $payments = $query->orderBy('status')->get();
 
         return view('accounting.comptable.salaries.index', [
             'payments' => $payments,
             'period' => $period,
+            'roleGroup' => $roleGroup,
         ]);
     }
 
