@@ -110,4 +110,43 @@ class PaymentService
             return $payment;
         });
     }
+
+    /**
+     * Annule un paiement (erreur de saisie ou remboursement à l'élève) :
+     * jamais de suppression, chaque facture retrouve le solde dû qu'elle
+     * avait avant ce paiement.
+     */
+    public function cancel(Payment $payment, User $cancelledBy, string $reason): Payment
+    {
+        if ($payment->isCancelled()) {
+            throw new \RuntimeException('Ce paiement est déjà annulé.');
+        }
+
+        return DB::transaction(function () use ($payment, $cancelledBy, $reason) {
+            $allocations = $payment->allocations()->with('studentInvoice')->lockForUpdate()->get();
+
+            foreach ($allocations as $allocation) {
+                $invoice = $allocation->studentInvoice;
+                $newPaid = round((float) $invoice->amount_paid - (float) $allocation->amount, 2);
+
+                $invoice->update([
+                    'amount_paid' => max(0, $newPaid),
+                    'status' => $newPaid <= 0.01
+                        ? StudentInvoice::STATUS_PENDING
+                        : ($newPaid >= $invoice->amount_due - 0.01
+                            ? StudentInvoice::STATUS_PAID
+                            : StudentInvoice::STATUS_PARTIAL),
+                ]);
+            }
+
+            $payment->update([
+                'status' => Payment::STATUS_CANCELLED,
+                'cancelled_by' => $cancelledBy->id,
+                'cancelled_at' => now(),
+                'cancellation_reason' => $reason,
+            ]);
+
+            return $payment;
+        });
+    }
 }

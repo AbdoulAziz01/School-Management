@@ -443,6 +443,30 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');
             Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
         });
+
+        // Dépenses (Phase 6.4)
+        Route::prefix('expenses')->name('expenses.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\ExpenseController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Accounting\ExpenseController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Accounting\ExpenseController::class, 'store'])->name('store');
+            Route::post('/{expense}/cancel', [\App\Http\Controllers\Accounting\ExpenseController::class, 'cancel'])->name('cancel');
+            Route::get('/{expense}/justificatif', [\App\Http\Controllers\Accounting\ExpenseController::class, 'downloadJustificatif'])->name('justificatif');
+        });
+
+        // Salaires (Phase 6.4)
+        Route::prefix('salaries')->name('salaries.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'index'])->name('index');
+            Route::post('/generate', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'generate'])->name('generate');
+            Route::post('/{salaryPayment}/pay', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'pay'])->name('pay');
+            Route::post('/{salaryPayment}/cancel', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'cancel'])->name('cancel');
+        });
+
+        // Corrections/annulations des paiements élèves (Phase 6.4)
+        Route::prefix('payments')->name('payments.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\PaymentCorrectionController::class, 'index'])->name('index');
+            Route::post('/{payment}/cancel', [\App\Http\Controllers\Accounting\PaymentCorrectionController::class, 'cancel'])->name('cancel');
+        });
+
         Route::get('/', fn () => redirect()->route('comptable.dashboard'));
     });
 

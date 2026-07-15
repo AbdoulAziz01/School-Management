@@ -14,6 +14,24 @@
                 <span>Tableau de bord</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a href="{{ route('comptable.payments.index') }}" class="nav-link {{ request()->routeIs('comptable.payments.*') ? 'active' : '' }}">
+                <i class="fas fa-receipt"></i>
+                <span>Paiements élèves</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('comptable.expenses.index') }}" class="nav-link {{ request()->routeIs('comptable.expenses.*') ? 'active' : '' }}">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>Dépenses</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('comptable.salaries.index') }}" class="nav-link {{ request()->routeIs('comptable.salaries.*') ? 'active' : '' }}">
+                <i class="fas fa-money-check-alt"></i>
+                <span>Salaires</span>
+            </a>
+        </li>
     </ul>
 
     <div class="menu-separator"></div>

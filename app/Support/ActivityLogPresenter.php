@@ -29,6 +29,8 @@ class ActivityLogPresenter
         'App\\Models\\StudentInvoice' => 'Facture élève',
         'App\\Models\\Payment' => 'Paiement',
         'App\\Models\\CashSession' => 'Session de caisse',
+        'App\\Models\\Expense' => 'Dépense',
+        'App\\Models\\SalaryPayment' => 'Paiement de salaire',
     ];
 
     private const FIELD_LABELS = [
@@ -65,6 +67,10 @@ class ActivityLogPresenter
         'effective_from' => 'Applicable à partir du',
         'effective_to' => 'Applicable jusqu\'au',
         'fee_type_id' => 'Type de frais',
+        'motif' => 'Motif',
+        'cancellation_reason' => 'Motif d\'annulation',
+        'amount_paid' => 'Montant payé',
+        'amount_due' => 'Montant dû',
     ];
 
     /** Champs volontairement masqués : techniques ou déjà exprimés ailleurs dans la phrase. */

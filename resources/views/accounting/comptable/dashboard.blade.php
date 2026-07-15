@@ -10,13 +10,48 @@
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body text-center py-5">
+<div class="row g-4">
+    <div class="col-md-4">
+        <a href="{{ route('comptable.payments.index') }}" class="text-decoration-none">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="fas fa-receipt fa-2x text-warning mb-2"></i>
+                    <h5 class="mb-1">Paiements élèves</h5>
+                    <p class="text-muted mb-0 small">Consulter, corriger ou annuler un paiement.</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ route('comptable.expenses.index') }}" class="text-decoration-none">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="fas fa-money-bill-wave fa-2x text-warning mb-2"></i>
+                    <h5 class="mb-1">Dépenses</h5>
+                    <p class="text-muted mb-0 small">Fournitures, factures, entretien, primes...</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ route('comptable.salaries.index') }}" class="text-decoration-none">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="fas fa-money-check-alt fa-2x text-warning mb-2"></i>
+                    <h5 class="mb-1">Salaires</h5>
+                    <p class="text-muted mb-0 small">Générer et payer les salaires du mois.</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-body text-center py-4">
         <i class="fas fa-tools fa-2x text-warning mb-3"></i>
-        <h5 class="mb-2">Module Comptabilité en construction</h5>
+        <h5 class="mb-2">Rapports en construction</h5>
         <p class="text-muted mb-0">
-            Votre espace comptable est prêt. La gestion des dépenses, des salaires et des écritures
-            arrive dans les prochaines étapes.
+            Le tableau de bord chiffré (recettes, dépenses, masse salariale...) arrive en Phase 6.5.
         </p>
     </div>
 </div>
