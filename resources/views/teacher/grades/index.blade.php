@@ -127,9 +127,16 @@
                                         <td class="text-center p-1">
                                             @if($grade)
                                                 <span class="badge {{ $grade->grade >= 10 ? 'bg-success' : 'bg-danger' }}"
-                                                      title="{{ $col['label'] }} — enregistrée">
+                                                      title="{{ $col['label'] }} — enregistrée{{ $grade->canStillBeEditedByTeacher() ? '' : ' (déjà corrigée)' }}">
                                                     {{ number_format($grade->grade, 1) }}
                                                 </span>
+                                                @if($grade->canStillBeEditedByTeacher())
+                                                    <a href="{{ route('teacher.grades.edit', $grade->id) }}"
+                                                       class="ms-1 text-muted"
+                                                       title="Corriger cette note (une seule fois possible)">
+                                                        <i class="fas fa-pen small"></i>
+                                                    </a>
+                                                @endif
                                             @else
                                                 <span class="text-muted small">—</span>
                                             @endif
@@ -150,7 +157,7 @@
                     </table>
                 </div>
                 <div class="px-3 py-2 border-top bg-light small text-muted">
-                    <span class="me-3"><i class="fas fa-lock me-1"></i>Les notes enregistrées sont définitives.</span>
+                    <span class="me-3"><i class="fas fa-pen me-1"></i>Une note enregistrée peut être corrigée une seule fois (icône <i class="fas fa-pen"></i>) — l'administration est alors avertie par email.</span>
                     <span class="me-3"><strong>S1 · D1</strong> = 1<sup>er</sup> devoir</span>
                     <span class="me-3"><strong>S1 · D2</strong> = 2<sup>e</sup> devoir</span>
                     <span class="me-3"><strong>S1 · Compo</strong> = composition</span>

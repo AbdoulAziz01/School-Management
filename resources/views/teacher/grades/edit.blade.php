@@ -12,15 +12,20 @@
         </ol>
     </nav>
     
-    <h1 class="mb-0 h3">Modifier une note</h1>
+    <h1 class="mb-0 h3">Corriger une note</h1>
     <p class="text-muted">Élève: {{ $grade->user->name ?? 'N/A' }} - Matière: {{ $grade->subject->name ?? 'N/A' }}</p>
+</div>
+
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Correction unique :</strong> vous ne pourrez corriger cette note qu'une seule fois. Une fois enregistrée, cette correction sera définitive et l'administration en sera automatiquement informée par email.
 </div>
 
 <div class="row">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Modification de la note</h5>
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Correction de la note</h5>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ route('teacher.grades.update', $grade->id) }}">
@@ -114,24 +119,6 @@
                             </button>
                         </div>
                     </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Supprimer</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted">Cette action est irréversible. La note sera définitivement supprimée.</p>
-                <form method="POST" action="{{ route('teacher.grades.destroy', $grade->id) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette note ?');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger w-100">
-                        <i class="fas fa-trash me-2"></i>Supprimer cette note
-                    </button>
                 </form>
             </div>
         </div>

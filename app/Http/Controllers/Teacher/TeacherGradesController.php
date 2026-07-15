@@ -392,23 +392,70 @@ class TeacherGradesController extends Controller
     }
 
     /**
-     * Modification interdite — les notes enregistrées sont définitives pour les enseignants.
+     * Formulaire de correction — un enseignant ne peut corriger une note
+     * qu'une seule fois après sa saisie initiale (voir Grade::canStillBeEditedByTeacher()).
      */
     public function edit($id)
     {
-        return redirect()
-            ->route('teacher.grades.index')
-            ->with('error', 'Les notes déjà enregistrées ne peuvent pas être modifiées. Contactez l\'administration si une correction est nécessaire.');
+        $grade = Grade::with(['user', 'subject'])->findOrFail($id);
+        $teacher = Auth::user();
+
+        $denyReason = $this->denyGradeEditReason($teacher, $grade);
+        if ($denyReason !== null) {
+            return redirect()->route('teacher.grades.index')->with('error', $denyReason);
+        }
+
+        return view('teacher.grades.edit', compact('grade'));
     }
 
     /**
-     * Mise à jour interdite pour les enseignants.
+     * Applique la correction unique et avertit l'administration par email.
      */
     public function update(Request $request, $id)
     {
-        return redirect()
-            ->route('teacher.grades.index')
-            ->with('error', 'Les notes déjà enregistrées ne peuvent pas être modifiées.');
+        $grade = Grade::with(['user', 'subject'])->findOrFail($id);
+        $teacher = Auth::user();
+
+        $denyReason = $this->denyGradeEditReason($teacher, $grade);
+        if ($denyReason !== null) {
+            return redirect()->route('teacher.grades.index')->with('error', $denyReason);
+        }
+
+        $validated = $request->validate([
+            'grade'        => 'required|numeric|min:0|max:20',
+            'coefficient'  => 'required|numeric|min:0.5|max:5',
+            'date'         => 'required|date',
+            'comments'     => 'nullable|string|max:1000',
+            'appreciation' => 'nullable|string|max:1000',
+        ]);
+
+        $oldGrade = (string) $grade->grade;
+
+        DB::beginTransaction();
+        try {
+            $grade->update([
+                'grade'              => $validated['grade'],
+                'coefficient'        => $validated['coefficient'],
+                'date'               => $validated['date'],
+                'comments'           => $validated['comments'] ?? null,
+                'appreciation'       => $validated['appreciation'] ?? null,
+                'teacher_edited_at'  => now(),
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Erreur correction note', ['grade_id' => $grade->id, 'error' => $e->getMessage()]);
+
+            return back()->with('error', 'Erreur lors de l\'enregistrement de la correction.');
+        }
+
+        $this->notifySchoolStaffOfGradeEdit($grade, $teacher, $oldGrade, (string) $validated['grade']);
+
+        return redirect()->route('teacher.grades.index', [
+            'class_id'   => $grade->user->class_id,
+            'subject_id' => $grade->subject_id,
+        ])->with('success', 'Note corrigée avec succès. L\'administration a été informée de cette correction.');
     }
 
     /**
@@ -417,5 +464,45 @@ class TeacherGradesController extends Controller
     public function destroy($id)
     {
         return back()->with('error', 'Les notes enregistrées ne peuvent pas être supprimées. Contactez l\'administration.');
+    }
+
+    /**
+     * @return string|null Motif de refus, ou null si l'enseignant peut corriger cette note.
+     */
+    private function denyGradeEditReason(User $teacher, Grade $grade): ?string
+    {
+        if (! $grade->canStillBeEditedByTeacher()) {
+            return 'Vous avez déjà utilisé votre correction unique sur cette note. Contactez l\'administration pour toute modification supplémentaire.';
+        }
+
+        $year = $grade->academic_year_id ? AcademicYear::find($grade->academic_year_id) : null;
+        if (ClosedAcademicYearGuard::areGradesLocked($year)) {
+            return ClosedAcademicYearGuard::gradesLockedMessage($year);
+        }
+
+        $classId = $grade->user?->class_id;
+        if (! $classId || ! $this->teachesClassSubject($teacher, (int) $classId, (int) $grade->subject_id, $year)) {
+            return 'Vous n\'enseignez pas cette matière pour cette classe.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Avertit admins et surveillants de l'établissement par email (en file
+     * d'attente) qu'une correction de note vient d'avoir lieu.
+     */
+    private function notifySchoolStaffOfGradeEdit(Grade $grade, User $teacher, string $oldGrade, string $newGrade): void
+    {
+        $recipients = User::where('school_id', $grade->school_id)
+            ->whereIn('role', User::ROLE_SCHOOL_STAFF)
+            ->whereNotNull('email')
+            ->get();
+
+        foreach ($recipients as $recipient) {
+            \Mail::to($recipient->email)->queue(
+                new \App\Mail\GradeEditedByTeacherMail($grade, $teacher, $oldGrade, $newGrade)
+            );
+        }
     }
 }

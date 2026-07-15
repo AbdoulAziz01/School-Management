@@ -15,7 +15,7 @@ class Grade extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['user_id', 'subject_id', 'grade', 'type', 'semester', 'coefficient'])
+            ->logOnly(['user_id', 'subject_id', 'grade', 'type', 'semester', 'coefficient', 'teacher_edited_at'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Note {$eventName}");
@@ -38,6 +38,7 @@ class Grade extends Model
         'semester',
         'academic_year_id',
         'school_id',
+        'teacher_edited_at',
     ];
 
     /**
@@ -46,11 +47,21 @@ class Grade extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'date'             => 'date',
-        'grade'            => 'decimal:2',
-        'semester'         => 'integer',
-        'academic_year_id' => 'integer',
+        'date'               => 'date',
+        'grade'              => 'decimal:2',
+        'semester'           => 'integer',
+        'academic_year_id'   => 'integer',
+        'teacher_edited_at'  => 'datetime',
     ];
+
+    /**
+     * Un enseignant ne peut corriger une note qu'une seule fois après sa
+     * saisie initiale (voir migration add_teacher_edited_at_to_grades_table).
+     */
+    public function canStillBeEditedByTeacher(): bool
+    {
+        return $this->teacher_edited_at === null;
+    }
 
     /**
      * L'année académique à laquelle cette note est rattachée.
