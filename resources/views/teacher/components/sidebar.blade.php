@@ -304,6 +304,15 @@
                 <span>Classes Virtuelles</span>
             </a>
         </li>
+
+        @if(\App\Support\SchoolModules::isEnabled($currentSchool ?? null, \App\Support\SchoolModules::ACCOUNTING))
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('teacher.salary.*') ? 'active' : '' }}" href="{{ route('teacher.salary.index') }}">
+                    <i class="fas fa-money-check-alt"></i>
+                    <span>Mon salaire</span>
+                </a>
+            </li>
+        @endif
     </ul>
 
     <div class="menu-separator"></div>

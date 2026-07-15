@@ -552,6 +552,13 @@
                     <span>Ma Carte Scolaire</span>
                 </a>
 
+                @if(\App\Support\SchoolModules::isEnabled($currentSchool ?? null, \App\Support\SchoolModules::ACCOUNTING))
+                    <a href="{{ route('student.payments.index') }}" class="nav-link {{ request()->routeIs('student.payments.*') ? 'active' : '' }}">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>Mes paiements</span>
+                    </a>
+                @endif
+
                 <div class="menu-separator"></div>
                 
                 <div class="menu-section">

@@ -50,7 +50,7 @@ class PaymentReceiptController extends Controller
 
     public function pdf(Payment $payment)
     {
-        $payment->load(['student', 'recordedBy', 'allocations.studentInvoice']);
+        $payment->load(['student', 'recordedBy', 'allocations.studentInvoice', 'school']);
 
         $verifyUrl = $this->verifyUrl($payment);
         // SVG plutôt que PNG : le rendu PNG de simple-qrcode nécessite
@@ -66,6 +66,12 @@ class PaymentReceiptController extends Controller
             'qrCode' => $qrCode,
             'generatedAt' => now()->format('d/m/Y H:i'),
         ]);
+
+        // Ticket 80mm (imprimante thermique de caisse) : largeur fixe,
+        // hauteur volontairement très généreuse pour ne jamais paginer sur
+        // une 2e page — 1mm = 2.83465pt. Le reste de la bande est du blanc,
+        // sans effet sur une imprimante à rouleau continu.
+        $pdf->setPaper([0, 0, 80 * 2.83465, 1500], 'portrait');
 
         return $pdf->stream("recu-{$payment->receipt_number}.pdf");
     }

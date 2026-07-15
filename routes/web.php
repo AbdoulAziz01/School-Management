@@ -161,6 +161,11 @@ Route::middleware(['auth', 'school.active', \App\Http\Middleware\StudentMiddlewa
     Route::get('/card',       [StudentCardController::class, 'show']) ->name('card.show');
     Route::get('/card/token', [StudentCardController::class, 'token'])->name('card.token');
 
+    // Ma situation financière (module Comptabilité, établissements privés uniquement)
+    Route::middleware('module:accounting')->prefix('payments')->name('payments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Student\StudentPaymentsController::class, 'index'])->name('index');
+    });
+
     // Redirection de /student vers /student/dashboard
     Route::get('/', function () {
         return redirect()->route('student.dashboard');
@@ -225,6 +230,11 @@ Route::middleware(['auth', 'school.active', \App\Http\Middleware\TeacherMiddlewa
     Route::patch('/virtual-classes/{virtualClass}/toggle',      [TeacherVirtualClassController::class, 'toggle']) ->name('virtual-class.toggle');
     Route::get('/virtual-classes/{virtualClass}/join',          [TeacherVirtualClassController::class, 'join'])   ->name('virtual-class.join');
     Route::delete('/virtual-classes/{virtualClass}',            [TeacherVirtualClassController::class, 'destroy'])->name('virtual-class.destroy');
+
+    // Mon salaire (module Comptabilité, établissements privés uniquement)
+    Route::middleware('module:accounting')->prefix('salary')->name('salary.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Teacher\TeacherSalaryController::class, 'index'])->name('index');
+    });
 
     // Redirection de /teacher vers /teacher/dashboard
     Route::get('/', function () {
