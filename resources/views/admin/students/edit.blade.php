@@ -22,88 +22,44 @@
                         <h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size:.75rem;letter-spacing:.08em;">Identité</h6>
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="first_name" class="form-label">Prénom <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('first_name') is-invalid @enderror"
-                                           id="first_name" name="first_name"
-                                           value="{{ old('first_name', $student->first_name ?? '') }}" required>
-                                    @error('first_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field name="first_name" label="Prénom" :value="$student->first_name ?? ''" required />
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="last_name" class="form-label">Nom <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('last_name') is-invalid @enderror"
-                                           id="last_name" name="last_name"
-                                           value="{{ old('last_name', $student->last_name ?? '') }}" required>
-                                    @error('last_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field name="last_name" label="Nom" :value="$student->last_name ?? ''" required />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email <span class="text-muted fw-normal">(optionnel)</span></label>
-                                    <input type="email" class="form-control @error('email') is-invalid @enderror"
-                                           id="email" name="email" value="{{ old('email', $student->email) }}">
-                                    @error('email')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="email" name="email" label="Email (optionnel)" :value="$student->email" />
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label">Téléphone</label>
-                                    <input type="tel" class="form-control @error('phone') is-invalid @enderror"
-                                           id="phone" name="phone" value="{{ old('phone', $student->phone) }}">
-                                    @error('phone')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="tel" name="phone" label="Téléphone" :value="$student->phone" />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="date_of_birth" class="form-label">Date de naissance</label>
-                                    <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror"
-                                           id="date_of_birth" name="date_of_birth"
-                                           value="{{ old('date_of_birth', $student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('Y-m-d') : '') }}">
-                                    @error('date_of_birth')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="date" name="date_of_birth" label="Date de naissance"
+                                    :value="$student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('Y-m-d') : ''" />
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="class_id" class="form-label">Classe</label>
-                                    <select class="form-select @error('class_id') is-invalid @enderror"
-                                            id="class_id" name="class_id">
-                                        <option value="">-- Sélectionnez une classe --</option>
-                                        @foreach($classes as $academicYear => $classGroup)
-                                            <optgroup label="{{ $academicYear }}">
-                                                @foreach($classGroup as $class)
-                                                    <option value="{{ $class->id }}"
-                                                        {{ old('class_id', $student->class_id) == $class->id ? 'selected' : '' }}>
-                                                        {{ $class->name }}
-                                                        @if($class->level)
-                                                            - {{ $class->level->name }}
-                                                        @endif
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-                                        @endforeach
-                                    </select>
-                                    @error('class_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="select" name="class_id" label="Classe">
+                                    <option value="">-- Sélectionnez une classe --</option>
+                                    @foreach($classes as $academicYear => $classGroup)
+                                        <optgroup label="{{ $academicYear }}">
+                                            @foreach($classGroup as $class)
+                                                <option value="{{ $class->id }}"
+                                                    {{ old('class_id', $student->class_id) == $class->id ? 'selected' : '' }}>
+                                                    {{ $class->name }}
+                                                    @if($class->level)
+                                                        - {{ $class->level->name }}
+                                                    @endif
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endforeach
+                                </x-admin.form-field>
                             </div>
                         </div>
 
@@ -115,31 +71,17 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="status" class="form-label">Statut <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('status') is-invalid @enderror"
-                                            id="status" name="status" required>
-                                        <option value="pending" {{ old('status', $student->status) === 'pending' ? 'selected' : '' }}>En attente</option>
-                                        <option value="approved" {{ old('status', $student->status) === 'approved' ? 'selected' : '' }}>Approuvé</option>
-                                        <option value="rejected" {{ old('status', $student->status) === 'rejected' ? 'selected' : '' }}>Rejeté</option>
-                                    </select>
-                                    @error('status')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="select" name="status" label="Statut" required>
+                                    <option value="pending" {{ old('status', $student->status) === 'pending' ? 'selected' : '' }}>En attente</option>
+                                    <option value="approved" {{ old('status', $student->status) === 'approved' ? 'selected' : '' }}>Approuvé</option>
+                                    <option value="rejected" {{ old('status', $student->status) === 'rejected' ? 'selected' : '' }}>Rejeté</option>
+                                </x-admin.form-field>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-12">
-                                <div class="mb-3">
-                                    <label for="address" class="form-label">Adresse</label>
-                                    <textarea class="form-control @error('address') is-invalid @enderror"
-                                              id="address" name="address" rows="2">{{ old('address', $student->address) }}</textarea>
-                                    @error('address')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="textarea" name="address" label="Adresse" :value="$student->address" />
                             </div>
                         </div>
 
@@ -149,8 +91,9 @@
                         <h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size:.75rem;letter-spacing:.08em;">Documents &amp; Photo</h6>
                         <div class="row">
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="photo" class="form-label">Photo de l'élève</label>
+                                <x-admin.form-field type="file" name="photo" accept="image/*"
+                                    help="{{ 'JPG, PNG, WEBP — max 4 Mo'.($student->profile_photo_path ? ' (remplace la photo actuelle)' : '') }}">
+                                    <x-slot:label>Photo de l'élève</x-slot:label>
                                     @if($student->profile_photo_path)
                                         <div class="mb-2">
                                             <img src="{{ Storage::url($student->profile_photo_path) }}"
@@ -159,19 +102,12 @@
                                             <span class="ms-2 text-muted small">Photo actuelle</span>
                                         </div>
                                     @endif
-                                    <input type="file" class="form-control @error('photo') is-invalid @enderror"
-                                           id="photo" name="photo" accept="image/*">
-                                    <div class="form-text">JPG, PNG, WEBP — max 4 Mo{{ $student->profile_photo_path ? ' (remplace la photo actuelle)' : '' }}</div>
-                                    @error('photo')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                </x-admin.form-field>
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="birth_certificate" class="form-label">
-                                        Extrait de naissance <span class="badge bg-secondary fw-normal" style="font-size:.7rem;">PDF</span>
-                                    </label>
+                                <x-admin.form-field type="file" name="birth_certificate" accept=".pdf"
+                                    help="{{ 'Fichier PDF uniquement — max 8 Mo'.($student->birth_certificate_path ? ' (remplace le document actuel)' : '') }}">
+                                    <x-slot:label>Extrait de naissance <span class="badge bg-secondary fw-normal" style="font-size:.7rem;">PDF</span></x-slot:label>
                                     @if($student->birth_certificate_path)
                                         <div class="mb-2">
                                             <a href="{{ Storage::url($student->birth_certificate_path) }}" target="_blank"
@@ -180,13 +116,7 @@
                                             </a>
                                         </div>
                                     @endif
-                                    <input type="file" class="form-control @error('birth_certificate') is-invalid @enderror"
-                                           id="birth_certificate" name="birth_certificate" accept=".pdf">
-                                    <div class="form-text">Fichier PDF uniquement — max 8 Mo{{ $student->birth_certificate_path ? ' (remplace le document actuel)' : '' }}</div>
-                                    @error('birth_certificate')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                </x-admin.form-field>
                             </div>
                         </div>
 
@@ -198,36 +128,20 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="parent_name" class="form-label">Nom du parent/tuteur</label>
-                                    <input type="text" class="form-control @error('parent_name') is-invalid @enderror"
-                                           id="parent_name" name="parent_name"
-                                           value="{{ old('parent_name', $student->parent_name) }}"
-                                           placeholder="Ex : Ibrahima Fall">
-                                    @error('parent_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
+                                <x-admin.form-field name="parent_name" label="Nom du parent/tuteur"
+                                    :value="$student->parent_name" placeholder="Ex : Ibrahima Fall" />
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="parent_whatsapp" class="form-label">Numéro WhatsApp parent</label>
-                                    <input type="text" class="form-control @error('parent_whatsapp') is-invalid @enderror"
-                                           id="parent_whatsapp" name="parent_whatsapp"
-                                           value="{{ old('parent_whatsapp', $student->parent_whatsapp) }}"
-                                           placeholder="Ex : 221781234567">
-                                    <div class="form-text">Format international sans + ni espaces (ex : 221781234567)</div>
-                                    @error('parent_whatsapp')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
+                                <x-admin.form-field name="parent_whatsapp" label="Numéro WhatsApp parent"
+                                    :value="$student->parent_whatsapp" placeholder="Ex : 221781234567"
+                                    help="Format international sans + ni espaces (ex : 221781234567)" />
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="parent_lang" class="form-label">Langue de notification</label>
-                                    <select class="form-select @error('parent_lang') is-invalid @enderror" id="parent_lang" name="parent_lang">
-                                        <option value="fr_text" {{ old('parent_lang', $student->parent_lang ?? 'fr_text') === 'fr_text' ? 'selected' : '' }}>Français (texte)</option>
-                                        <option value="wo_audio" {{ old('parent_lang', $student->parent_lang) === 'wo_audio' ? 'selected' : '' }}>Wolof (audio)</option>
-                                        <option value="pu_audio" {{ old('parent_lang', $student->parent_lang) === 'pu_audio' ? 'selected' : '' }}>Pulaar (audio)</option>
-                                    </select>
-                                    @error('parent_lang')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
+                                <x-admin.form-field type="select" name="parent_lang" label="Langue de notification">
+                                    <option value="fr_text" {{ old('parent_lang', $student->parent_lang ?? 'fr_text') === 'fr_text' ? 'selected' : '' }}>Français (texte)</option>
+                                    <option value="wo_audio" {{ old('parent_lang', $student->parent_lang) === 'wo_audio' ? 'selected' : '' }}>Wolof (audio)</option>
+                                    <option value="pu_audio" {{ old('parent_lang', $student->parent_lang) === 'pu_audio' ? 'selected' : '' }}>Pulaar (audio)</option>
+                                </x-admin.form-field>
                             </div>
                         </div>
 

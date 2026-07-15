@@ -20,14 +20,7 @@
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="name" class="form-label">Nom complet <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                           id="name" name="name" value="{{ old('name', $teacher->name) }}" required>
-                                    @error('name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field name="name" label="Nom complet" :value="$teacher->name" required />
 
                                 <div class="mb-3">
                                     <label class="form-label">Identifiant de connexion</label>
@@ -35,57 +28,22 @@
                                     <div class="form-text">Généré automatiquement à la création (connexion avec cet identifiant ou l'email).</div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                                    <input type="email" class="form-control @error('email') is-invalid @enderror" 
-                                           id="email" name="email" value="{{ old('email', $teacher->email) }}" required>
-                                    @error('email')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="email" name="email" label="Email" :value="$teacher->email" required />
 
-                                <div class="mb-3">
-                                    <label for="date_of_birth" class="form-label">Date de naissance</label>
-                                    <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" 
-                                           id="date_of_birth" name="date_of_birth" 
-                                           value="{{ old('date_of_birth', $teacher->date_of_birth ? $teacher->date_of_birth->format('Y-m-d') : '') }}">
-                                    @error('date_of_birth')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="date" name="date_of_birth" label="Date de naissance"
+                                    :value="$teacher->date_of_birth ? $teacher->date_of_birth->format('Y-m-d') : ''" />
                             </div>
 
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label">Téléphone</label>
-                                    <input type="text" class="form-control @error('phone') is-invalid @enderror" 
-                                           id="phone" name="phone" value="{{ old('phone', $teacher->phone) }}">
-                                    @error('phone')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field name="phone" label="Téléphone" :value="$teacher->phone" />
 
-                                <div class="mb-3">
-                                    <label for="status" class="form-label">Statut <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('status') is-invalid @enderror" 
-                                            id="status" name="status" required>
-                                        <option value="pending" {{ old('status', $teacher->status) === 'pending' ? 'selected' : '' }}>En attente</option>
-                                        <option value="approved" {{ old('status', $teacher->status) === 'approved' ? 'selected' : '' }}>Approuvé</option>
-                                        <option value="rejected" {{ old('status', $teacher->status) === 'rejected' ? 'selected' : '' }}>Rejeté</option>
-                                    </select>
-                                    @error('status')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="select" name="status" label="Statut" required>
+                                    <option value="pending" {{ old('status', $teacher->status) === 'pending' ? 'selected' : '' }}>En attente</option>
+                                    <option value="approved" {{ old('status', $teacher->status) === 'approved' ? 'selected' : '' }}>Approuvé</option>
+                                    <option value="rejected" {{ old('status', $teacher->status) === 'rejected' ? 'selected' : '' }}>Rejeté</option>
+                                </x-admin.form-field>
 
-                                <div class="mb-3">
-                                    <label for="address" class="form-label">Adresse</label>
-                                    <textarea class="form-control @error('address') is-invalid @enderror" 
-                                              id="address" name="address" rows="3">{{ old('address', $teacher->address) }}</textarea>
-                                    @error('address')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-admin.form-field type="textarea" name="address" label="Adresse" :value="$teacher->address" :rows="3" />
 
                                 <div class="mb-3">
                                     <label class="form-label">Connexion</label>
