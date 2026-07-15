@@ -129,6 +129,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Factures de frais scolaires de l'élève (module Comptabilité).
+     */
+    public function studentInvoices()
+    {
+        return $this->hasMany(StudentInvoice::class, 'student_id');
+    }
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>

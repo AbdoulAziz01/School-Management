@@ -38,7 +38,7 @@ class GenerateSalaryPayments extends Command
 
         foreach ($schools as $school) {
             $created = $salaries->generateForPeriod($school, $period);
-            $this->info("« {$school->name} » : {$created->count()} paiement(s) de salaire généré(s)/déjà existant(s) pour {$period->translatedFormat('F Y')}.");
+            $this->info("« {$school->name} » : {$created->count()} paiement(s) de salaire généré(s)/déjà existant(s) pour {$period->locale('fr')->translatedFormat('F Y')}.");
         }
 
         return self::SUCCESS;

@@ -6,6 +6,7 @@ use App\Models\CashRegister;
 use App\Models\CashSession;
 use App\Models\Payment;
 use App\Models\User;
+use App\Notifications\CashSessionDiscrepancyNotification;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -69,8 +70,23 @@ class CashSessionService
                 'notes' => $notes,
             ]);
 
+            if (abs($difference) > 0.01) {
+                $this->notifyDirecteursOfDiscrepancy($session, $closedBy);
+            }
+
             return $session;
         });
+    }
+
+    private function notifyDirecteursOfDiscrepancy(CashSession $session, User $closedBy): void
+    {
+        $directeurs = User::where('school_id', $session->school_id)
+            ->where('role', User::ROLE_DIRECTEUR)
+            ->get();
+
+        foreach ($directeurs as $directeur) {
+            $directeur->notify(new CashSessionDiscrepancyNotification($session, $closedBy->name));
+        }
     }
 
     /** @return array{opening_balance: float, encaissements: float, expected_balance: float, payments_count: int} */

@@ -106,7 +106,7 @@ class StudentInvoiceService
                 ],
                 [
                     'school_id' => $student->school_id,
-                    'label' => $feeType->name.' — '.$monthStart->translatedFormat('F Y'),
+                    'label' => $feeType->name.' — '.$monthStart->locale('fr')->translatedFormat('F Y'),
                     'amount_due' => $amount,
                     'status' => StudentInvoice::STATUS_PENDING,
                 ]

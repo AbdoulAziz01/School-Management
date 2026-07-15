@@ -43,6 +43,13 @@ class AppServiceProvider extends ServiceProvider
 
         DB::prohibitDestructiveCommands($this->app->isProduction());
 
+        // Alimentation automatique du grand livre (ledger_entries) — voir
+        // docblock de la migration : jamais un contrôleur ne doit créer de
+        // LedgerEntry directement.
+        \App\Models\Payment::observe(\App\Observers\PaymentObserver::class);
+        \App\Models\Expense::observe(\App\Observers\ExpenseObserver::class);
+        \App\Models\SalaryPayment::observe(\App\Observers\SalaryPaymentObserver::class);
+
         Password::defaults(fn () => $this->app->isProduction()
             ? Password::min(10)->mixedCase()->numbers()->symbols()->uncompromised()
             : Password::min(8));

@@ -408,6 +408,7 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
 Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.role:directeur'])
     ->prefix('directeur')->name('directeur.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Accounting\DirecteurDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/ledger/export', [\App\Http\Controllers\Accounting\DirecteurDashboardController::class, 'exportLedger'])->name('ledger.export');
         Route::prefix('profile')->name('profile.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'edit'])->name('edit');
             Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');

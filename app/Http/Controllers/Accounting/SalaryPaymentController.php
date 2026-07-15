@@ -46,7 +46,7 @@ class SalaryPaymentController extends Controller
 
         return redirect()
             ->route('comptable.salaries.index', ['period' => $period->format('Y-m')])
-            ->with('success', $created->count().' paiement(s) de salaire généré(s) pour '.$period->translatedFormat('F Y').'.');
+            ->with('success', $created->count().' paiement(s) de salaire généré(s) pour '.$period->locale('fr')->translatedFormat('F Y').'.');
     }
 
     public function pay(Request $request, SalaryPayment $salaryPayment)

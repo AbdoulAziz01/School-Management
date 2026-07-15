@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0"><i class="fas fa-money-check-alt me-2"></i>Salaires</h1>
-        <p class="text-muted mb-0">{{ $period->translatedFormat('F Y') }}</p>
+        <p class="text-muted mb-0">{{ $period->locale('fr')->translatedFormat('F Y') }}</p>
     </div>
     <form method="GET" action="{{ route('comptable.salaries.index') }}" class="d-flex gap-2">
         <input type="month" name="period" class="form-control form-control-sm" value="{{ $period->format('Y-m') }}" onchange="this.form.submit()">
@@ -16,7 +16,7 @@
 @if($payments->isEmpty())
     <div class="card">
         <div class="card-body text-center py-5">
-            <p class="text-muted mb-3">Aucun paiement de salaire généré pour {{ $period->translatedFormat('F Y') }}.</p>
+            <p class="text-muted mb-3">Aucun paiement de salaire généré pour {{ $period->locale('fr')->translatedFormat('F Y') }}.</p>
             <form method="POST" action="{{ route('comptable.salaries.generate') }}">
                 @csrf
                 <input type="hidden" name="period" value="{{ $period->format('Y-m') }}">
