@@ -430,6 +430,8 @@ class StudentController extends Controller
 
             DB::commit();
 
+            \App\Events\StudentEnrolled::dispatch($student);
+
             return redirect()
                 ->route('admin.students.show', $student)
                 ->with('success', 'Élève créé avec succès. Identifiants affichés sur la fiche.');
