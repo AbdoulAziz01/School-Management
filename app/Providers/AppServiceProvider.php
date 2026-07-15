@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\View\Composers\CaisseSidebarComposer;
 use App\Http\View\Composers\PortalNavbarComposer;
 use App\Http\View\Composers\PlatformBrandingComposer;
 use App\Http\View\Composers\SchoolBrandingComposer;
@@ -113,6 +114,8 @@ class AppServiceProvider extends ServiceProvider
             'accounting.comptable.sidebar',
             'accounting.caisse.sidebar',
         ], SchoolBrandingComposer::class);
+
+        View::composer('accounting.caisse.sidebar', CaisseSidebarComposer::class);
 
         View::share('platformName', config('platform.name', 'EduManager'));
 

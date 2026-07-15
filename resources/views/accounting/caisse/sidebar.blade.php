@@ -81,7 +81,7 @@
 
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a href="{{ route('caisse.dashboard') }}" class="nav-link">
+            <a href="{{ route('caisse.dashboard') }}" class="nav-link {{ request()->routeIs('caisse.dashboard') && ! $sidebarCashSessionOpen ? 'active' : '' }}">
                 <i class="fas fa-unlock"></i>
                 <span>Ouvrir la caisse</span>
             </a>
@@ -93,7 +93,7 @@
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ route('caisse.dashboard') }}" class="nav-link">
+            <a href="{{ route('caisse.dashboard') }}" class="nav-link {{ request()->routeIs('caisse.dashboard') && $sidebarCashSessionOpen ? 'active' : '' }}">
                 <i class="fas fa-coins"></i>
                 <span>Solde actuel</span>
             </a>
