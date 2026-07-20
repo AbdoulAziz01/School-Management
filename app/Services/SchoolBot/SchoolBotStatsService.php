@@ -244,8 +244,8 @@ class SchoolBotStatsService
             ->where('school_id', $schoolId)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->where(function ($query) use ($term) {
-                $query->where('name', 'like', $term)
-                    ->orWhere('identifier', 'like', $term);
+                $query->where('name', 'ilike', $term)
+                    ->orWhere('identifier', 'ilike', $term);
             })
             ->orderBy('name')
             ->with(['class:id,name']);
@@ -266,8 +266,8 @@ class SchoolBotStatsService
             ->whereIn('role', $roles)
             ->where(function ($query) use ($term, $q) {
                 $query->where('identifier', $q)
-                    ->orWhere('identifier', 'like', $term)
-                    ->orWhere('name', 'like', $term);
+                    ->orWhere('identifier', 'ilike', $term)
+                    ->orWhere('name', 'ilike', $term);
             })
             ->orderByRaw('CASE WHEN identifier = ? THEN 0 ELSE 1 END', [$q])
             ->orderBy('name')

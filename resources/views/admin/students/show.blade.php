@@ -151,14 +151,20 @@
                                     <option value="{{ $index }}" @selected($index === 0)>
                                         {{ $subject['name'] }}
                                         @if($subject['average'] !== null)
-                                            ({{ number_format($subject['average'], 2, ',', ' ') }}/20)
+                                            ({{ number_format($subject['average'], 2, ',', ' ') }}/{{ rtrim(rtrim(number_format($subject['max_grade'] ?? 20, 2), '0'), '.') }})
                                         @endif
                                     </option>
                                 @endforeach
                                 <option value="all">Toutes les matières</option>
                             </select>
                         </div>
-                        <p class="text-muted small mb-3">Notes réelles enregistrées — S1 · D1 → D2 → Compo puis S2 · D1 → D2 → Compo — seuil : 10/20</p>
+                        <p class="text-muted small mb-3">
+                            @if($isPrimaireStudent ?? false)
+                                Notes réelles enregistrées — évolution des compositions, réussite à partir de la moitié du barème.
+                            @else
+                                Notes réelles enregistrées — S1 · D1 → D2 → Compo puis S2 · D1 → D2 → Compo — seuil : 10/20
+                            @endif
+                        </p>
                         <div class="student-evolution-chart-wrapper">
                             <canvas id="studentEvolutionChart"></canvas>
                         </div>
@@ -209,11 +215,12 @@
                                             <td class="text-center coef-col">
                                                 <span class="badge bg-secondary">{{ $data['coefficient'] }}</span>
                                             </td>
+                                            @php $subjectMax = $data['max_grade'] ?? 20; @endphp
                                             @foreach($evaluationColumns as $column)
                                                 @php $note = $data['slots'][$column['key']] ?? null; @endphp
                                                 <td class="text-center eval-col">
                                                     @if($note !== null)
-                                                        <span class="fw-semibold {{ $note >= 10 ? 'text-success' : 'text-danger' }}">
+                                                        <span class="fw-semibold {{ ($subjectMax > 0 && $note / $subjectMax >= 0.5) ? 'text-success' : 'text-danger' }}">
                                                             {{ number_format($note, 2, ',', ' ') }}
                                                         </span>
                                                     @else
@@ -223,8 +230,8 @@
                                             @endforeach
                                             <td class="text-center avg-col">
                                                 @if($data['average'] !== null)
-                                                    <span class="fw-bold {{ ($data['average'] ?? 0) >= ($data['passing_min'] ?? $passingGradeMin ?? 10) ? 'text-success' : 'text-danger' }}">
-                                                        {{ number_format($data['average'], 2, ',', ' ') }}/20
+                                                    <span class="fw-bold {{ ($data['average'] ?? 0) >= ($data['passing_min'] ?? ($subjectMax / 2)) ? 'text-success' : 'text-danger' }}">
+                                                        {{ number_format($data['average'], 2, ',', ' ') }}/{{ rtrim(rtrim(number_format($subjectMax, 2), '0'), '.') }}
                                                     </span>
                                                     @if(!empty($useLmdGrading))
                                                         <br><span class="text-muted" style="font-size:0.7rem;">{{ $data['lmd_formula'] ?? '' }}</span>
@@ -237,15 +244,16 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if($data['average'] === null)
+                                                @php $subjectRatio = ($data['average'] !== null && $subjectMax > 0) ? $data['average'] / $subjectMax : null; @endphp
+                                                @if($subjectRatio === null)
                                                     <span class="text-muted">—</span>
-                                                @elseif($data['average'] >= 16)
+                                                @elseif($subjectRatio >= 0.8)
                                                     <span class="badge bg-success">Excellent</span>
-                                                @elseif($data['average'] >= 14)
+                                                @elseif($subjectRatio >= 0.7)
                                                     <span class="badge" style="background-color: #fd7e14;">Très Bien</span>
-                                                @elseif($data['average'] >= 12)
+                                                @elseif($subjectRatio >= 0.6)
                                                     <span class="badge bg-info">Bien</span>
-                                                @elseif($data['average'] >= 10)
+                                                @elseif($subjectRatio >= 0.5)
                                                     <span class="badge bg-warning text-dark">Assez Bien</span>
                                                 @else
                                                     <span class="badge bg-danger">Insuffisant</span>
@@ -397,19 +405,30 @@
 
         const evolutionData = JSON.parse(dataEl.textContent);
         const labels = evolutionData.labels || [];
+        const isPrimaire = !!evolutionData.is_primaire;
         const palette = ['#0d6efd', '#198754', '#fd7e14', '#dc3545', '#6f42c1', '#20c997', '#e83e8c', '#6610f2', '#17a2b8', '#ffc107', '#28a745'];
         let chart = null;
 
-        function formatGrade(grade) {
-            if (grade === null || grade === undefined) return 'Non saisi';
-            return Number(grade).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/20';
+        function formatMax(maxGrade) {
+            const n = Number(maxGrade || 20);
+            return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
         }
 
-        function pointColor(grade) {
+        function formatGrade(grade, maxGrade) {
+            if (grade === null || grade === undefined) return 'Non saisi';
+            return Number(grade).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/' + formatMax(maxGrade);
+        }
+
+        function pointColor(grade, maxGrade) {
             if (grade === null) return '#adb5bd';
-            if (grade >= 14) return '#198754';
-            if (grade >= 10) return '#f59e0b';
-            return '#dc3545';
+            const ratio = maxGrade > 0 ? grade / maxGrade : 0;
+            if (!isPrimaire) {
+                return ratio >= 0.5 ? '#198754' : '#dc3545';
+            }
+            if (ratio >= 0.9) return '#15803d';
+            if (ratio >= 0.7) return '#22c55e';
+            if (ratio >= 0.5) return '#f59e0b';
+            return '#dc2626';
         }
 
         function buildDatasets(mode) {
@@ -418,15 +437,17 @@
             if (mode === 'all') {
                 return subjects.map(function (subject, index) {
                     const color = palette[index % palette.length];
+                    const maxGrade = subject.max_grade || 20;
                     const values = (subject.evaluations || []).map(function (e) { return e.grade; });
 
                     return {
                         label: subject.name,
+                        maxGrade: maxGrade,
                         data: values,
                         borderColor: color,
                         backgroundColor: color,
-                        pointBackgroundColor: values.map(pointColor),
-                        pointBorderColor: values.map(pointColor),
+                        pointBackgroundColor: values.map(function (v) { return pointColor(v, maxGrade); }),
+                        pointBorderColor: values.map(function (v) { return pointColor(v, maxGrade); }),
                         pointRadius: 5,
                         pointHoverRadius: 7,
                         borderWidth: 2,
@@ -441,15 +462,17 @@
             const subject = subjects[index];
             if (!subject) return [];
 
+            const maxGrade = subject.max_grade || 20;
             const values = (subject.evaluations || []).map(function (e) { return e.grade; });
 
             return [{
                 label: subject.name,
+                maxGrade: maxGrade,
                 data: values,
                 borderColor: '#0d6efd',
                 backgroundColor: '#0d6efd',
-                pointBackgroundColor: values.map(pointColor),
-                pointBorderColor: values.map(pointColor),
+                pointBackgroundColor: values.map(function (v) { return pointColor(v, maxGrade); }),
+                pointBorderColor: values.map(function (v) { return pointColor(v, maxGrade); }),
                 pointRadius: 7,
                 pointHoverRadius: 9,
                 borderWidth: 2,
@@ -471,6 +494,9 @@
 
             if (chart) chart.destroy();
 
+            const axisMax = Math.max.apply(null, datasets.map(function (ds) { return ds.maxGrade || 20; }));
+            const passLineValue = axisMax / 2;
+
             chart = new Chart(canvas, {
                 type: 'line',
                 data: { labels: labels, datasets: datasets },
@@ -482,7 +508,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function (ctx) {
-                                    return ctx.dataset.label + ' : ' + formatGrade(ctx.raw);
+                                    return ctx.dataset.label + ' : ' + formatGrade(ctx.raw, ctx.dataset.maxGrade);
                                 }
                             }
                         }
@@ -490,9 +516,9 @@
                     scales: {
                         y: {
                             min: 0,
-                            max: 20,
-                            ticks: { stepSize: 2 },
-                            title: { display: true, text: 'Note / 20' },
+                            max: axisMax,
+                            ticks: { stepSize: axisMax > 10 ? 2 : 1 },
+                            title: { display: true, text: 'Note / ' + formatMax(axisMax) },
                             grid: { color: '#e9ecef' }
                         },
                         x: {
@@ -506,7 +532,7 @@
                     afterDraw: function (c) {
                         const yScale = c.scales.y;
                         const ctx = c.ctx;
-                        const y = yScale.getPixelForValue(10);
+                        const y = yScale.getPixelForValue(passLineValue);
                         ctx.save();
                         ctx.strokeStyle = '#6c757d';
                         ctx.setLineDash([6, 4]);
@@ -517,7 +543,7 @@
                         ctx.stroke();
                         ctx.fillStyle = '#6c757d';
                         ctx.font = '10px sans-serif';
-                        ctx.fillText('10', c.chartArea.left - 18, y + 3);
+                        ctx.fillText(String(passLineValue), c.chartArea.left - 18, y + 3);
                         ctx.restore();
                     }
                 }, {

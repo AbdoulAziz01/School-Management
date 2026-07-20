@@ -18,11 +18,17 @@
     ];
 @endphp
 
-<div class="mb-4 d-flex justify-content-between align-items-center">
+<a href="{{ route('teacher.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+</a>
+<div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
         <h1 class="mb-0 h3">Gestion des Présences</h1>
         <p class="text-muted">Faites l'appel de vos classes</p>
     </div>
+    <a href="{{ route('teacher.attendance.history', $selectedClassId ? ['class_id' => $selectedClassId] : []) }}" class="btn btn-outline-primary">
+        <i class="fas fa-history me-2"></i>Historique des appels
+    </a>
 </div>
 
 {{-- Filtres --}}

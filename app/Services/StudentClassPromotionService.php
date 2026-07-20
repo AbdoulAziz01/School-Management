@@ -3,12 +3,14 @@
 namespace App\Services;
 
 use App\Support\ClassHistoricalContext;
+use App\Support\Grading\GradeSequence;
 use App\Models\AcademicYear;
 use App\Models\Grade;
 use App\Models\Level;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\User;
+use App\Services\SchoolBot\BulletinComputation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -16,11 +18,13 @@ class StudentClassPromotionService
 {
     public const TERMINALE_LEVEL_ORDER = 7;
 
-    private float $passingAverage;
+    /** Seuil de réussite, en ratio du barème (0.5 = 10/20 par défaut) — indépendant du barème réel de la classe. */
+    private float $passingRatio;
 
-    public function __construct()
-    {
-        $this->passingAverage = (float) config('school.passing_grade_min', 10);
+    public function __construct(
+        private BulletinComputation $bulletinComputation
+    ) {
+        $this->passingRatio = (float) config('school.passing_grade_min', 10) / 20;
     }
 
     public function appliesToSchool(?School $school): bool
@@ -47,6 +51,7 @@ class StudentClassPromotionService
             'semester_averages' => ['1' => null, '2' => null],
             'missing_subjects' => [],
             'processed' => false,
+            'max_grade' => 20.0,
         ];
 
         if (! $student->isStudent()) {
@@ -85,16 +90,20 @@ class StudentClassPromotionService
             return array_merge($base, ['message' => 'Niveau scolaire non pris en charge pour le passage automatique.']);
         }
 
+        $referenceMaxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($level);
+        $passingAverage = round($this->passingRatio * $referenceMaxGrade, 2);
+
         $allGrades = $this->gradesForStudent($student, $academicYear);
         $semesterAverages = [
-            '1' => $this->weightedAverageFromGrades($allGrades->where('semester', 1)),
-            '2' => $this->weightedAverageFromGrades($allGrades->where('semester', 2)),
+            '1' => $this->weightedAverageFromGrades($allGrades->where('semester', 1), $class, $referenceMaxGrade),
+            '2' => $this->weightedAverageFromGrades($allGrades->where('semester', 2), $class, $referenceMaxGrade),
         ];
 
-        $annualAverage = $this->weightedAverageFromGrades($allGrades);
+        $annualAverage = $this->weightedAverageFromGrades($allGrades, $class, $referenceMaxGrade);
 
         $base['semester_averages'] = $semesterAverages;
         $base['annual_average'] = $annualAverage;
+        $base['max_grade'] = $referenceMaxGrade;
 
         if ($annualAverage === null) {
             return array_merge($base, [
@@ -103,10 +112,12 @@ class StudentClassPromotionService
             ]);
         }
 
-        if ($annualAverage < $this->passingAverage) {
+        if ($annualAverage < $passingAverage) {
+            $maxLabel = rtrim(rtrim(number_format($referenceMaxGrade, 2), '0'), '.');
+
             return array_merge($base, [
                 'status' => 'failed',
-                'message' => "Moyenne annuelle insuffisante ({$annualAverage}/20, seuil {$this->passingAverage}/20).",
+                'message' => "Moyenne annuelle insuffisante ({$annualAverage}/{$maxLabel}, seuil {$passingAverage}/{$maxLabel}).",
             ]);
         }
 
@@ -339,10 +350,13 @@ class StudentClassPromotionService
     public function previewClass(SchoolClass $class, ?AcademicYear $academicYear = null): array
     {
         $academicYear ??= $class->academicYear;
+        $level = $class->level;
+        $referenceMaxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($level);
 
         $preview = [
             'enabled' => false,
-            'passing_grade_min' => $this->passingAverage,
+            'passing_grade_min' => round($this->passingRatio * $referenceMaxGrade, 2),
+            'max_grade' => $referenceMaxGrade,
             'academic_year_name' => $academicYear?->name,
             'counts' => [
                 'will_pass' => 0,
@@ -366,7 +380,6 @@ class StudentClassPromotionService
             return $preview;
         }
 
-        $level = $class->level;
         if (! $level || ! in_array($level->cycle, self::PROMOTION_CYCLES, true)) {
             return $preview;
         }
@@ -696,9 +709,11 @@ class StudentClassPromotionService
     }
 
     /**
-     * Même logique que les statistiques de la fiche classe (moyenne pondérée par matière).
+     * Même logique que les statistiques de la fiche classe (moyenne pondérée
+     * par matière, chaque matière normalisée sur 20 avant pondération pour
+     * rester comparable au seuil de passage même en primaire /10).
      */
-    private function weightedAverageFromGrades(Collection $grades): ?float
+    private function weightedAverageFromGrades(Collection $grades, SchoolClass $class, float $referenceMaxGrade): ?float
     {
         if ($grades->isEmpty()) {
             return null;
@@ -707,14 +722,20 @@ class StudentClassPromotionService
         $weightedSum = 0.0;
         $totalCoef = 0.0;
 
-        foreach ($grades->groupBy('subject_id') as $subjectGrades) {
+        foreach ($grades->groupBy('subject_id') as $subjectId => $subjectGrades) {
             $subjectAvg = $subjectGrades->avg('grade');
             if ($subjectAvg === null) {
                 continue;
             }
 
+            $maxGrade = GradeSequence::maxGradeFor($class, (int) $subjectId);
+            if ($maxGrade <= 0) {
+                continue;
+            }
+
+            $normalizedAvg = ($subjectAvg / $maxGrade) * $referenceMaxGrade;
             $coefficient = (float) ($subjectGrades->first()->subject->coefficient ?? 1);
-            $weightedSum += $subjectAvg * $coefficient;
+            $weightedSum += $normalizedAvg * $coefficient;
             $totalCoef += $coefficient;
         }
 

@@ -21,10 +21,10 @@ class UnassignedStudentController extends Controller
         if ($request->filled('q')) {
             $search = $request->string('q')->trim()->toString();
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('identifier', 'like', "%{$search}%")
-                    ->orWhere('user_id', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%")
+                    ->orWhere('identifier', 'ilike', "%{$search}%")
+                    ->orWhere('user_id', 'ilike', "%{$search}%");
             });
         }
 

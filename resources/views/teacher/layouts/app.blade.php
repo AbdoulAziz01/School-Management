@@ -356,6 +356,45 @@
             h2, .h2 { font-size: 1.25rem; }
             h3, .h3 { font-size: 1.1rem; }
         }
+
+        /* Modales ancrées à droite (jamais centrées) — voir
+           admin/layouts/app.blade.php pour l'explication complète. */
+        .modal .modal-dialog {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            left: auto !important;
+            margin: 0 !important;
+            max-width: 480px !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 100% !important;
+            display: block !important;
+        }
+        .modal .modal-content {
+            height: 100%;
+            border-radius: 0;
+            border: none;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal .modal-body {
+            overflow-y: auto;
+            flex: 1 1 auto;
+        }
+        .modal.fade .modal-dialog {
+            transform: translateX(100%);
+            transition: transform 0.25s ease-out;
+        }
+        .modal.fade.show .modal-dialog {
+            transform: translateX(0);
+        }
+        @media (max-width: 576px) {
+            .modal .modal-dialog {
+                max-width: 100% !important;
+            }
+        }
     </style>
     @include('partials.portal-top-navbar-styles')
     @stack('styles')

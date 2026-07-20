@@ -21,6 +21,7 @@ class GradeEditedByTeacherNotification extends Notification
         public User $teacher,
         public string $oldGrade,
         public string $newGrade,
+        public float $maxGrade = 20.0,
     ) {}
 
     /** @return list<string> */
@@ -40,8 +41,14 @@ class GradeEditedByTeacherNotification extends Notification
             'teacher_name' => $this->teacher->name,
             'old_grade' => $this->oldGrade,
             'new_grade' => $this->newGrade,
+            'max_grade' => $this->maxGrade,
             'semester' => $this->grade->semester,
-            'message' => "{$this->teacher->name} a corrigé la note de {$this->grade->user?->name} en {$this->grade->subject?->name} ({$this->oldGrade}/20 → {$this->newGrade}/20).",
+            'message' => "{$this->teacher->name} a corrigé la note de {$this->grade->user?->name} en {$this->grade->subject?->name} ({$this->oldGrade}/{$this->formattedMaxGrade()} → {$this->newGrade}/{$this->formattedMaxGrade()}).",
         ];
+    }
+
+    private function formattedMaxGrade(): string
+    {
+        return rtrim(rtrim(number_format($this->maxGrade, 2), '0'), '.');
     }
 }

@@ -15,7 +15,14 @@
     .stat-card:hover {
         transform: translateY(-5px);
     }
-    
+
+    .stat-card-link {
+        display: block;
+        text-decoration: none !important;
+        color: inherit !important;
+        cursor: pointer;
+    }
+
     .stat-label {
         color: #6c757d;
         font-size: 0.875rem;
@@ -99,7 +106,7 @@
 <!-- Cartes de statistiques -->
 <div class="mb-4 row g-4">
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
+        <a href="{{ route('student.schedule') }}" class="card stat-card stat-card-link">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -116,11 +123,11 @@
                     </div>
                 @endif
             </div>
-        </div>
+        </a>
     </div>
-    
+
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
+        <a href="{{ route('student.grades') }}" class="card stat-card stat-card-link">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -138,11 +145,11 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
-    
+
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
+        <a href="{{ route('student.attendance') }}" class="card stat-card stat-card-link">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -160,7 +167,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -236,9 +243,14 @@
                                         <td>{{ $grade->subject->name ?? 'N/A' }}</td>
                                         <td>
                                             @if($grade->grade !== null)
-                                                @php $note = (float) $grade->grade; @endphp
-                                                <span class="grade-badge {{ $note >= 16 ? 'grade-excellent' : ($note >= 12 ? 'grade-good' : ($note >= 10 ? 'grade-average' : 'grade-poor')) }}">
-                                                    {{ number_format($note, 2) }}/20
+                                                @php
+                                                    $note = (float) $grade->grade;
+                                                    $noteMax = $grade->max_grade_display ?? 20;
+                                                    $noteRatio = $noteMax > 0 ? $note / $noteMax : 0;
+                                                    $noteClass = $noteRatio >= 0.8 ? 'grade-excellent' : ($noteRatio >= 0.6 ? 'grade-good' : ($noteRatio >= 0.5 ? 'grade-average' : 'grade-poor'));
+                                                @endphp
+                                                <span class="grade-badge {{ $noteClass }}">
+                                                    {{ number_format($note, 2) }}/{{ rtrim(rtrim(number_format($noteMax, 2), '0'), '.') }}
                                                 </span>
                                             @else
                                                 <span class="text-muted">—</span>

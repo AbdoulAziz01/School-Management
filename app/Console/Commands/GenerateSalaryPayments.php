@@ -18,7 +18,7 @@ class GenerateSalaryPayments extends Command
     protected $signature = 'accounting:generate-salary-payments {--school= : Limiter à un établissement (ID)} {--period= : Mois cible (YYYY-MM), par défaut le mois courant}';
 
     protected $description = 'Génère les paiements de salaire du personnel pour une période donnée';
-
+     
     public function handle(SalaryPaymentService $salaries): int
     {
         $period = $this->option('period')

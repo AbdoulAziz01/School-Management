@@ -34,15 +34,15 @@
                     
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
-                            <label for="grade" class="form-label">Note /20 <span class="text-danger">*</span></label>
-                            <input type="number" 
-                                   name="grade" 
-                                   id="grade" 
-                                   class="form-control form-control-lg @error('grade') is-invalid @enderror" 
+                            <label for="grade" class="form-label">Note /{{ $maxGrade ?? 20 }} <span class="text-danger">*</span></label>
+                            <input type="number"
+                                   name="grade"
+                                   id="grade"
+                                   class="form-control form-control-lg @error('grade') is-invalid @enderror"
                                    value="{{ old('grade', $grade->grade) }}"
-                                   min="0" 
-                                   max="20" 
-                                   step="0.25" 
+                                   min="0"
+                                   max="{{ $maxGrade ?? 20 }}"
+                                   step="0.25"
                                    required>
                             @error('grade')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -52,7 +52,7 @@
                         <div class="col-md-4">
                             <label class="form-label">Évaluation</label>
                             <input type="text" class="form-control bg-light" readonly
-                                   value="{{ \App\Support\SenegalGradeSequence::LABELS[$grade->type] ?? $grade->type }} — Semestre {{ $grade->semester }}">
+                                   value="{{ \App\Support\Grading\GradeSequence::labels()[$grade->type] ?? $grade->type }} — Semestre {{ $grade->semester }}">
                         </div>
                         
                         <div class="col-md-4">

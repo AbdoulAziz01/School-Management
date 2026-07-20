@@ -1,7 +1,11 @@
 @php
-    $credentials = session('staff_credentials') ?? session('new_admin_login');
+    $credentialsList = session('staff_credentials_list');
+    if (! $credentialsList) {
+        $single = session('staff_credentials') ?? session('new_admin_login');
+        $credentialsList = $single ? [$single] : [];
+    }
 @endphp
-@if($credentials)
+@foreach($credentialsList as $credentials)
     @php
         $title = $credentials['title'] ?? 'Identifiants de connexion';
         $password = $credentials['password'] ?? $credentials['otp_code'] ?? null;
@@ -63,4 +67,4 @@
             <p class="mb-0 small text-muted"><i class="fas fa-info-circle me-1"></i> Transmettez le mot de passe manuellement si aucun email n’a été envoyé.</p>
         @endif
     </div>
-@endif
+@endforeach

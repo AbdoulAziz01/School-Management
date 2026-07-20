@@ -26,6 +26,7 @@ class GradeEditedByTeacherMail extends Mailable implements ShouldQueue
         public User $teacher,
         public string $oldGrade,
         public string $newGrade,
+        public float $maxGrade = 20.0,
     ) {}
 
     public function envelope(): Envelope

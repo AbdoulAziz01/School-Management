@@ -69,6 +69,9 @@
 @endpush
 
 @section('content')
+<a href="{{ route('admin.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+</a>
 <div class="mb-4">
     <h1 class="mb-0 h3">Inscriptions en attente d'approbation</h1>
 </div>

@@ -4,21 +4,26 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
+use App\Models\Attendance;
 use App\Models\Grade;
 use App\Models\SchoolClass;
 use App\Models\User;
 use App\Support\DashboardAcademicYearContext;
 use App\Support\StudentClassContext;
+use App\Support\Reports\BulletinSheetFormatter;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Services\StudentClassPromotionService;
 use App\Services\SchoolBot\BulletinComputation;
 
 class StudentBulletinController extends Controller
 {
     public function __construct(
-        private BulletinComputation $bulletinComputation
+        private BulletinComputation $bulletinComputation,
+        private BulletinSheetFormatter $sheetFormatter
     ) {}
 
     /**
@@ -47,12 +52,25 @@ class StudentBulletinController extends Controller
         $level = $class?->level;
         $serie = $level?->serie;
 
+        // Le primaire n'a pas de notion de semestre (3 compositions
+        // annuelles, ou 2 + examen final pour la CM2) : seul le bulletin
+        // annuel est pertinent pour ce cycle.
+        if ($level?->isPrimaireCycle()) {
+            return redirect()->route('student.bulletin.annual');
+        }
+
         // Récupérer les notes du semestre
         $grades = Grade::where('user_id', $user->id)
             ->where('semester', $semester)
             ->where('academic_year_id', $academicYear->id)
             ->with('subject')
             ->get();
+
+        // Nombre d'absences sur le semestre (Attendance n'a pas de colonne
+        // semestre : on découpe la période de l'année scolaire au même
+        // pivot que BulletinComputation::getCurrentSemester(), fin
+        // janvier / début février).
+        $absenceCount = $this->countAbsences($user, $this->semesterDateRange($academicYear, $semester));
 
         // Grouper les notes par matière et calculer les moyennes
         $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school);
@@ -80,8 +98,10 @@ class StudentBulletinController extends Controller
 
         $schoolName = config('app.school_name', 'Établissement scolaire');
 
-        // URL signée pour la vérification via QR code (validité 1 an)
+        // URL signée pour la vérification via QR code (validité 1 an) —
+        // format SVG (pas de dépendance Imagick, contrairement au PNG).
         $verifyUrl = null;
+        $qrCodeUri = null;
         if ($class) {
             $verifyUrl = URL::signedRoute('bulletin.verify', [
                 'student_id'      => $user->id,
@@ -89,9 +109,32 @@ class StudentBulletinController extends Controller
                 'academic_year_id' => $academicYear->id,
                 'semester'        => $semester,
             ]);
+            $qrCodeUri = 'data:image/svg+xml;base64,'.base64_encode(
+                QrCode::format('svg')->size(120)->errorCorrection('H')->generate($verifyUrl)
+            );
         }
 
+        $sheet = $this->sheetFormatter->format(
+            school: $user->school,
+            academicYearName: $academicYear->name,
+            periodLabel: 'Semestre '.$semester,
+            niveau: $level?->name ?? '-',
+            classe: $studentInfo['class'],
+            student: [
+                'name' => $studentInfo['name'],
+                'dob' => $studentInfo['date_of_birth'],
+                'matricule' => $studentInfo['identifier'],
+            ],
+            effectif: $rankData['total'],
+            rank: $rankData,
+            bulletinData: $bulletinData,
+            generalAverage: $generalAverage,
+            maxGrade: 20.0,
+            qrCodeUri: $qrCodeUri,
+        );
+
         return view('student.bulletin-senegal', compact(
+            'sheet',
             'bulletinData',
             'generalAverage',
             'studentInfo',
@@ -100,7 +143,8 @@ class StudentBulletinController extends Controller
             'semester',
             'academicYear',
             'schoolName',
-            'verifyUrl'
+            'verifyUrl',
+            'absenceCount'
         ));
     }
 
@@ -229,19 +273,48 @@ class StudentBulletinController extends Controller
         $class = $user->schoolClass;
         $level = $class ? $class->level : null;
         $serie = $level ? $level->serie : null;
+        $isPrimaire = $level?->isPrimaireCycle() ?? false;
 
-        // Calculer les données pour les deux semestres
-        $semestre1Data = $this->getSemesterData($user, 1, $academicYear, $level);
-        $semestre2Data = $this->getSemesterData($user, 2, $academicYear, $level);
+        if ($isPrimaire) {
+            // Primaire : pas de semestres — une seule moyenne annuelle
+            // calculée directement à partir des compositions (voir
+            // App\Support\Grading). On garde la forme semestre1Data/
+            // semestre2Data pour ne pas dupliquer la vue, semestre2Data
+            // restant vide et masqué côté template.
+            $grades = Grade::where('user_id', $user->id)
+                ->where('academic_year_id', $academicYear->id)
+                ->with('subject')
+                ->get();
 
-        // Calculer la moyenne annuelle
-        $moyenneAnnuelle = 0;
-        if ($semestre1Data['moyenne'] > 0 && $semestre2Data['moyenne'] > 0) {
-            $moyenneAnnuelle = round(($semestre1Data['moyenne'] + $semestre2Data['moyenne']) / 2, 2);
+            $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school);
+            $moyenneAnnuelle = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
+
+            $semestre1Data = ['data' => $bulletinData, 'moyenne' => $moyenneAnnuelle];
+            $semestre2Data = ['data' => [], 'moyenne' => 0];
+        } else {
+            // Calculer les données pour les deux semestres
+            $semestre1Data = $this->getSemesterData($user, 1, $academicYear, $level);
+            $semestre2Data = $this->getSemesterData($user, 2, $academicYear, $level);
+
+            // Calculer la moyenne annuelle
+            $moyenneAnnuelle = 0;
+            if ($semestre1Data['moyenne'] > 0 && $semestre2Data['moyenne'] > 0) {
+                $moyenneAnnuelle = round(($semestre1Data['moyenne'] + $semestre2Data['moyenne']) / 2, 2);
+            }
         }
 
+        // Nombre d'absences sur l'année scolaire entière.
+        $absenceCount = $this->countAbsences($user, [
+            $academicYear->start_date ? Carbon::parse($academicYear->start_date) : null,
+            $academicYear->end_date ? Carbon::parse($academicYear->end_date) : null,
+        ]);
+
+        // Barème de la moyenne générale : 10 en primaire (jamais /20 pour
+        // ce cycle), 20 en secondaire (inchangé).
+        $overallMaxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($level);
+
         // Décision du conseil de classe
-        $decision = $this->getDecision($moyenneAnnuelle);
+        $decision = $this->getDecision($moyenneAnnuelle, $overallMaxGrade);
 
         $promotionResult = app(StudentClassPromotionService::class)->tryPromote($user, $academicYear);
         if (($promotionResult['promoted'] ?? false) && ($promotionResult['status'] ?? '') === 'promoted') {
@@ -262,13 +335,93 @@ class StudentBulletinController extends Controller
             'level' => $level ? $level->name : '-',
         ];
 
+        $studentForSheet = [
+            'name' => $studentInfo['name'],
+            'dob' => $studentInfo['date_of_birth'],
+            'matricule' => $studentInfo['identifier'],
+        ];
+
+        // Le "look" pixel-perfect du bulletin (voir BulletinSheetFormatter)
+        // n'a qu'un seul tableau de notes par feuille. Le primaire (pas de
+        // semestres) tient sur une seule feuille ; le secondaire (S1 + S2)
+        // produit deux feuilles imprimées à la suite, chacune avec son
+        // propre classement — il n'existe pas de "classement annuel"
+        // combiné dans l'app aujourd'hui.
+        $sheets = [];
+        if ($isPrimaire) {
+            $rank = $class ? $this->calculateRank($user, $class, 1, $academicYear) : ['rank' => null, 'total' => 0];
+            $qrCodeUri = null;
+            if ($class) {
+                // Pas de "semester" dans l'URL : BulletinVerifyController
+                // l'interprète comme un bulletin annuel primaire.
+                $verifyUrl = URL::signedRoute('bulletin.verify', [
+                    'student_id'       => $user->id,
+                    'class_id'         => $class->id,
+                    'academic_year_id' => $academicYear->id,
+                ]);
+                $qrCodeUri = 'data:image/svg+xml;base64,'.base64_encode(
+                    QrCode::format('svg')->size(120)->errorCorrection('H')->generate($verifyUrl)
+                );
+            }
+
+            $sheets[] = $this->sheetFormatter->format(
+                school: $user->school,
+                academicYearName: $academicYear->name,
+                periodLabel: 'Année scolaire complète',
+                niveau: $studentInfo['level'],
+                classe: $studentInfo['class'],
+                student: $studentForSheet,
+                effectif: $rank['total'],
+                rank: $rank,
+                bulletinData: $semestre1Data['data'],
+                generalAverage: $moyenneAnnuelle,
+                maxGrade: $overallMaxGrade,
+                qrCodeUri: $qrCodeUri,
+            );
+        } else {
+            foreach ([1 => $semestre1Data, 2 => $semestre2Data] as $semesterNumber => $semesterData) {
+                $rank = $class ? $this->calculateRank($user, $class, $semesterNumber, $academicYear) : ['rank' => null, 'total' => 0];
+                $qrCodeUri = null;
+                if ($class) {
+                    $verifyUrl = URL::signedRoute('bulletin.verify', [
+                        'student_id'       => $user->id,
+                        'class_id'         => $class->id,
+                        'academic_year_id' => $academicYear->id,
+                        'semester'         => $semesterNumber,
+                    ]);
+                    $qrCodeUri = 'data:image/svg+xml;base64,'.base64_encode(
+                        QrCode::format('svg')->size(120)->errorCorrection('H')->generate($verifyUrl)
+                    );
+                }
+
+                $sheets[] = $this->sheetFormatter->format(
+                    school: $user->school,
+                    academicYearName: $academicYear->name,
+                    periodLabel: 'Semestre '.$semesterNumber,
+                    niveau: $studentInfo['level'],
+                    classe: $studentInfo['class'],
+                    student: $studentForSheet,
+                    effectif: $rank['total'],
+                    rank: $rank,
+                    bulletinData: $semesterData['data'],
+                    generalAverage: (float) $semesterData['moyenne'],
+                    maxGrade: $overallMaxGrade,
+                    qrCodeUri: $qrCodeUri,
+                );
+            }
+        }
+
         return view('student.bulletin-annuel', compact(
+            'sheets',
             'semestre1Data',
             'semestre2Data',
             'moyenneAnnuelle',
             'decision',
             'studentInfo',
-            'academicYear'
+            'academicYear',
+            'isPrimaire',
+            'absenceCount',
+            'overallMaxGrade'
         ));
     }
 
@@ -293,21 +446,65 @@ class StudentBulletinController extends Controller
     }
 
     /**
+     * Nombre d'absences d'un élève sur une période donnée (bornes
+     * incluses). Sans bornes (année scolaire sans dates renseignées),
+     * compte toutes les absences enregistrées pour l'élève.
+     *
+     * @param  array{0: ?Carbon, 1: ?Carbon}  $range
+     */
+    private function countAbsences(User $user, array $range): int
+    {
+        [$start, $end] = $range;
+
+        return Attendance::where('user_id', $user->id)
+            ->where('status', 'absent')
+            ->when($start && $end, fn ($q) => $q->whereBetween('date', [$start->toDateString(), $end->toDateString()]))
+            ->count();
+    }
+
+    /**
+     * Découpe la période de l'année scolaire en deux semestres, au même
+     * pivot que BulletinComputation::getCurrentSemester() (fin janvier /
+     * début février) — Attendance n'a pas de colonne semestre.
+     *
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function semesterDateRange(AcademicYear $academicYear, int $semester): array
+    {
+        if (! $academicYear->start_date || ! $academicYear->end_date) {
+            return [null, null];
+        }
+
+        $start = Carbon::parse($academicYear->start_date);
+        $end = Carbon::parse($academicYear->end_date);
+
+        $pivot = Carbon::create($start->year, 2, 1);
+        if ($pivot->lt($start)) {
+            $pivot->addYear();
+        }
+
+        return $semester === 1
+            ? [$start, $pivot->copy()->subDay()]
+            : [$pivot, $end];
+    }
+
+    /**
      * Obtenir la décision du conseil de classe (texte + mention délégués à
      * BulletinComputation, la couleur d'affichage reste propre à cette vue).
      */
-    private function getDecision($moyenneAnnuelle)
+    private function getDecision($moyenneAnnuelle, float $maxGrade = 20.0)
     {
+        $ratio = $maxGrade > 0 ? $moyenneAnnuelle / $maxGrade : 0;
         $color = match (true) {
-            $moyenneAnnuelle >= 10 => 'success',
-            $moyenneAnnuelle >= 8 => 'warning',
+            $ratio >= 10 / 20 => 'success',
+            $ratio >= 8 / 20 => 'warning',
             default => 'danger',
         };
 
         return [
-            'text' => $this->bulletinComputation->getDecisionText($moyenneAnnuelle),
+            'text' => $this->bulletinComputation->getDecisionText($moyenneAnnuelle, $maxGrade),
             'color' => $color,
-            'mention' => $moyenneAnnuelle >= 12 ? $this->bulletinComputation->getMention($moyenneAnnuelle) : null,
+            'mention' => $ratio >= 12 / 20 ? $this->bulletinComputation->getMention($moyenneAnnuelle, $maxGrade) : null,
         ];
     }
 }

@@ -1,13 +1,19 @@
 @php
     $selectedSubjectIds = array_map('intval', $selectedSubjectIds ?? []);
     $selectedClassIds = array_map('intval', $selectedClassIds ?? []);
+    $isPrimaire = $isPrimaire ?? false;
 @endphp
-
 <div class="mb-4">
     <h5 class="mb-3">
         Matières enseignées
-        @if($requireTeaching ?? false)<span class="text-danger">*</span>@endif
+        @if(! $isPrimaire && ($requireTeaching ?? false))<span class="text-danger">*</span>@endif
     </h5>
+    @if($isPrimaire)
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-1"></i>
+            Au primaire, le maître titulaire enseigne l'ensemble du programme — toutes les matières sont assignées automatiquement, aucune sélection n'est nécessaire.
+        </div>
+    @endif
     @if($subjects->isEmpty())
         <div class="alert alert-warning mb-0">
             Aucune matière disponible. <a href="{{ route('admin.subjects.create') }}">Créer une matière</a> d'abord.
@@ -20,7 +26,8 @@
                         <input class="form-check-input" type="checkbox"
                                name="subjects[]" value="{{ $subject->id }}"
                                id="subject_{{ $subject->id }}"
-                               {{ in_array($subject->id, $selectedSubjectIds) ? 'checked' : '' }}>
+                               {{ $isPrimaire || in_array($subject->id, $selectedSubjectIds) ? 'checked' : '' }}
+                               {{ $isPrimaire ? 'disabled' : '' }}>
                         <label class="form-check-label" for="subject_{{ $subject->id }}">
                             {{ $subject->name }}
                             @if($subject->code)

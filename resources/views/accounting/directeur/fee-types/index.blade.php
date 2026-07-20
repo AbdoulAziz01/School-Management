@@ -28,6 +28,7 @@
                             <th>Nom</th>
                             <th>Catégorie</th>
                             <th>Récurrent</th>
+                            <th>Montant</th>
                             <th style="min-width: 180px;">Actions</th>
                         </tr>
                     </thead>
@@ -38,6 +39,13 @@
                                 <td>{{ $feeType->name }}</td>
                                 <td><span class="badge bg-info">{{ $categories[$feeType->category] ?? $feeType->category }}</span></td>
                                 <td>{{ $feeType->is_recurring ? 'Oui (mensuel)' : 'Non' }}</td>
+                                <td>
+                                    @if($defaultAmounts[$feeType->id] ?? null)
+                                        <strong>{{ number_format($defaultAmounts[$feeType->id], 0, ',', ' ') }} FCFA</strong>
+                                    @else
+                                        <span class="text-danger small"><i class="fas fa-exclamation-triangle me-1"></i>Non défini</span>
+                                    @endif
+                                </td>
                                 <td>
                                     <a href="{{ route('directeur.fee-types.amounts', $feeType) }}" class="btn btn-sm btn-primary" title="Montants par niveau">
                                         <i class="fas fa-coins"></i> Montants

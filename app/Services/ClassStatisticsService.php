@@ -6,7 +6,9 @@ use App\Models\AcademicYear;
 use App\Models\Grade;
 use App\Models\SchoolClass;
 use App\Models\User;
+use App\Services\SchoolBot\BulletinComputation;
 use App\Support\ClassHistoricalContext;
+use App\Support\Grading\GradeSequence;
 use Carbon\Carbon;
 
 /**
@@ -17,23 +19,33 @@ use Carbon\Carbon;
  */
 class ClassStatisticsService
 {
+    public function __construct(
+        private BulletinComputation $bulletinComputation
+    ) {}
+
     /**
      * @param  array<int, int>  $studentIds
      * @return array<string, mixed>
      */
     public function calculate(SchoolClass $class, array $studentIds, ?AcademicYear $academicYear): array
     {
+        $class->loadMissing('level');
+        // Barème de référence des moyennes de cette classe : 10 en
+        // primaire (jamais /20 pour ce cycle), 20 en secondaire
+        // (inchangé) — voir BulletinComputation::referenceMaxGradeForLevel().
+        $maxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($class->level);
+
         $classAverage = 0;
         $totalGrades = 0;
-        $passCount = 0; // >= 10/20
-        $failCount = 0; // < 10/20
+        $passCount = 0; // >= 50 % du barème
+        $failCount = 0; // < 50 % du barème
         $studentAverages = [];
         $gradeDistribution = [
-            'excellent' => 0, // >= 16
-            'good' => 0,      // >= 14
-            'average' => 0,   // >= 12
-            'passing' => 0,   // >= 10
-            'failing' => 0,   // < 10
+            'excellent' => 0, // >= 80 % du barème
+            'good' => 0,      // >= 70 % du barème
+            'average' => 0,   // >= 60 % du barème
+            'passing' => 0,   // >= 50 % du barème
+            'failing' => 0,   // < 50 % du barème
         ];
         $monthlyAverages = [];
 
@@ -50,24 +62,26 @@ class ClassStatisticsService
 
             foreach ($studentIds as $studentId) {
                 $studentGrades = $allGrades->where('user_id', $studentId);
-                $studentAvg = $this->calculateWeightedAverage($studentGrades);
+                $studentAvg = $this->calculateWeightedAverage($studentGrades, $class, $maxGrade);
 
                 if ($studentAvg !== null) {
                     $studentAverages[$studentId] = $studentAvg;
 
-                    if ($studentAvg >= 16) {
+                    $ratio = $maxGrade > 0 ? $studentAvg / $maxGrade : 0;
+
+                    if ($ratio >= 0.8) {
                         $gradeDistribution['excellent']++;
-                    } elseif ($studentAvg >= 14) {
+                    } elseif ($ratio >= 0.7) {
                         $gradeDistribution['good']++;
-                    } elseif ($studentAvg >= 12) {
+                    } elseif ($ratio >= 0.6) {
                         $gradeDistribution['average']++;
-                    } elseif ($studentAvg >= 10) {
+                    } elseif ($ratio >= 0.5) {
                         $gradeDistribution['passing']++;
                     } else {
                         $gradeDistribution['failing']++;
                     }
 
-                    if ($studentAvg >= 10) {
+                    if ($ratio >= 0.5) {
                         $passCount++;
                     } else {
                         $failCount++;
@@ -79,7 +93,7 @@ class ClassStatisticsService
                 $classAverage = array_sum($studentAverages) / count($studentAverages);
             }
 
-            $monthlyAverages = $this->buildMonthlyPeriodAverages($studentIds, $allGrades, $academicYear);
+            $monthlyAverages = $this->buildMonthlyPeriodAverages($studentIds, $allGrades, $academicYear, $class, $maxGrade);
 
             $hasChartData = collect($monthlyAverages)->contains(fn ($row) => $row['average'] !== null);
 
@@ -90,7 +104,7 @@ class ClassStatisticsService
                     $gradeEnd = now()->copy()->endOfMonth();
                 }
 
-                $monthlyAverages = $this->buildMonthlyPeriodAverages($studentIds, $allGrades, $academicYear, $gradeStart, $gradeEnd);
+                $monthlyAverages = $this->buildMonthlyPeriodAverages($studentIds, $allGrades, $academicYear, $class, $maxGrade, $gradeStart, $gradeEnd);
             }
 
             $totalGrades = $allGrades->count();
@@ -107,9 +121,10 @@ class ClassStatisticsService
         $bestAverage = $studentsWithGrades > 0 ? max($studentAverages) : 0;
         $lowestAverage = $studentsWithGrades > 0 ? min($studentAverages) : 0;
 
-        $studentInsights = $this->buildClassStudentInsights($studentAverages);
+        $studentInsights = $this->buildClassStudentInsights($studentAverages, $maxGrade);
 
         return [
+            'max_grade' => $maxGrade,
             'average' => round($classAverage, 2),
             'best_average' => round($bestAverage, 2),
             'lowest_average' => round($lowestAverage, 2),
@@ -131,7 +146,14 @@ class ClassStatisticsService
         ];
     }
 
-    private function calculateWeightedAverage($grades): ?float
+    /**
+     * Moyenne pondérée, toujours normalisée sur le barème de référence de
+     * la classe ($referenceMaxGrade — 10 en primaire, 20 en secondaire) :
+     * chaque matière est ramenée à son propre barème avant d'être
+     * pondérée par son coefficient, pour que les seuils de
+     * distribution/classement restent valides quel que soit le cycle.
+     */
+    private function calculateWeightedAverage($grades, SchoolClass $class, float $referenceMaxGrade): ?float
     {
         if ($grades->isEmpty()) {
             return null;
@@ -140,14 +162,20 @@ class ClassStatisticsService
         $weightedSum = 0;
         $totalCoef = 0;
 
-        foreach ($grades->groupBy('subject_id') as $subjectGrades) {
+        foreach ($grades->groupBy('subject_id') as $subjectId => $subjectGrades) {
             $subjectAvg = $subjectGrades->avg('grade');
             if ($subjectAvg === null) {
                 continue;
             }
 
+            $maxGrade = GradeSequence::maxGradeFor($class, (int) $subjectId);
+            if ($maxGrade <= 0) {
+                continue;
+            }
+
+            $normalizedAvg = ($subjectAvg / $maxGrade) * $referenceMaxGrade;
             $coefficient = $subjectGrades->first()->subject->coefficient ?? 1;
-            $weightedSum += $subjectAvg * $coefficient;
+            $weightedSum += $normalizedAvg * $coefficient;
             $totalCoef += $coefficient;
         }
 
@@ -196,6 +224,8 @@ class ClassStatisticsService
         array $studentIds,
         $allGrades,
         ?AcademicYear $academicYear,
+        SchoolClass $class,
+        float $referenceMaxGrade,
         ?Carbon $periodStartOverride = null,
         ?Carbon $periodEndOverride = null
     ): array {
@@ -224,7 +254,7 @@ class ClassStatisticsService
             });
 
             $monthlyStudentAverages = collect($studentIds)
-                ->map(fn ($studentId) => $this->calculateWeightedAverage($monthGrades->where('user_id', $studentId)))
+                ->map(fn ($studentId) => $this->calculateWeightedAverage($monthGrades->where('user_id', $studentId), $class, $referenceMaxGrade))
                 ->filter(fn ($average) => $average !== null);
 
             $monthAverage = $monthlyStudentAverages->count() > 0 ? $monthlyStudentAverages->avg() : null;
@@ -245,7 +275,7 @@ class ClassStatisticsService
      * @param  array<int, float>  $studentAverages
      * @return array<string, mixed>
      */
-    private function buildClassStudentInsights(array $studentAverages): array
+    private function buildClassStudentInsights(array $studentAverages, float $maxGrade): array
     {
         if ($studentAverages === []) {
             return [
@@ -298,19 +328,21 @@ class ClassStatisticsService
 
             $ranking[] = $entry;
 
-            if ($rounded >= 10) {
+            $ratio = $maxGrade > 0 ? $rounded / $maxGrade : 0;
+
+            if ($ratio >= 0.5) {
                 $passing[] = $entry;
             } else {
                 $failing[] = $entry;
             }
 
-            if ($rounded >= 16) {
+            if ($ratio >= 0.8) {
                 $buckets['excellent'][] = $entry;
-            } elseif ($rounded >= 14) {
+            } elseif ($ratio >= 0.7) {
                 $buckets['good'][] = $entry;
-            } elseif ($rounded >= 12) {
+            } elseif ($ratio >= 0.6) {
                 $buckets['average'][] = $entry;
-            } elseif ($rounded >= 10) {
+            } elseif ($ratio >= 0.5) {
                 $buckets['passing'][] = $entry;
             } else {
                 $buckets['failing'][] = $entry;

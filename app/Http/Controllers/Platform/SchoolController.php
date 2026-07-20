@@ -50,9 +50,9 @@ class SchoolController extends Controller
         if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhere('city', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('code', 'ilike', "%{$search}%")
+                    ->orWhere('city', 'ilike', "%{$search}%");
             });
         }
 
@@ -79,16 +79,21 @@ class SchoolController extends Controller
             array_merge(
                 SchoolProfile::fullRules(),
                 [
-                    'is_active'     => ['sometimes', 'boolean'],
-                    'admin_name'    => ['required', 'string', 'max:255'],
-                    'admin_email'   => ['required', 'email', 'max:255', 'unique:users,email'],
+                    'is_active'      => ['sometimes', 'boolean'],
+                    'admin_name'     => ['required', 'string', 'max:255'],
+                    'admin_email'    => ['required', 'email', 'max:255', 'unique:users,email'],
+                    'director_name'  => ['nullable', 'string', 'max:255', 'required_with:director_email'],
+                    'director_email' => ['nullable', 'email', 'max:255', 'different:admin_email', 'unique:users,email', 'required_with:director_name'],
                 ]
             ),
             [
                 'admin_email.unique' => 'Cette adresse email est déjà utilisée par un autre compte (admin, enseignant, élève…). Choisissez une adresse différente pour l\'administrateur de l\'établissement.',
+                'director_email.unique' => 'Cette adresse email est déjà utilisée par un autre compte. Choisissez une adresse différente pour le directeur.',
+                'director_email.different' => 'Le directeur doit avoir une adresse email différente de celle de l\'administrateur.',
             ],
             [
                 'admin_email' => 'email admin',
+                'director_email' => 'email directeur',
             ]
         );
 
@@ -118,27 +123,38 @@ class SchoolController extends Controller
 
         SchoolSubjectProvisioner::ensureForSchool($school->id);
 
-        $otpResult = StaffOtpMailer::send($admin, StaffOtpMailer::accountLabelFor($admin));
+        $credentialsList = [];
+        $errors = [];
+
+        $credentialsList[] = $this->createStaffAndGetCredentials(
+            $school,
+            $admin,
+            'Compte administrateur de l\'établissement',
+            $errors
+        );
+
+        if (! empty($validated['director_name']) && ! empty($validated['director_email'])) {
+            $director = $this->createSchoolStaff(
+                $school,
+                ['admin_name' => $validated['director_name'], 'admin_email' => $validated['director_email']],
+                User::ROLE_DIRECTEUR
+            );
+
+            $credentialsList[] = $this->createStaffAndGetCredentials(
+                $school,
+                $director,
+                'Compte directeur de l\'établissement',
+                $errors
+            );
+        }
 
         $redirect = redirect()
             ->route('platform.schools.show', $school)
-            ->with('success', "École « {$school->name} » créée.");
+            ->with('success', "École « {$school->name} » créée.")
+            ->with('staff_credentials_list', array_values(array_filter($credentialsList)));
 
-        if (! ($otpResult['ok'] ?? false)) {
-            $fallback = StaffOtpMailer::assignCodeWithoutMail($admin);
-            $otpResult = $fallback['ok'] ? $fallback : $otpResult;
-        }
-
-        if ($otpResult['ok'] ?? false) {
-            $redirect->with('staff_credentials', $this->staffCredentialsPayload(
-                $admin,
-                $otpResult['code'] ?? '',
-                $school,
-                'Compte administrateur de l\'établissement',
-                $otpResult
-            ));
-        } else {
-            $redirect->with('error', $otpResult['message'] ?? 'Impossible de générer les identifiants de connexion.');
+        if (! empty($errors)) {
+            $redirect->with('error', implode(' ', $errors));
         }
 
         return $redirect;
@@ -172,9 +188,14 @@ class SchoolController extends Controller
             $healthAlerts[] = ['type' => 'secondary', 'message' => 'Établissement désactivé — les utilisateurs ne peuvent plus s\'y connecter.'];
         }
 
+        $staffRoles = User::ROLE_SCHOOL_STAFF;
+        if ($school->isPrivateEstablishment()) {
+            $staffRoles = array_merge($staffRoles, User::ROLE_ACCOUNTING_STAFF);
+        }
+
         $staffMembers = User::withoutGlobalScopes()
             ->where('school_id', $school->id)
-            ->whereIn('role', User::ROLE_SCHOOL_STAFF)
+            ->whereIn('role', $staffRoles)
             ->orderBy('role')
             ->orderBy('name')
             ->get();
@@ -269,6 +290,16 @@ class SchoolController extends Controller
 
         if (! $school->isFormation()) {
             SchoolLevelProvisioner::syncLevelsForSchool($school->fresh());
+
+            // Si le type d'établissement évolue (ex. Primaire → Mixte), les
+            // nouveaux cycles viennent d'obtenir leurs niveaux ci-dessus,
+            // mais pas encore leurs matières ni leurs coefficients
+            // level_subject — sans cet appel, un admin qui passe en Mixte
+            // se retrouve avec des niveaux 6ème→Terminale vides, aucune
+            // saisie de notes possible. Idempotent (firstOrCreate) : ne
+            // touche jamais aux matières/niveaux déjà provisionnés (le
+            // primaire existant reste intact).
+            SchoolSubjectProvisioner::ensureForSchool($school->id);
         }
 
         if ($request->boolean('remove_logo')) {
@@ -322,10 +353,15 @@ class SchoolController extends Controller
 
     public function storeAdmin(Request $request, School $school): RedirectResponse
     {
+        $allowedRoles = [User::ROLE_ADMIN, User::ROLE_SURVEILLANT];
+        if ($school->isPrivateEstablishment()) {
+            array_push($allowedRoles, User::ROLE_DIRECTEUR, User::ROLE_COMPTABLE, User::ROLE_CAISSIER);
+        }
+
         $validated = $request->validate([
             'admin_name' => ['required', 'string', 'max:255'],
             'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'staff_role' => ['required', 'in:'.User::ROLE_ADMIN.','.User::ROLE_SURVEILLANT],
+            'staff_role' => ['required', Rule::in($allowedRoles)],
         ], [
             'admin_email.unique' => 'Cette adresse email est déjà utilisée par un autre compte. Choisissez une adresse différente.',
         ], [
@@ -334,7 +370,13 @@ class SchoolController extends Controller
 
         $staff = $this->createSchoolStaff($school, $validated, $validated['staff_role']);
 
-        $label = $staff->role === User::ROLE_SURVEILLANT ? 'Surveillant' : 'Administrateur';
+        $label = match ($staff->role) {
+            User::ROLE_SURVEILLANT => 'Surveillant',
+            User::ROLE_DIRECTEUR => 'Directeur',
+            User::ROLE_COMPTABLE => 'Comptable',
+            User::ROLE_CAISSIER => 'Caissier',
+            default => 'Administrateur',
+        };
         $otpResult = StaffOtpMailer::send($staff, StaffOtpMailer::accountLabelFor($staff));
 
         if (! ($otpResult['ok'] ?? false)) {
@@ -361,7 +403,10 @@ class SchoolController extends Controller
 
     public function resetAdminPassword(Request $request, School $school, User $user): RedirectResponse
     {
-        if ($user->school_id !== $school->id || ! $user->isSchoolStaff()) {
+        $isManagedStaff = $user->isSchoolStaff()
+            || ($school->isPrivateEstablishment() && in_array($user->role, User::ROLE_ACCOUNTING_STAFF, true));
+
+        if ($user->school_id !== $school->id || ! $isManagedStaff) {
             abort(404);
         }
 
@@ -373,7 +418,13 @@ class SchoolController extends Controller
         }
 
         if ($otpResult['ok'] ?? false) {
-            $roleLabel = $user->role === User::ROLE_SURVEILLANT ? 'surveillant' : 'administrateur';
+            $roleLabel = match ($user->role) {
+                User::ROLE_SURVEILLANT => 'surveillant',
+                User::ROLE_DIRECTEUR => 'directeur',
+                User::ROLE_COMPTABLE => 'comptable',
+                User::ROLE_CAISSIER => 'caissier',
+                default => 'administrateur',
+            };
 
             return back()
                 ->with('success', "Nouveau mot de passe généré pour {$user->name}.")
@@ -402,6 +453,28 @@ class SchoolController extends Controller
             ->with('success', 'Établissement supprimé.');
     }
 
+    /**
+     * @param  list<string>  $errors
+     * @return array<string, mixed>|null
+     */
+    private function createStaffAndGetCredentials(School $school, User $staff, string $title, array &$errors): ?array
+    {
+        $otpResult = StaffOtpMailer::send($staff, StaffOtpMailer::accountLabelFor($staff));
+
+        if (! ($otpResult['ok'] ?? false)) {
+            $fallback = StaffOtpMailer::assignCodeWithoutMail($staff);
+            $otpResult = $fallback['ok'] ? $fallback : $otpResult;
+        }
+
+        if ($otpResult['ok'] ?? false) {
+            return $this->staffCredentialsPayload($staff, $otpResult['code'] ?? '', $school, $title, $otpResult);
+        }
+
+        $errors[] = $otpResult['message'] ?? "Impossible de générer les identifiants pour « {$staff->name} ».";
+
+        return null;
+    }
+
     private function createSchoolStaff(School $school, array $data, string $role): User
     {
         $identifier = $this->nextStaffIdentifier($school->id, $role);
@@ -424,7 +497,13 @@ class SchoolController extends Controller
 
     private function nextStaffIdentifier(int $schoolId, string $role): string
     {
-        $prefix = ($role === User::ROLE_SURVEILLANT ? 'SUR' : 'ADM').$schoolId;
+        $prefix = match ($role) {
+            User::ROLE_SURVEILLANT => 'SUR',
+            User::ROLE_DIRECTEUR => 'DIR',
+            User::ROLE_COMPTABLE => 'CPT',
+            User::ROLE_CAISSIER => 'CAI',
+            default => 'ADM',
+        }.$schoolId;
 
         $last = User::withoutGlobalScopes()
             ->where('school_id', $schoolId)

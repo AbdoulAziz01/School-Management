@@ -34,6 +34,9 @@
                         </label>
                     </div>
 
+                    <x-admin.form-field type="number" name="amount" label="Montant (FCFA)" :value="old('amount')"
+                        help="Montant appliqué à toutes les classes. Laissez vide pour le configurer plus tard, ou pour définir un montant différent par niveau depuis la liste des types de frais." />
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-1"></i> Créer

@@ -133,7 +133,11 @@
                             <tr>
                                 <th style="width: 50px;">#</th>
                                 <th>Élève</th>
-                                <th style="width: 120px;">Note /20</th>
+                                @php
+                                    $maxGradeValue = $maxGrade ?? 20;
+                                    $maxGradeDisplay = fmod($maxGradeValue, 1) == 0 ? (int) $maxGradeValue : $maxGradeValue;
+                                @endphp
+                                <th style="width: 120px;">Note /{{ $maxGradeDisplay }}</th>
                                 <th>Commentaire (optionnel)</th>
                             </tr>
                         </thead>
@@ -156,18 +160,20 @@
                                     <td>
                                         @if($savedGrade)
                                             <div class="d-flex align-items-center gap-2">
-                                                <span class="badge {{ $savedGrade->grade >= 10 ? 'bg-success' : 'bg-danger' }} fs-6">
+                                                <span class="badge fs-6" style="background-color: {{ \App\Support\Grading\GradeSequence::gradeBadgeColor($savedGrade->grade, $maxGrade ?? 20, $isPrimaireContext ?? false) }};">
                                                     {{ number_format($savedGrade->grade, 2) }}
                                                 </span>
                                                 <span class="text-muted small"><i class="fas fa-lock me-1"></i>Enregistrée</span>
                                             </div>
                                         @else
-                                            <input type="number" 
-                                                   name="grades[{{ $index }}][grade]" 
-                                                   class="form-control grade-input" 
-                                                   min="0" 
-                                                   max="20" 
-                                                   step="0.25" 
+                                            <input type="number"
+                                                   name="grades[{{ $index }}][grade]"
+                                                   class="form-control grade-input"
+                                                   min="0"
+                                                   max="{{ $maxGrade ?? 20 }}"
+                                                   data-max-grade="{{ $maxGrade ?? 20 }}"
+                                                   data-primaire="{{ ($isPrimaireContext ?? false) ? '1' : '0' }}"
+                                                   step="0.25"
                                                    placeholder="--">
                                         @endif
                                     </td>
@@ -202,7 +208,9 @@
             <div class="card-body text-center py-5">
                 <i class="fas fa-check-circle fa-4x text-success mb-4"></i>
                 <h4 class="text-muted">Saisie terminée pour cette classe et matière</h4>
-                <p class="text-muted">Les 6 évaluations (3 par semestre) sont enregistrées.</p>
+                <p class="text-muted">
+                    {{ ($isPrimaireContext ?? false) ? 'Toutes les compositions sont enregistrées.' : 'Les 6 évaluations (3 par semestre) sont enregistrées.' }}
+                </p>
             </div>
         </div>
     @elseif($selectedClassId)
@@ -255,15 +263,23 @@
         });
     });
     
-    // Colorer les notes en fonction de leur valeur
+    // Colorer les notes en fonction du pourcentage de réussite (jamais un
+    // seuil absolu type "note >= 10", qui n'a de sens que sur /20) — 4
+    // bandes pour le primaire (barème souvent /10), réussite/échec simple
+    // sinon.
     document.querySelectorAll('.grade-input').forEach(input => {
         input.addEventListener('change', function() {
             this.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-opacity-10');
             const value = parseFloat(this.value);
+            const maxGrade = parseFloat(this.dataset.maxGrade || '20') || 20;
+            const isPrimaire = this.dataset.primaire === '1';
             if (!isNaN(value)) {
-                if (value >= 14) {
+                const ratio = value / maxGrade;
+                if (!isPrimaire) {
+                    this.classList.add(ratio >= 0.5 ? 'bg-success' : 'bg-danger', 'bg-opacity-10');
+                } else if (ratio >= 0.9 || ratio >= 0.7) {
                     this.classList.add('bg-success', 'bg-opacity-10');
-                } else if (value >= 10) {
+                } else if (ratio >= 0.5) {
                     this.classList.add('bg-warning', 'bg-opacity-10');
                 } else {
                     this.classList.add('bg-danger', 'bg-opacity-10');

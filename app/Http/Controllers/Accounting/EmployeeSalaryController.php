@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
+use App\Models\SalaryPayment;
 use App\Models\User;
 use App\Services\EmployeeSalaryProfileService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 /**
@@ -41,8 +43,8 @@ class EmployeeSalaryController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('identifier', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('identifier', 'ilike', "%{$search}%");
             });
         }
 
@@ -58,6 +60,53 @@ class EmployeeSalaryController extends Controller
             'currentSalaries' => $currentSalaries,
             'roleGroup' => $roleGroup,
         ]);
+    }
+
+    /**
+     * Suivi (lecture seule) des paiements de salaire du mois pour tout le
+     * personnel — profs, surveillants, comptables, caissiers, admin. Le
+     * paiement effectif reste réservé au comptable/caissier
+     * (SalaryPaymentController) : séparation des tâches volontaire, le
+     * directeur pilote mais n'exécute pas d'opération quotidienne.
+     */
+    public function checklist(Request $request)
+    {
+        $period = $this->resolveChecklistPeriod($request);
+        $roleGroup = $request->query('role_group');
+
+        $roleGroupFilters = [
+            'teachers' => User::ROLE_TEACHER_ALIASES,
+            'surveillants' => [User::ROLE_SURVEILLANT],
+            'admin' => [User::ROLE_ADMIN],
+            'accounting' => [User::ROLE_COMPTABLE, User::ROLE_CAISSIER],
+        ];
+
+        $query = SalaryPayment::where('period', $period)->with(['user', 'paidBy']);
+
+        if ($roleGroup && isset($roleGroupFilters[$roleGroup])) {
+            $query->whereHas('user', fn ($q) => $q->whereIn('role', $roleGroupFilters[$roleGroup]));
+        }
+
+        $payments = $query->get()->sortBy(fn (SalaryPayment $p) => $p->user->name);
+
+        return view('accounting.directeur.salaries.checklist', [
+            'payments' => $payments,
+            'period' => $period,
+            'roleGroup' => $roleGroup,
+        ]);
+    }
+
+    private function resolveChecklistPeriod(Request $request): Carbon
+    {
+        if ($request->filled('period')) {
+            try {
+                return Carbon::createFromFormat('Y-m', $request->input('period'))->startOfMonth();
+            } catch (\Exception) {
+                // format invalide, on retombe sur le mois courant
+            }
+        }
+
+        return now()->startOfMonth();
     }
 
     public function edit(User $employee)

@@ -11,6 +11,26 @@
     <p class="text-muted mb-0">{{ $people->total() }} {{ mb_strtolower($meta['label']) }}</p>
 </div>
 
+@if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if($credentials = session('new_staff_credentials'))
+    <div class="alert alert-warning border-0 shadow-sm mb-4">
+        <h6 class="alert-heading mb-3"><i class="fas fa-key me-2"></i>Identifiants de connexion — à noter maintenant</h6>
+        <p class="small text-danger fw-semibold mb-2">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            Affiché une seule fois : il ne sera plus jamais visible ensuite.
+        </p>
+        <ul class="list-unstyled small mb-0">
+            <li class="mb-1"><span class="text-muted">Nom :</span> {{ $credentials['name'] }}</li>
+            <li class="mb-1"><span class="text-muted">Identifiant :</span> <code class="user-select-all">{{ $credentials['identifier'] }}</code></li>
+            <li class="mb-1"><span class="text-muted">Email :</span> {{ $credentials['email'] }}</li>
+            <li><span class="text-muted">Mot de passe :</span> <code class="user-select-all fs-6 fw-bold text-primary">{{ $credentials['password'] }}</code></li>
+        </ul>
+    </div>
+@endif
+
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('directeur.personnel.show', $group) }}" class="d-flex gap-2">

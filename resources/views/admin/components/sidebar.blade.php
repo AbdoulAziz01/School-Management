@@ -56,7 +56,20 @@
                 <span>{{ !empty($isFormationSchool) && $isFormationSchool ? 'Modules' : 'Matières' }}</span>
             </a>
         </li>
-        
+
+        @php
+            $primarySchool = auth()->user()?->school;
+        @endphp
+        @if($primarySchool && ($primarySchool->isPrimaireEstablishment() || $primarySchool->isMixte()))
+        <!-- Notation du primaire -->
+        <li class="nav-item">
+            <a href="{{ route('admin.primary-grading.index') }}" class="nav-link {{ request()->routeIs('admin.primary-grading.*') ? 'active' : '' }}">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Notation primaire</span>
+            </a>
+        </li>
+        @endif
+
         <!-- Années scolaires -->
         <li class="nav-item">
             <a href="{{ route('admin.academic-years.index') }}" class="nav-link {{ request()->routeIs('admin.academic-years.*') ? 'active' : '' }}">
@@ -70,6 +83,14 @@
             <a href="{{ route('admin.reports.index') }}" class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                 <i class="fas fa-file-export"></i>
                 <span>Rapports</span>
+            </a>
+        </li>
+
+        <!-- Présences (consultation transparence) -->
+        <li class="nav-item">
+            <a href="{{ route('admin.attendance.index') }}" class="nav-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}">
+                <i class="fas fa-clipboard-check"></i>
+                <span>Présences</span>
             </a>
         </li>
 

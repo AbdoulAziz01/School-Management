@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AcademicYear;
 use App\Models\FeeAmount;
 use App\Models\FeeType;
+use App\Models\Level;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -93,6 +94,72 @@ class FeeConfigurationService
             ->where('academic_year_id', $academicYear->id)
             ->get()
             ->keyBy(fn (FeeAmount $amount) => $amount->level_id ?? 0);
+    }
+
+    /**
+     * Grille complète [level_id => [fee_type_id => montant]] pour l'année en
+     * cours — une seule requête au lieu d'une par type de frais, pour
+     * alimenter le tableau croisé Niveau × Type de frais. level_id = 0
+     * représente la ligne "Tous niveaux" (valeur par défaut).
+     *
+     * @param  Collection<int, FeeType>  $feeTypes
+     * @return array<int, array<int, float>>
+     */
+    public function amountsGrid(Collection $feeTypes, AcademicYear $academicYear): array
+    {
+        $grid = [];
+
+        FeeAmount::whereIn('fee_type_id', $feeTypes->pluck('id'))
+            ->where('academic_year_id', $academicYear->id)
+            ->get(['level_id', 'fee_type_id', 'amount'])
+            ->each(function (FeeAmount $row) use (&$grid) {
+                $grid[$row->level_id ?? 0][$row->fee_type_id] = (float) $row->amount;
+            });
+
+        return $grid;
+    }
+
+    /**
+     * Montant applicable pour une case de la grille : valeur spécifique au
+     * niveau si elle existe, sinon repli sur "Tous niveaux".
+     *
+     * @param  array<int, array<int, float>>  $grid
+     */
+    public function amountFromGrid(array $grid, int $levelId, int $feeTypeId): ?float
+    {
+        return $grid[$levelId][$feeTypeId] ?? $grid[0][$feeTypeId] ?? null;
+    }
+
+    /**
+     * Enregistre en une transaction tous les montants d'un niveau pour
+     * l'année en cours — un par type de frais. Une valeur vide/nulle
+     * supprime la ligne existante (le frais ne s'applique plus à ce niveau,
+     * avec repli automatique sur "Tous niveaux" s'il existe).
+     *
+     * @param  array<int, mixed>  $amounts  fee_type_id => montant|null
+     */
+    public function updateLevelAmounts(Level $level, AcademicYear $academicYear, array $amounts): void
+    {
+        DB::transaction(function () use ($level, $academicYear, $amounts) {
+            foreach ($amounts as $feeTypeId => $value) {
+                if ($value === null || $value === '') {
+                    FeeAmount::where([
+                        'fee_type_id' => (int) $feeTypeId,
+                        'academic_year_id' => $academicYear->id,
+                        'level_id' => $level->id,
+                    ])->delete();
+
+                    continue;
+                }
+
+                $this->setAmount(
+                    FeeType::findOrFail($feeTypeId),
+                    $academicYear,
+                    $level->id,
+                    (float) $value
+                );
+            }
+        });
     }
 
     /**

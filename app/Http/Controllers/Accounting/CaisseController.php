@@ -110,8 +110,8 @@ class CaisseController extends Controller
             $students = User::whereIn('role', User::ROLE_STUDENT_ALIASES)
                 ->where('status', User::STATUS_APPROVED)
                 ->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('identifier', 'like', "%{$search}%");
+                    $q->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('identifier', 'ilike', "%{$search}%");
                 })
                 ->with('schoolClass')
                 ->orderBy('name')

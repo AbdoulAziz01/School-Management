@@ -3,6 +3,10 @@
 @section('title', 'Personnel & Élèves')
 
 @section('content')
+@if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
 <div class="mb-4">
     <h1 class="h3 mb-0"><i class="fas fa-users me-2"></i>Personnel & Élèves</h1>
     <p class="text-muted mb-0">Vue d'ensemble de qui travaille et étudie dans votre établissement</p>
@@ -28,7 +32,7 @@
 
 <p class="text-muted small mt-4">
     <i class="fas fa-info-circle me-1"></i>
-    Vue en lecture seule. La création et la modification des comptes se fait depuis le panneau
-    d'administration de l'établissement.
+    Vous pouvez créer directement vos comptes comptable et caissier. Les autres rôles (admin,
+    surveillant, enseignant, élève) restent gérés depuis le panneau d'administration de l'établissement.
 </p>
 @endsection

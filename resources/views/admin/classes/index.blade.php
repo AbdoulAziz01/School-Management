@@ -4,6 +4,9 @@
 
 @section('content')
 <div class="container-fluid">
+    <a href="{{ route('admin.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+        <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+    </a>
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">

@@ -41,25 +41,43 @@
         </div>
     </div>
     
-    <div class="col-md-8">
+    <div class="col-md-8" id="matieres-classe">
         <div class="card h-100">
             <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-book me-2"></i>Matières enseignées dans cette classe</h5>
             </div>
             <div class="card-body">
-                @if($subjects->count() > 0)
+                @if($assignments->count() > 0)
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Décochez une matière que vous n'assurez pas réellement dans cette classe — elle disparaîtra de la saisie de notes et de l'appel.
+                    </p>
                     <div class="row g-3">
-                        @foreach($subjects as $subject)
+                        @foreach($assignments as $assignment)
+                            @continue(! $assignment->subject)
                             <div class="col-md-6">
-                                <div class="border rounded p-3">
+                                <div class="border rounded p-3 {{ $assignment->is_active ? '' : 'bg-light' }}">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <h6 class="mb-1">{{ $subject->name }}</h6>
-                                            <small class="text-muted">Coef: {{ $subject->coefficient ?? 1 }}</small>
+                                            <h6 class="mb-1 {{ $assignment->is_active ? '' : 'text-muted text-decoration-line-through' }}">
+                                                {{ $assignment->subject->name }}
+                                            </h6>
+                                            <small class="text-muted">Coef: {{ $assignment->subject->coefficient ?? 1 }}</small>
                                         </div>
-                                        <a href="{{ route('teacher.grades.index', ['class_id' => $class->id, 'subject_id' => $subject->id]) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-star"></i>
-                                        </a>
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if($assignment->is_active)
+                                                <a href="{{ route('teacher.grades.index', ['class_id' => $class->id, 'subject_id' => $assignment->subject->id]) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-star"></i>
+                                                </a>
+                                            @endif
+                                            <form action="{{ route('teacher.assignments.toggle', $assignment) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm {{ $assignment->is_active ? 'btn-outline-secondary' : 'btn-outline-success' }}"
+                                                        title="{{ $assignment->is_active ? 'Désactiver cette matière' : 'Réactiver cette matière' }}">
+                                                    <i class="fas {{ $assignment->is_active ? 'fa-toggle-on' : 'fa-toggle-off' }}"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -74,7 +92,7 @@
 </div>
 
 {{-- Liste des élèves --}}
-<div class="card">
+<div class="card" id="liste-eleves">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="fas fa-users me-2"></i>Liste des élèves ({{ $students->count() }})</h5>
         <div>

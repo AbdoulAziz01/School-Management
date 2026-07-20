@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Services\StudentClassPromotionService;
 use App\Support\ClassHistoricalContext;
+use App\Support\Grading\GradeSequence;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
@@ -32,7 +33,7 @@ class SchoolInspectionDetailController extends Controller
 
         $students = $this->studentsForClass($class, $academicYear, $isReadOnly, $promotionService);
 
-        $studentAverages = $this->studentAveragesForYear($students->pluck('id')->all(), $academicYear, $class->school_id);
+        $studentAverages = $this->studentAveragesForYear($students->pluck('id')->all(), $academicYear, $class->school_id, $class);
 
         return view('platform.schools.classes.show', compact(
             'school',
@@ -60,7 +61,8 @@ class SchoolInspectionDetailController extends Controller
             $averages = $this->studentAveragesForYear(
                 [$user->id],
                 $user->class->academicYear,
-                $school->id
+                $school->id,
+                $user->class
             );
             $studentAverage = $averages[$user->id] ?? null;
         }
@@ -94,8 +96,14 @@ class SchoolInspectionDetailController extends Controller
             ->get();
     }
 
-    /** @return array<int, float> */
-    private function studentAveragesForYear(array $studentIds, ?\App\Models\AcademicYear $academicYear, int $schoolId): array
+    /**
+     * @return array<int, float>
+     *
+     * Moyenne pondérée normalisée sur 20 : chaque matière est ramenée à son
+     * propre barème (primaire /10 par défaut, secondaire /20) avant d'être
+     * pondérée par son coefficient.
+     */
+    private function studentAveragesForYear(array $studentIds, ?\App\Models\AcademicYear $academicYear, int $schoolId, SchoolClass $class): array
     {
         if ($studentIds === [] || ! $academicYear) {
             return [];
@@ -119,13 +127,20 @@ class SchoolInspectionDetailController extends Controller
             $weightedSum = 0;
             $totalCoef = 0;
 
-            foreach ($grades->groupBy('subject_id') as $subjectGrades) {
+            foreach ($grades->groupBy('subject_id') as $subjectId => $subjectGrades) {
                 $subjectAvg = $subjectGrades->avg('grade');
                 if ($subjectAvg === null) {
                     continue;
                 }
+
+                $maxGrade = GradeSequence::maxGradeFor($class, (int) $subjectId);
+                if ($maxGrade <= 0) {
+                    continue;
+                }
+
+                $normalizedAvg = ($subjectAvg / $maxGrade) * 20;
                 $coefficient = $subjectGrades->first()->subject->coefficient ?? 1;
-                $weightedSum += $subjectAvg * $coefficient;
+                $weightedSum += $normalizedAvg * $coefficient;
                 $totalCoef += $coefficient;
             }
 

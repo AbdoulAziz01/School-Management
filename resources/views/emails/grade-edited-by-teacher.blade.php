@@ -5,10 +5,10 @@
 
 **Élève :** {{ $grade->user->name ?? '—' }} ({{ $grade->user->identifier ?? '—' }})
 **Matière :** {{ $grade->subject->name ?? '—' }}
-**Évaluation :** {{ \App\Support\SenegalGradeSequence::LABELS[$grade->type] ?? $grade->type }} — Semestre {{ $grade->semester }}
+**Évaluation :** {{ \App\Support\Grading\GradeSequence::labels()[$grade->type] ?? $grade->type }} — Semestre {{ $grade->semester }}
 
-**Ancienne note :** {{ $oldGrade }}/20
-**Nouvelle note :** {{ $newGrade }}/20
+**Ancienne note :** {{ $oldGrade }}/{{ rtrim(rtrim(number_format($maxGrade ?? 20, 2), '0'), '.') }}
+**Nouvelle note :** {{ $newGrade }}/{{ rtrim(rtrim(number_format($maxGrade ?? 20, 2), '0'), '.') }}
 
 **Date de la correction :** {{ $grade->teacher_edited_at?->format('d/m/Y à H:i') }}
 

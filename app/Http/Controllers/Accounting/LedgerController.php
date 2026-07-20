@@ -18,7 +18,7 @@ class LedgerController extends Controller
     {
         $school = School::find($request->user()->school_id);
 
-        $query = LedgerEntry::where('school_id', $school->id)->orderByDesc('recorded_at');
+        $query = LedgerEntry::where('school_id', $school->id)->with('createdBy')->orderByDesc('recorded_at');
 
         if ($request->filled('type')) {
             $query->where('entry_type', $request->type);

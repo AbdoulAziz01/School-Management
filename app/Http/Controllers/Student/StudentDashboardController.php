@@ -7,6 +7,7 @@ use App\Models\AcademicYear;
 use App\Models\Grade;
 use App\Models\Attendance;
 use App\Support\DashboardAcademicYearContext;
+use App\Support\Grading\GradeSequence;
 use App\Support\StudentClassContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,9 +36,24 @@ class StudentDashboardController extends Controller
             $gradesQuery = Grade::where('user_id', $user->id)
                 ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id));
 
-            $average = (clone $gradesQuery)->count() > 0
-                ? round((clone $gradesQuery)->avg('grade'), 2)
-                : null;
+            // Moyenne toujours normalisée sur 20 : chaque matière est
+            // ramenée à son propre barème avant d'être moyennée (une
+            // matière primaire /10 ne doit pas fausser la moyenne affichée
+            // "/20", voir StudentGradesController pour le même principe).
+            $average = null;
+            $allGrades = (clone $gradesQuery)->with('subject')->get();
+            if ($allGrades->isNotEmpty()) {
+                $normalized = $allGrades->groupBy('subject_id')
+                    ->map(function ($subjectGrades) use ($studentClass) {
+                        $subjectAvg = $subjectGrades->avg('grade');
+                        $maxGrade = $studentClass ? GradeSequence::maxGradeFor($studentClass, (int) $subjectGrades->first()->subject_id) : 20.0;
+
+                        return $maxGrade > 0 ? ($subjectAvg / $maxGrade) * 20 : null;
+                    })
+                    ->filter(fn ($v) => $v !== null);
+
+                $average = $normalized->isNotEmpty() ? round($normalized->avg(), 2) : null;
+            }
 
             $attendancesQuery = Attendance::where('user_id', $user->id);
             if ($selectedYear?->start_date) {
@@ -60,6 +76,13 @@ class StudentDashboardController extends Controller
                 ->take(5)
                 ->get();
 
+            $isPrimaireStudent = $studentClass?->level?->isPrimaireCycle() ?? false;
+            foreach ($recentGrades as $grade) {
+                $grade->max_grade_display = $studentClass
+                    ? GradeSequence::maxGradeFor($studentClass, (int) $grade->subject_id)
+                    : 20.0;
+            }
+
             return view('student.dashboard', [
                 'user' => $user,
                 'average' => $average,
@@ -72,6 +95,7 @@ class StudentDashboardController extends Controller
                 'isSelectedYearCurrent' => $isSelectedYearCurrent,
                 'studentClass' => $studentClass,
                 'classLabel' => $classLabel,
+                'isPrimaireStudent' => $isPrimaireStudent,
             ]);
         } catch (\Exception $e) {
             Log::error('Erreur tableau de bord élève', ['error' => $e->getMessage()]);

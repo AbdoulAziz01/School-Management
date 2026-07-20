@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AcademicYear;
+use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Services\TeacherCredentialService;
 use App\Support\SchoolSubjectProvisioner;
 use App\Support\SchoolUserIdentifier;
 use App\Support\TenantSchool;
-use App\Models\TeacherAssignment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +24,8 @@ class TeacherController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        private TeacherCredentialService $credentials
+        private TeacherCredentialService $credentials,
+        private \App\Services\TeacherTeachingService $teaching
     ) {}
 
     /**
@@ -33,15 +33,16 @@ class TeacherController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::whereIn('role', User::ROLE_TEACHER_ALIASES);
+        $query = User::whereIn('role', User::ROLE_TEACHER_ALIASES)
+            ->with(['assignedClasses' => fn ($q) => $q->whereHas('academicYear', fn ($ay) => $ay->where('is_current', true))]);
 
         // Recherche par nom, email ou identifiant
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('identifier', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('email', 'ilike', "%{$search}%")
+                  ->orWhere('identifier', 'ilike', "%{$search}%");
             });
         }
         
@@ -68,13 +69,16 @@ class TeacherController extends Controller
      */
     public function store(Request $request)
     {
+        $schoolId = auth()->user()->school_id ?? TenantSchool::id();
+        $primaireSubjectIds = $this->primaireSubjectIdsFor($schoolId);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:255'],
             'date_of_birth' => ['nullable', 'date'],
-            'subjects' => ['required', 'array', 'min:1'],
+            'subjects' => $primaireSubjectIds === null ? ['required', 'array', 'min:1'] : ['nullable', 'array'],
             'subjects.*' => ['integer', 'exists:subjects,id'],
             'classes' => ['required', 'array', 'min:1'],
             'classes.*' => ['integer', 'exists:classes,id'],
@@ -87,8 +91,6 @@ class TeacherController extends Controller
 
         try {
             DB::beginTransaction();
-
-            $schoolId = auth()->user()->school_id ?? TenantSchool::id();
 
             if (! $schoolId) {
                 throw new \RuntimeException('Établissement introuvable pour la génération de l\'identifiant.');
@@ -111,9 +113,9 @@ class TeacherController extends Controller
             ]);
             $teacher->save();
 
-            $this->syncTeacherTeaching(
+            $this->teaching->sync(
                 $teacher,
-                $request->input('subjects', []),
+                $primaireSubjectIds ?? $request->input('subjects', []),
                 $request->input('classes', [])
             );
 
@@ -225,9 +227,11 @@ class TeacherController extends Controller
 
             $teacher->update($updateData);
 
-            $this->syncTeacherTeaching(
+            $primaireSubjectIds = $this->primaireSubjectIdsFor($teacher->school_id);
+
+            $this->teaching->sync(
                 $teacher,
-                $request->input('subjects', []),
+                $primaireSubjectIds ?? $request->input('subjects', []),
                 $request->input('classes', [])
             );
 
@@ -336,54 +340,51 @@ class TeacherController extends Controller
      */
     private function teachingFormData(): array
     {
-        SchoolSubjectProvisioner::ensureForSchool(TenantSchool::id() ?? auth()->user()?->school_id);
+        $schoolId = TenantSchool::id() ?? auth()->user()?->school_id;
 
-        $subjects = Subject::orderBy('name')->get();
+        SchoolSubjectProvisioner::ensureForSchool($schoolId);
+
+        $isPrimaire = School::find($schoolId)?->isPrimaireEstablishment() ?? false;
+
+        $subjectsQuery = Subject::orderBy('name');
+
+        // École primaire pure : la liste "Matières enseignées" ne doit
+        // proposer que le catalogue officiel du primaire, jamais les
+        // matières collège/lycée. Les écoles Mixte gardent le catalogue
+        // complet (un enseignant peut y intervenir sur les deux cycles).
+        // Une matière désactivée pour tous les niveaux primaire (grille
+        // "Notation primaire") — ex. une école qui n'enseigne pas
+        // l'Éducation Religieuse — n'est plus proposée du tout.
+        if ($isPrimaire) {
+            $subjectsQuery->whereHas('levels', fn ($q) => $q->where('levels.cycle', 'primaire')->where('level_subject.is_active', true));
+        }
+
+        $subjects = $subjectsQuery->get();
 
         $classes = SchoolClass::with(['level', 'academicYear'])
             ->whereHas('academicYear', fn ($q) => $q->where('is_current', true))
             ->orderBy('name')
             ->get();
 
-        return compact('subjects', 'classes');
+        return compact('subjects', 'classes', 'isPrimaire');
     }
 
-    private function syncTeacherTeaching(User $teacher, array $subjectIds, array $classIds): void
+    /**
+     * Au primaire, le maître titulaire enseigne l'intégralité du programme :
+     * il n'y a pas de sélection de matières à faire, on assigne tout le
+     * catalogue automatiquement plutôt que de fier ce choix à l'admin.
+     *
+     * @return list<int>|null null si l'établissement n'est pas primaire (pas d'auto-assignation).
+     */
+    private function primaireSubjectIdsFor(?int $schoolId): ?array
     {
-        $subjectIds = array_values(array_unique(array_map('intval', $subjectIds)));
-        $classIds = array_values(array_unique(array_map('intval', $classIds)));
-
-        $teacher->subjects()->sync($subjectIds);
-        $teacher->assignedClasses()->sync($classIds);
-
-        $currentYear = AcademicYear::where('is_current', true)->first();
-
-        if (! $currentYear) {
-            return;
+        if (! School::find($schoolId)?->isPrimaireEstablishment()) {
+            return null;
         }
 
-        TeacherAssignment::where('teacher_id', $teacher->id)
-            ->where('academic_year_id', $currentYear->id)
-            ->delete();
-
-        if ($subjectIds === [] || $classIds === []) {
-            return;
-        }
-
-        $classes = SchoolClass::whereIn('id', $classIds)->get();
-
-        foreach ($classes as $class) {
-            foreach ($subjectIds as $subjectId) {
-                TeacherAssignment::firstOrCreate(
-                    [
-                        'teacher_id' => $teacher->id,
-                        'class_id' => $class->id,
-                        'subject_id' => $subjectId,
-                        'academic_year_id' => $class->academic_year_id ?? $currentYear->id,
-                    ],
-                    ['school_id' => $teacher->school_id]
-                );
-            }
-        }
+        return Subject::where('school_id', $schoolId)
+            ->whereHas('levels', fn ($q) => $q->where('levels.cycle', 'primaire')->where('level_subject.is_active', true))
+            ->pluck('id')
+            ->all();
     }
 }

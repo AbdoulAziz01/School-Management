@@ -130,9 +130,9 @@ class SchoolInspectionController extends Controller
                 ->when($selectedYearId > 0, fn ($q) => $q->where('academic_year_id', $selectedYearId))
                 ->when($search !== '', function ($q) use ($search) {
                     $q->where(function ($inner) use ($search) {
-                        $inner->where('name', 'like', "%{$search}%")
-                            ->orWhere('room_number', 'like', "%{$search}%")
-                            ->orWhereHas('level', fn ($l) => $l->where('name', 'like', "%{$search}%"));
+                        $inner->where('name', 'ilike', "%{$search}%")
+                            ->orWhere('room_number', 'ilike', "%{$search}%")
+                            ->orWhereHas('level', fn ($l) => $l->where('name', 'ilike', "%{$search}%"));
                     });
                 })
                 ->orderBy('name')
@@ -142,8 +142,8 @@ class SchoolInspectionController extends Controller
             'subjects' => Subject::withoutGlobalScopes()
                 ->where('school_id', $school->id)
                 ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
-                    $inner->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
+                    $inner->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('code', 'ilike', "%{$search}%");
                 }))
                 ->orderBy('name')
                 ->paginate(25)
@@ -162,10 +162,10 @@ class SchoolInspectionController extends Controller
     private function applyUserSearch($query, string $search): void
     {
         $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('identifier', 'like', "%{$search}%")
-                ->orWhere('user_id', 'like', "%{$search}%");
+            $q->where('name', 'ilike', "%{$search}%")
+                ->orWhere('email', 'ilike', "%{$search}%")
+                ->orWhere('identifier', 'ilike', "%{$search}%")
+                ->orWhere('user_id', 'ilike', "%{$search}%");
         });
     }
 }

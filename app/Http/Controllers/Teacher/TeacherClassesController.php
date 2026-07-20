@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\TeacherAssignment;
 use App\Models\SchoolClass;
 use App\Models\AcademicYear;
+use App\Support\TeacherSubjectResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -36,6 +37,7 @@ class TeacherClassesController extends Controller
             $subjects = TeacherAssignment::with('subject')
                 ->where('teacher_id', $teacher->id)
                 ->where('class_id', $class->id)
+                ->active()
                 ->when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))
                 ->get()
                 ->pluck('subject')
@@ -45,7 +47,12 @@ class TeacherClassesController extends Controller
             if ($subjects->isEmpty()) {
                 $subjects = $teacher->subjects()->get();
             }
-            
+
+            // Une matière désactivée par l'admin pour ce niveau (grille
+            // "Notation primaire") ne doit plus apparaître ici, même si
+            // elle reste dans teacher_subjects ou une ancienne affectation.
+            $subjects = TeacherSubjectResolver::filterActiveForLevel($subjects, $class);
+
             $classes->push([
                 'class' => $class,
                 'subjects' => $subjects,
@@ -73,19 +80,26 @@ class TeacherClassesController extends Controller
         }
         
         $class = SchoolClass::with('level')->findOrFail($id);
-        
+
         // Récupérer les matières via teacher_assignments ou les matières du prof
+        // (non filtré sur is_active : la vue affiche aussi les matières
+        // désactivées par le prof, avec un bouton pour les réactiver).
         $assignments = TeacherAssignment::with(['subject'])
             ->where('teacher_id', $teacher->id)
             ->where('class_id', $id)
             ->when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))
             ->get();
-        
-        $subjects = $assignments->pluck('subject')->filter();
-        if ($subjects->isEmpty()) {
+
+        $subjects = $assignments->where('is_active', true)->pluck('subject')->filter();
+        if ($assignments->isEmpty()) {
             $subjects = $teacher->subjects()->get();
         }
-        
+
+        // Une matière désactivée par l'admin pour ce niveau (grille
+        // "Notation primaire") ne doit plus apparaître ici, même si elle
+        // reste dans teacher_subjects ou une ancienne affectation.
+        $subjects = TeacherSubjectResolver::filterActiveForLevel($subjects, $class);
+
         // Récupérer les élèves de la classe
         $students = User::where('class_id', $id)
             ->whereIn('role', ['student', 'eleve'])
@@ -94,5 +108,25 @@ class TeacherClassesController extends Controller
             ->get();
         
         return view('teacher.classes.show', compact('class', 'subjects', 'students', 'assignments'));
+    }
+
+    /**
+     * Active/désactive une matière pour une classe donnée — un enseignant
+     * (notamment au primaire, où toutes les matières lui sont assignées
+     * d'office) peut ainsi indiquer qu'il n'assure pas réellement telle
+     * matière, sans intervention de l'administrateur.
+     */
+    public function toggleAssignment(TeacherAssignment $assignment)
+    {
+        abort_unless($assignment->teacher_id === Auth::id(), 403);
+
+        $assignment->update(['is_active' => ! $assignment->is_active]);
+
+        return back()->with(
+            'success',
+            $assignment->is_active
+                ? 'Matière réactivée.'
+                : 'Matière désactivée — elle n\'apparaîtra plus pour la saisie de notes ou l\'appel.'
+        );
     }
 }

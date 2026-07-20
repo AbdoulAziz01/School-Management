@@ -67,6 +67,10 @@
                 <td class="label">Rang</td>
                 <td>@if($rank['rank']){{ $rank['rank'] }}<sup>e</sup> / {{ $rank['total'] }}@else — @endif</td>
             </tr>
+            <tr>
+                <td class="label">Absences</td><td>{{ $bulletin['absenceCount'] ?? 0 }}</td>
+                <td class="label"></td><td></td>
+            </tr>
         </table>
 
         <table class="grades">
@@ -93,7 +97,9 @@
                             <td>{{ $row['composition'] ?? '—' }}</td>
                             <td>{{ $row['moyenne_devoirs'] ?? '—' }}</td>
                         @endunless
-                        <td>{{ $row['moyenne_matiere'] ?? '—' }}</td>
+                        <td>
+                            {{ $row['moyenne_matiere'] ?? '—' }}@if($row['moyenne_matiere'] !== null)/{{ rtrim(rtrim(number_format($row['max_grade'] ?? 20, 2), '0'), '.') }}@endif
+                        </td>
                         <td>{{ $row['points'] ?? '—' }}</td>
                         <td>{{ $row['appreciation'] ?? '—' }}</td>
                     </tr>

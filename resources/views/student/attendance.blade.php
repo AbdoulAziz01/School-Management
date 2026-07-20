@@ -224,6 +224,9 @@
 @endpush
 
 @section('content')
+<a href="{{ route('student.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+</a>
 <div class="container-fluid">
 
     {{-- ── En-tête ── --}}

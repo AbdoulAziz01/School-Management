@@ -58,6 +58,8 @@ return [
     'ultramsg' => [
         'instance_id' => env('ULTRAMSG_INSTANCE_ID'),
         'token'       => env('ULTRAMSG_TOKEN'),
+        // Coupe-circuit temporaire : désactive l'envoi auto des messages WhatsApp aux parents.
+        'notify_parents_enabled' => env('NOTIFY_PARENTS_ENABLED', false),
     ],
 
 ];

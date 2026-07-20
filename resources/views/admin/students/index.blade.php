@@ -139,6 +139,9 @@
 
 @section('content')
 <div class="container-fluid">
+    <a href="{{ route('admin.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+        <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+    </a>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <h2 class="h4 mb-0">Gestion des élèves</h2>
         <div class="d-flex gap-2 flex-wrap">
@@ -159,6 +162,9 @@
                     </li>
                 </ul>
             </div>
+            <a href="{{ route('admin.students.import') }}" class="btn btn-outline-primary">
+                <i class="fas fa-file-import me-1"></i> Importer
+            </a>
             <a href="{{ route('admin.students.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-2"></i> Nouvel élève
             </a>

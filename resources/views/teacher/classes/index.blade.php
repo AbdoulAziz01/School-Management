@@ -3,6 +3,9 @@
 @section('title', 'Mes Classes - Enseignant')
 
 @section('content')
+<a href="{{ route('teacher.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+</a>
 <div class="mb-4 d-flex justify-content-between align-items-center">
     <div>
         <h1 class="mb-0 h3">Mes Classes</h1>
@@ -14,8 +17,8 @@
     <div class="row g-4">
         @foreach($classes as $classData)
             <div class="col-12 col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header bg-primary text-white">
+                <div class="card h-100 class-card">
+                    <div class="card-header class-card-header">
                         <h5 class="mb-0">
                             <i class="fas fa-users me-2"></i>
                             {{ $classData['class']->name ?? 'N/A' }}
@@ -28,12 +31,15 @@
                         </div>
                         
                         <div class="mb-3">
-                            <strong>Matières enseignées:</strong>
-                            <div class="mt-2">
+                            <strong>Matières enseignées ({{ $classData['subjects']->count() }}):</strong>
+                            <div class="subject-chips mt-2">
                                 @if($classData['subjects']->count() > 0)
-                                    @foreach($classData['subjects'] as $subject)
-                                        <span class="badge bg-primary me-1 mb-1">{{ $subject->name }}</span>
+                                    @foreach($classData['subjects']->take(6) as $subject)
+                                        <span class="subject-chip">{{ $subject->name }}</span>
                                     @endforeach
+                                    @if($classData['subjects']->count() > 6)
+                                        <span class="subject-chip subject-chip--more">+{{ $classData['subjects']->count() - 6 }} autres</span>
+                                    @endif
                                 @else
                                     <span class="text-muted">Aucune matière assignée</span>
                                 @endif
@@ -69,4 +75,33 @@
         </div>
     </div>
 @endif
+
+<style>
+    .class-card-header {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: #1c1917;
+        border-bottom: none;
+    }
+    .subject-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .subject-chip {
+        display: inline-block;
+        padding: 0.3rem 0.65rem;
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        font-size: 0.78rem;
+        font-weight: 500;
+        line-height: 1.2;
+    }
+    .subject-chip--more {
+        background: #f3f4f6;
+        color: #6b7280;
+        border-color: #e5e7eb;
+    }
+</style>
 @endsection

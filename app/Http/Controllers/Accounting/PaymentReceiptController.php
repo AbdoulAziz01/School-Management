@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\ThermalTicketPdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -24,8 +24,8 @@ class PaymentReceiptController extends Controller
         if ($search !== '') {
             $payments = Payment::with('student')
                 ->where(function ($q) use ($search) {
-                    $q->where('receipt_number', 'like', "%{$search}%")
-                        ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', "%{$search}%"));
+                    $q->where('receipt_number', 'ilike', "%{$search}%")
+                        ->orWhereHas('student', fn ($sq) => $sq->where('name', 'ilike', "%{$search}%"));
                 })
                 ->orderByDesc('paid_at')
                 ->limit(30)
@@ -60,20 +60,22 @@ class PaymentReceiptController extends Controller
             QrCode::format('svg')->size(120)->errorCorrection('H')->generate($verifyUrl)
         );
 
-        $pdf = Pdf::loadView('accounting.caisse.receipt-pdf', [
+        $html = view('accounting.caisse.receipt-pdf', [
             'payment' => $payment,
             'verifyUrl' => $verifyUrl,
             'qrCode' => $qrCode,
             'generatedAt' => now()->format('d/m/Y H:i'),
-        ]);
+        ])->render();
 
         // Ticket 80mm (imprimante thermique de caisse) : largeur fixe,
-        // hauteur volontairement très généreuse pour ne jamais paginer sur
-        // une 2e page — 1mm = 2.83465pt. Le reste de la bande est du blanc,
-        // sans effet sur une imprimante à rouleau continu.
-        $pdf->setPaper([0, 0, 80 * 2.83465, 1500], 'portrait');
+        // hauteur calculée dynamiquement pour épouser le contenu réel — voir
+        // ThermalTicketPdf.
+        $pdf = ThermalTicketPdf::render($html);
 
-        return $pdf->stream("recu-{$payment->receipt_number}.pdf");
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="recu-'.$payment->receipt_number.'.pdf"',
+        ]);
     }
 
     public function verify(Request $request)

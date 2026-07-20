@@ -6,6 +6,9 @@
 @section('title', 'Journal des opérations')
 
 @section('content')
+<a href="{{ route($portalPrefix . '.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+</a>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0"><i class="fas fa-book me-2"></i>Journal des opérations</h1>
@@ -52,6 +55,7 @@
                             <th>Date</th>
                             <th>Type</th>
                             <th>Description</th>
+                            <th>Effectué par</th>
                             <th class="text-end">Montant</th>
                         </tr>
                     </thead>
@@ -65,6 +69,7 @@
                                     </span>
                                 </td>
                                 <td>{{ $entry->description }}</td>
+                                <td class="small text-muted">{{ $entry->createdBy?->name ?? '—' }}</td>
                                 <td class="text-end {{ $entry->amount < 0 ? 'text-muted' : '' }}">
                                     {{ $entry->amount >= 0 ? '+' : '' }}{{ number_format($entry->amount, 0, ',', ' ') }} FCFA
                                 </td>

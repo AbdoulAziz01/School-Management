@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Support\Grading\GradeSequence;
+use App\Support\Grading\GradeSequenceResolver;
+use App\Support\Grading\PrimaryGradeSequence;
 use App\Support\SenegalGradeSequence;
 use App\Models\User;
 use App\Models\Grade;
@@ -13,9 +16,11 @@ use App\Services\StudentClassPromotionService;
 use App\Models\AcademicYear;
 use App\Support\ClosedAcademicYearGuard;
 use App\Support\DashboardAcademicYearContext;
+use App\Support\TeacherSubjectResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TeacherGradesController extends Controller
 {
@@ -70,15 +75,18 @@ class TeacherGradesController extends Controller
             ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
         
-        $subjects = $teacher->subjects()->get();
-
         $assignments = TeacherAssignment::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
             ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
 
-        // Fusionner les matières
-        $subjects = $subjects->merge($assignments->pluck('subject')->filter())->unique('id');
+        // Matières réellement disponibles (affectations + qualification
+        // générale), filtrées par matière active pour le niveau de chaque
+        // classe (level_subject.is_active — voir TeacherSubjectResolver).
+        $subjects = $classes
+            ->flatMap(fn ($class) => TeacherSubjectResolver::forClass($teacher, $class, $selectedYear?->id))
+            ->unique('id')
+            ->values();
         
         // Filtres
         $selectedClassId = $request->get('class_id');
@@ -110,22 +118,19 @@ class TeacherGradesController extends Controller
             }
         }
         
-        $evaluationColumns = [];
-        foreach ([1, 2] as $semester) {
-            foreach (SenegalGradeSequence::ORDER as $type) {
-                $evaluationColumns[] = [
-                    'semester' => $semester,
-                    'type' => $type,
-                    'header' => 'S'.$semester.' · '.match ($type) {
-                        'devoir1' => 'D1',
-                        'devoir2' => 'D2',
-                        'composition' => 'Compo',
-                        default => $type,
-                    },
-                    'label' => 'Semestre '.$semester.' — '.SenegalGradeSequence::LABELS[$type],
-                ];
-            }
-        }
+        // Colonnes à plat (primaire) ou S1/S2 × Devoir/Composition (secondaire)
+        // selon le cycle de la classe filtrée ; comportement par défaut
+        // (aucune classe sélectionnée) inchangé = secondaire.
+        $selectedClassForColumns = $selectedClassId
+            ? SchoolClass::with('level')->find($selectedClassId)
+            : null;
+        $evaluationColumns = GradeSequence::evaluationColumnsFor($selectedClassForColumns, $selectedSubjectId ? (int) $selectedSubjectId : null);
+        $isPrimaireContext = $selectedClassForColumns
+            ? GradeSequenceResolver::isPrimaire($selectedClassForColumns)
+            : false;
+        $maxGrade = ($selectedClassForColumns && $selectedSubjectId)
+            ? GradeSequence::maxGradeFor($selectedClassForColumns, (int) $selectedSubjectId)
+            : 20.0;
 
         return view('teacher.grades.index', compact(
             'classes',
@@ -135,6 +140,8 @@ class TeacherGradesController extends Controller
             'selectedClassId',
             'selectedSubjectId',
             'evaluationColumns',
+            'isPrimaireContext',
+            'maxGrade',
             'gradesLocked',
             'gradesLockedMessage',
             'selectedYear',
@@ -162,7 +169,14 @@ class TeacherGradesController extends Controller
             ->with(['level', 'academicYear'])
             ->whereHas('academicYear', fn ($q) => $q->where('is_current', true)->where('is_closed', false))
             ->get();
-        $subjects = $teacher->subjects()->get();
+
+        // Matières réellement disponibles (affectations + qualification
+        // générale), filtrées par matière active pour le niveau de chaque
+        // classe (level_subject.is_active — voir TeacherSubjectResolver).
+        $subjects = $classes
+            ->flatMap(fn ($class) => TeacherSubjectResolver::forClass($teacher, $class, $currentYear?->id))
+            ->unique('id')
+            ->values();
 
         $selectedClassId   = $request->get('class_id');
         $selectedSubjectId = $request->get('subject_id');
@@ -184,33 +198,57 @@ class TeacherGradesController extends Controller
                 ->get();
         }
 
-        $gradeTypes = SenegalGradeSequence::evaluationTypes();
         $nextAllowed = null;
         $evaluationProgress = null;
         $existingGradesForEvaluation = collect();
+        $selectedSchoolClass = null;
 
         if ($selectedClassId && $selectedSubjectId) {
-            $nextAllowed = SenegalGradeSequence::nextAllowed(
-                (int) $selectedClassId,
-                (int) $selectedSubjectId,
-                $currentYear?->id
-            );
-            $evaluationProgress = SenegalGradeSequence::progress(
-                (int) $selectedClassId,
-                (int) $selectedSubjectId,
-                $currentYear?->id
-            );
+            $selectedSchoolClass = SchoolClass::with('level')->find($selectedClassId);
 
-            if ($nextAllowed) {
-                $existingGradesForEvaluation = SenegalGradeSequence::gradesForEvaluation(
-                    (int) $selectedClassId,
+            if ($selectedSchoolClass) {
+                $nextAllowed = GradeSequence::nextAllowed(
+                    $selectedSchoolClass,
                     (int) $selectedSubjectId,
-                    $nextAllowed['semester'],
-                    $nextAllowed['type'],
                     $currentYear?->id
                 );
+                $evaluationProgress = GradeSequence::progress(
+                    $selectedSchoolClass,
+                    (int) $selectedSubjectId,
+                    $currentYear?->id
+                );
+
+                if ($nextAllowed) {
+                    $existingGradesForEvaluation = GradeSequence::gradesForEvaluation(
+                        $selectedSchoolClass,
+                        (int) $selectedSubjectId,
+                        $nextAllowed['semester'],
+                        $nextAllowed['type'],
+                        $currentYear?->id
+                    );
+                }
             }
         }
+
+        // Catalogue de types affiché uniquement à titre informatif ailleurs
+        // dans la vue ; la classe sélectionnée (si connue) restreint le
+        // catalogue à son propre schéma, sinon on garde l'union des deux
+        // (aucun impact : le formulaire pilote la saisie via $nextAllowed,
+        // jamais via un choix libre de $gradeTypes).
+        $gradeTypes = $selectedSchoolClass
+            ? array_intersect_key(GradeSequence::labels(), array_flip(
+                GradeSequenceResolver::isPrimaire($selectedSchoolClass)
+                    ? PrimaryGradeSequence::orderFor($selectedSchoolClass, (int) $selectedSubjectId)
+                    : SenegalGradeSequence::ORDER
+            ))
+            : GradeSequence::labels();
+
+        $maxGrade = $selectedSchoolClass
+            ? GradeSequence::maxGradeFor($selectedSchoolClass, (int) $selectedSubjectId)
+            : 20.0;
+        $isPrimaireContext = $selectedSchoolClass
+            ? GradeSequenceResolver::isPrimaire($selectedSchoolClass)
+            : false;
 
         return view('teacher.grades.create', compact(
             'classes',
@@ -218,10 +256,12 @@ class TeacherGradesController extends Controller
             'students',
             'selectedClassId',
             'selectedSubjectId',
+            'isPrimaireContext',
             'gradeTypes',
             'nextAllowed',
             'evaluationProgress',
             'existingGradesForEvaluation',
+            'maxGrade',
         ));
     }
 
@@ -238,13 +278,13 @@ class TeacherGradesController extends Controller
         $request->validate([
             'class_id'         => 'required|exists:classes,id',
             'subject_id'       => 'required|exists:subjects,id',
-            'type'             => 'required|in:devoir1,devoir2,composition',
+            'type'             => ['required', Rule::in(GradeSequence::allTypes())],
             'date'             => 'required|date',
             'coefficient'      => 'required|numeric|min:0.5|max:5',
             'semester'         => 'required|integer|in:1,2',
             'grades'           => 'required|array',
             'grades.*.user_id' => 'required|integer|exists:users,id',
-            'grades.*.grade'   => 'nullable|numeric|min:0|max:20',
+            'grades.*.grade'   => 'nullable|numeric|min:0',
         ]);
 
         $teacher     = Auth::user();
@@ -254,10 +294,21 @@ class TeacherGradesController extends Controller
             return back()->with('error', 'Vous n\'avez pas accès à cette classe.');
         }
 
-        $schoolClass = SchoolClass::with('academicYear')->findOrFail($request->class_id);
+        $schoolClass = SchoolClass::with(['academicYear', 'level'])->findOrFail($request->class_id);
         if (ClosedAcademicYearGuard::isClassLocked($schoolClass)) {
             return back()->with('error', ClosedAcademicYearGuard::gradesLockedMessage($schoolClass->academicYear));
         }
+
+        // Note maximale dynamique (configurable pour le primaire, 20 pour
+        // le secondaire — voir GradeSequence::maxGradeFor()). Validée
+        // séparément car elle dépend de class_id/subject_id, connus
+        // seulement une fois la première passe de validation passée.
+        $maxGrade = GradeSequence::maxGradeFor($schoolClass, (int) $request->subject_id);
+        $request->validate([
+            'grades.*.grade' => "nullable|numeric|max:{$maxGrade}",
+        ], [
+            'grades.*.grade.max' => "La note ne peut pas dépasser {$maxGrade} (barème configuré pour cette matière).",
+        ]);
 
         if (! $this->teachesClassSubject($teacher, (int) $request->class_id, (int) $request->subject_id, $currentYear)) {
             return back()->with('error', 'Vous n\'enseignez pas cette matière pour cette classe.');
@@ -277,8 +328,8 @@ class TeacherGradesController extends Controller
 
         $semester = (int) $request->semester;
 
-        $sequenceError = SenegalGradeSequence::validateEntry(
-            (int) $request->class_id,
+        $sequenceError = GradeSequence::validateEntry(
+            $schoolClass,
             (int) $request->subject_id,
             $semester,
             $request->type,
@@ -302,7 +353,8 @@ class TeacherGradesController extends Controller
 
                 $userId = (int) $gradeData['user_id'];
 
-                if (SenegalGradeSequence::findStudentGrade(
+                if (GradeSequence::findStudentGrade(
+                    $schoolClass,
                     $userId,
                     (int) $request->subject_id,
                     $semester,
@@ -378,14 +430,29 @@ class TeacherGradesController extends Controller
             return false;
         }
 
+        $class = SchoolClass::with('level')->find($classId);
+        if ($class && ! TeacherSubjectResolver::isSubjectActiveForLevel($subjectId, $class)) {
+            // Matière désactivée par l'admin pour ce niveau (grille
+            // "Notation primaire") : plus aucune saisie possible, même via
+            // une affectation ou une qualification teacher_subjects encore
+            // en place.
+            return false;
+        }
+
         $yearId = $year?->id;
 
-        if (TeacherAssignment::where('teacher_id', $teacher->id)
+        $assignment = TeacherAssignment::where('teacher_id', $teacher->id)
             ->where('class_id', $classId)
             ->where('subject_id', $subjectId)
             ->when($yearId, fn ($q) => $q->where('academic_year_id', $yearId))
-            ->exists()) {
-            return true;
+            ->first();
+
+        // Une affectation explicite fait foi (y compris si le prof l'a
+        // désactivée lui-même : il ne doit alors plus pouvoir y saisir de
+        // notes). Sans affectation formelle, on retombe sur sa
+        // qualification générale (teacher_subjects) comme avant.
+        if ($assignment) {
+            return $assignment->is_active;
         }
 
         return $teacher->subjects()->where('subjects.id', $subjectId)->exists();
@@ -405,7 +472,9 @@ class TeacherGradesController extends Controller
             return redirect()->route('teacher.grades.index')->with('error', $denyReason);
         }
 
-        return view('teacher.grades.edit', compact('grade'));
+        $maxGrade = $this->maxGradeForGrade($grade);
+
+        return view('teacher.grades.edit', compact('grade', 'maxGrade'));
     }
 
     /**
@@ -421,8 +490,10 @@ class TeacherGradesController extends Controller
             return redirect()->route('teacher.grades.index')->with('error', $denyReason);
         }
 
+        $maxGrade = $this->maxGradeForGrade($grade);
+
         $validated = $request->validate([
-            'grade'        => 'required|numeric|min:0|max:20',
+            'grade'        => "required|numeric|min:0|max:{$maxGrade}",
             'coefficient'  => 'required|numeric|min:0.5|max:5',
             'date'         => 'required|date',
             'comments'     => 'nullable|string|max:1000',
@@ -450,7 +521,7 @@ class TeacherGradesController extends Controller
             return back()->with('error', 'Erreur lors de l\'enregistrement de la correction.');
         }
 
-        $this->notifySchoolStaffOfGradeEdit($grade, $teacher, $oldGrade, (string) $validated['grade']);
+        $this->notifySchoolStaffOfGradeEdit($grade, $teacher, $oldGrade, (string) $validated['grade'], $maxGrade);
 
         return redirect()->route('teacher.grades.index', [
             'class_id'   => $grade->user->class_id,
@@ -488,11 +559,27 @@ class TeacherGradesController extends Controller
         return null;
     }
 
+    /** Note maximale applicable à une note déjà enregistrée (résolue via sa classe/matière — voir GradeSequence::maxGradeFor()). */
+    private function maxGradeForGrade(Grade $grade): float
+    {
+        $classId = $grade->user?->class_id;
+        if (! $classId) {
+            return 20.0;
+        }
+
+        $schoolClass = SchoolClass::with('level')->find($classId);
+        if (! $schoolClass) {
+            return 20.0;
+        }
+
+        return GradeSequence::maxGradeFor($schoolClass, (int) $grade->subject_id);
+    }
+
     /**
      * Avertit admins et surveillants de l'établissement par email (en file
      * d'attente) qu'une correction de note vient d'avoir lieu.
      */
-    private function notifySchoolStaffOfGradeEdit(Grade $grade, User $teacher, string $oldGrade, string $newGrade): void
+    private function notifySchoolStaffOfGradeEdit(Grade $grade, User $teacher, string $oldGrade, string $newGrade, float $maxGrade): void
     {
         $recipients = User::where('school_id', $grade->school_id)
             ->whereIn('role', User::ROLE_SCHOOL_STAFF)
@@ -502,13 +589,13 @@ class TeacherGradesController extends Controller
             // Badge : écrit en base tout de suite, sans passer par la file
             // d'attente (voir GradeEditedByTeacherNotification).
             $recipient->notify(
-                new \App\Notifications\GradeEditedByTeacherNotification($grade, $teacher, $oldGrade, $newGrade)
+                new \App\Notifications\GradeEditedByTeacherNotification($grade, $teacher, $oldGrade, $newGrade, $maxGrade)
             );
 
             // Email : mis en file pour ne pas bloquer la requête de l'enseignant.
             if ($recipient->email) {
                 \Mail::to($recipient->email)->queue(
-                    new \App\Mail\GradeEditedByTeacherMail($grade, $teacher, $oldGrade, $newGrade)
+                    new \App\Mail\GradeEditedByTeacherMail($grade, $teacher, $oldGrade, $newGrade, $maxGrade)
                 );
             }
         }

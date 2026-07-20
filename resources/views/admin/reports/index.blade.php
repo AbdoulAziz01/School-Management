@@ -35,33 +35,47 @@
                         <h5 class="mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>Exports PDF</h5>
                     </div>
                     <div class="card-body">
-                        <form method="GET" class="d-grid gap-2">
+                        <form method="GET" class="d-grid gap-2" id="pdf-export-form">
                             <input type="hidden" name="academic_year_id" value="{{ $selectedYearId }}">
                             <div class="mb-2">
                                 <label class="form-label">Classe</label>
-                                <select name="class_id" class="form-select" required>
+                                <select name="class_id" id="pdf-class-select" class="form-select" required>
                                     <option value="">— Choisir —</option>
                                     @foreach($classes as $class)
-                                        <option value="{{ $class->id }}" @selected(request('class_id') == $class->id)>{{ $class->name }}</option>
+                                        <option value="{{ $class->id }}" data-primaire="{{ ($class->level?->isPrimaireCycle() ?? false) ? '1' : '0' }}" @selected(request('class_id') == $class->id)>{{ $class->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="mb-2">
+                            <div class="mb-2" id="pdf-semester-field">
                                 <label class="form-label">Semestre (bulletins)</label>
                                 <select name="semester" class="form-select" required>
                                     <option value="1" @selected($currentSemester === 1)>Semestre 1</option>
                                     <option value="2" @selected($currentSemester === 2)>Semestre 2</option>
                                 </select>
                             </div>
-                            <button type="submit" formaction="{{ route('admin.reports.semester-pdf') }}" class="btn btn-primary">
+                            <div class="mb-2 d-none" id="pdf-primaire-period-field">
+                                <label class="form-label">Période (primaire)</label>
+                                <select id="pdf-primaire-period-select" class="form-select">
+                                    <option value="annual">Toute l'année (bulletin complet)</option>
+                                    <option value="1">Composition 1</option>
+                                    <option value="2">Composition 2</option>
+                                    <option value="3">Composition 3</option>
+                                </select>
+                                <input type="hidden" name="composition" id="pdf-composition-input">
+                            </div>
+                            <button type="submit" formaction="{{ route('admin.reports.semester-pdf') }}" class="btn btn-primary" id="pdf-semester-btn">
                                 <i class="fas fa-download me-2"></i>Bulletins semestriels (classe complète)
+                            </button>
+                            <button type="submit" formaction="{{ route('admin.reports.annual-bulletins-pdf') }}" class="btn btn-primary d-none" id="pdf-primaire-btn" formnovalidate>
+                                <i class="fas fa-download me-2"></i><span id="pdf-primaire-btn-label">Bulletins annuels — tous les élèves</span>
                             </button>
                             <button type="submit" formaction="{{ route('admin.reports.annual-pdf') }}" class="btn btn-outline-primary" formnovalidate>
                                 <i class="fas fa-download me-2"></i>Rapport de fin d'année (PDF)
                             </button>
                         </form>
                         <p class="small text-muted mt-3 mb-0">
-                            Le PDF semestriel contient un bulletin par élève (même calcul que l'espace élève).
+                            Le PDF semestriel/annuel contient un bulletin complet par élève (même calcul que l'espace élève).
+                            Le rapport de fin d'année est un tableau de synthèse (une ligne par élève).
                         </p>
                     </div>
                 </div>
@@ -125,4 +139,54 @@
         </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const classSelect = document.getElementById('pdf-class-select');
+        const semesterField = document.getElementById('pdf-semester-field');
+        const semesterBtn = document.getElementById('pdf-semester-btn');
+        const periodField = document.getElementById('pdf-primaire-period-field');
+        const periodSelect = document.getElementById('pdf-primaire-period-select');
+        const compositionInput = document.getElementById('pdf-composition-input');
+        const primaireBtn = document.getElementById('pdf-primaire-btn');
+        const primaireBtnLabel = document.getElementById('pdf-primaire-btn-label');
+        if (!classSelect) return;
+
+        const annualUrl = @json(route('admin.reports.annual-bulletins-pdf'));
+        const compositionUrl = @json(route('admin.reports.composition-pdf'));
+
+        function updatePrimaireTarget() {
+            const period = periodSelect.value;
+            if (period === 'annual') {
+                primaireBtn.setAttribute('formaction', annualUrl);
+                primaireBtnLabel.textContent = 'Bulletins annuels — tous les élèves';
+                compositionInput.value = '';
+            } else {
+                primaireBtn.setAttribute('formaction', compositionUrl);
+                primaireBtnLabel.textContent = 'Composition ' + period + ' — tous les élèves';
+                compositionInput.value = period;
+            }
+        }
+
+        function togglePdfControls() {
+            const selected = classSelect.options[classSelect.selectedIndex];
+            const isPrimaire = selected && selected.dataset.primaire === '1';
+
+            semesterField.classList.toggle('d-none', isPrimaire);
+            semesterBtn.classList.toggle('d-none', isPrimaire);
+            periodField.classList.toggle('d-none', !isPrimaire);
+            primaireBtn.classList.toggle('d-none', !isPrimaire);
+
+            if (isPrimaire) {
+                updatePrimaireTarget();
+            }
+        }
+
+        periodSelect.addEventListener('change', updatePrimaireTarget);
+        classSelect.addEventListener('change', togglePdfControls);
+        togglePdfControls();
+    });
+</script>
+@endpush
 @endsection

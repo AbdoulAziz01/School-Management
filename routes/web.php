@@ -180,6 +180,7 @@ Route::middleware(['auth', 'school.active', \App\Http\Middleware\TeacherMiddlewa
     // Mes classes
     Route::get('/classes', [TeacherClassesController::class, 'index'])->name('classes.index');
     Route::get('/classes/{id}', [TeacherClassesController::class, 'show'])->name('classes.show');
+    Route::post('/assignments/{assignment}/toggle', [TeacherClassesController::class, 'toggleAssignment'])->name('assignments.toggle');
     
     // Gestion des notes
     Route::get('/grades', [TeacherGradesController::class, 'index'])->name('grades.index');
@@ -192,6 +193,7 @@ Route::middleware(['auth', 'school.active', \App\Http\Middleware\TeacherMiddlewa
     // Gestion des présences
     Route::get('/attendance', [TeacherAttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/attendance', [TeacherAttendanceController::class, 'store'])->name('attendance.store');
+    Route::get('/attendance/history', [TeacherAttendanceController::class, 'history'])->name('attendance.history');
     Route::get('/attendance/student/{studentId}', [TeacherAttendanceController::class, 'studentHistory'])->name('attendance.student-history');
     
     // Emploi du temps
@@ -291,7 +293,18 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::post('/students/{student}/assign', [StudentController::class, 'assignToClass'])->name('admin.students.assign-to-class');
     Route::delete('/students/{student}/unassign', [StudentController::class, 'unassign'])->name('admin.students.unassign');
     Route::get('/students/search-suggestions', [StudentController::class, 'searchSuggestions'])->name('admin.students.search-suggestions');
-    
+    Route::get('/students/export', [StudentController::class, 'export'])->name('admin.students.export');
+
+    // Import en masse (Excel/CSV) — voir StudentImportController
+    Route::get('/students/import', [\App\Http\Controllers\Admin\StudentImportController::class, 'create'])->name('admin.students.import');
+    Route::get('/students/import/template', [\App\Http\Controllers\Admin\StudentImportController::class, 'template'])->name('admin.students.import.template');
+    Route::post('/students/import/upload', [\App\Http\Controllers\Admin\StudentImportController::class, 'upload'])->name('admin.students.import.upload');
+    Route::get('/students/import/result/{token}', [\App\Http\Controllers\Admin\StudentImportController::class, 'result'])->name('admin.students.import.result');
+    Route::get('/students/import/credentials/{token}', [\App\Http\Controllers\Admin\StudentImportController::class, 'downloadCredentials'])->name('admin.students.import.credentials');
+    Route::get('/students/import/{token}/mapping', [\App\Http\Controllers\Admin\StudentImportController::class, 'mapping'])->name('admin.students.import.mapping');
+    Route::post('/students/import/{token}/preview', [\App\Http\Controllers\Admin\StudentImportController::class, 'preview'])->name('admin.students.import.preview');
+    Route::post('/students/import/{token}/store', [\App\Http\Controllers\Admin\StudentImportController::class, 'store'])->name('admin.students.import.store');
+
     Route::post('students/{student}/regenerate-credentials', [StudentController::class, 'regenerateCredentials'])
         ->name('admin.students.regenerate-credentials');
     Route::post('students/{student}/send-credentials', [StudentController::class, 'sendCredentials'])
@@ -304,6 +317,17 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::get('/students/list', [StudentController::class, 'index'])->name('admin.students.list');
         
     // Gestion des enseignants
+    // Import en masse (Excel/CSV) — DOIT être avant Route::resource, sinon
+    // GET /teachers/import serait intercepté par GET /teachers/{teacher}.
+    Route::get('/teachers/import', [\App\Http\Controllers\Admin\TeacherImportController::class, 'create'])->name('admin.teachers.import');
+    Route::get('/teachers/import/template', [\App\Http\Controllers\Admin\TeacherImportController::class, 'template'])->name('admin.teachers.import.template');
+    Route::post('/teachers/import/upload', [\App\Http\Controllers\Admin\TeacherImportController::class, 'upload'])->name('admin.teachers.import.upload');
+    Route::get('/teachers/import/result/{token}', [\App\Http\Controllers\Admin\TeacherImportController::class, 'result'])->name('admin.teachers.import.result');
+    Route::get('/teachers/import/credentials/{token}', [\App\Http\Controllers\Admin\TeacherImportController::class, 'downloadCredentials'])->name('admin.teachers.import.credentials');
+    Route::get('/teachers/import/{token}/mapping', [\App\Http\Controllers\Admin\TeacherImportController::class, 'mapping'])->name('admin.teachers.import.mapping');
+    Route::post('/teachers/import/{token}/preview', [\App\Http\Controllers\Admin\TeacherImportController::class, 'preview'])->name('admin.teachers.import.preview');
+    Route::post('/teachers/import/{token}/store', [\App\Http\Controllers\Admin\TeacherImportController::class, 'store'])->name('admin.teachers.import.store');
+
     Route::resource('teachers', TeacherController::class)->names('admin.teachers');
     Route::post('teachers/{teacher}/send-invitation', [TeacherController::class, 'sendInvitation'])
         ->name('admin.teachers.send-invitation');
@@ -359,6 +383,12 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     // Gestion des matières
     Route::resource('subjects', 'App\Http\Controllers\Admin\SubjectController')->names('admin.subjects');
 
+    // Grille de notation du primaire (note max, coefficient, nb de compositions par niveau+matière)
+    Route::get('/primary-grading', [\App\Http\Controllers\Admin\PrimaryGradingConfigController::class, 'index'])
+        ->name('admin.primary-grading.index');
+    Route::put('/primary-grading', [\App\Http\Controllers\Admin\PrimaryGradingConfigController::class, 'update'])
+        ->name('admin.primary-grading.update');
+
     // Emplois du temps par classe
     Route::get('/schedules', [\App\Http\Controllers\Admin\ScheduleController::class, 'index'])
         ->name('admin.schedules.index');
@@ -368,10 +398,6 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         ->name('admin.schedules.store');
     Route::delete('/schedules/{schedule}', [\App\Http\Controllers\Admin\ScheduleController::class, 'destroy'])
         ->name('admin.schedules.destroy');
-
-    // Export élèves (Excel / CSV)
-    Route::get('/students/export', [StudentController::class, 'export'])
-        ->name('admin.students.export');
 
     // E-Learning / LMS
     Route::get('/lms', [AdminLmsController::class, 'index'])->name('admin.lms.index');
@@ -407,9 +433,15 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
     Route::get('/reports/semester-pdf', [ReportController::class, 'semesterBulletinsPdf'])->name('admin.reports.semester-pdf');
     Route::get('/reports/annual-pdf', [ReportController::class, 'annualReportPdf'])->name('admin.reports.annual-pdf');
+    Route::get('/reports/annual-bulletins-pdf', [ReportController::class, 'annualBulletinsPdf'])->name('admin.reports.annual-bulletins-pdf');
+    Route::get('/reports/composition-pdf', [ReportController::class, 'compositionBulletinsPdf'])->name('admin.reports.composition-pdf');
     Route::get('/reports/semester-csv', [ReportController::class, 'semesterSummaryCsv'])->name('admin.reports.semester-csv');
     Route::get('/reports/annual-csv', [ReportController::class, 'annualSummaryCsv'])->name('admin.reports.annual-csv');
     Route::get('/reports/grades-csv', [ReportController::class, 'gradesCsv'])->name('admin.reports.grades-csv');
+
+    // Présences : consultation transparence (lecture seule, toutes classes)
+    Route::get('/attendance', [\App\Http\Controllers\Admin\AttendanceController::class, 'index'])->name('admin.attendance.index');
+    Route::get('/attendance/history', [\App\Http\Controllers\Admin\AttendanceController::class, 'history'])->name('admin.attendance.history');
 });
 
 // Module Comptabilité — 3 portails dédiés (établissements privés uniquement,
@@ -425,11 +457,19 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
         });
 
-        // Paramétrage financier (Phase 6.2)
+        // Paramétrage financier (Phase 6.2) — tableau croisé Niveau × Type de
+        // frais en page d'accueil (index), gestion des types de frais
+        // eux-mêmes (colonnes) sur une page dédiée (types).
         Route::prefix('fee-types')->name('fee-types.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'index'])->name('index');
+            Route::get('/types', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'types'])->name('types');
             Route::get('/create', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'store'])->name('store');
+            // Routes littérales ('/levels...') AVANT les wildcards à un
+            // segment ('/{feeType}') — sinon PUT /levels serait intercepté
+            // par PUT /{feeType} (Laravel matche dans l'ordre d'enregistrement).
+            Route::put('/levels', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'updateLevelAmounts'])->name('levels.update');
+            Route::get('/levels/{level}/history', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'history'])->name('levels.history');
             Route::get('/{feeType}/edit', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'edit'])->name('edit');
             Route::put('/{feeType}', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'update'])->name('update');
             Route::delete('/{feeType}', [\App\Http\Controllers\Accounting\FeeTypeController::class, 'destroy'])->name('destroy');
@@ -439,8 +479,18 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
 
         Route::prefix('salaries')->name('salaries.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'index'])->name('index');
+            Route::get('/checklist', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'checklist'])->name('checklist');
+            // Paiement direct par le directeur (exception à la séparation des
+            // tâches, cf. AccountingRoles) — même contrôleur que le comptable,
+            // pas de logique dupliquée ; la permission salaire.payer fait foi.
+            Route::post('/{salaryPayment}/pay', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'pay'])->name('pay');
             Route::get('/{employee}/edit', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'edit'])->name('edit');
             Route::put('/{employee}', [\App\Http\Controllers\Accounting\EmployeeSalaryController::class, 'update'])->name('update');
+        });
+
+        Route::prefix('salary-receipts')->name('salary-receipts.')->group(function () {
+            Route::get('/{salaryPayment}', [\App\Http\Controllers\Accounting\SalaryReceiptController::class, 'show'])->name('show');
+            Route::get('/{salaryPayment}/pdf', [\App\Http\Controllers\Accounting\SalaryReceiptController::class, 'pdf'])->name('pdf');
         });
 
         // Journal des opérations + suivi financier élèves (Phase 7.1)
@@ -453,9 +503,12 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
         // permission paiement.annuler pour ce rôle, voir AccountingRoles).
         Route::get('/payments', [\App\Http\Controllers\Accounting\PaymentCorrectionController::class, 'index'])->name('payments.index');
 
-        // Personnel & élèves — vue d'ensemble en lecture seule (transparence)
+        // Personnel & élèves — vue d'ensemble pour le directeur, avec création
+        // limitée à ses subordonnés directs (comptable/caissier).
         Route::prefix('personnel')->name('personnel.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Accounting\PersonnelController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Accounting\PersonnelController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Accounting\PersonnelController::class, 'store'])->name('store');
             Route::get('/{group}', [\App\Http\Controllers\Accounting\PersonnelController::class, 'show'])->name('show');
         });
 
@@ -486,6 +539,11 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::post('/generate', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'generate'])->name('generate');
             Route::post('/{salaryPayment}/pay', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'pay'])->name('pay');
             Route::post('/{salaryPayment}/cancel', [\App\Http\Controllers\Accounting\SalaryPaymentController::class, 'cancel'])->name('cancel');
+        });
+
+        Route::prefix('salary-receipts')->name('salary-receipts.')->group(function () {
+            Route::get('/{salaryPayment}', [\App\Http\Controllers\Accounting\SalaryReceiptController::class, 'show'])->name('show');
+            Route::get('/{salaryPayment}/pdf', [\App\Http\Controllers\Accounting\SalaryReceiptController::class, 'pdf'])->name('pdf');
         });
 
         // Corrections/annulations des paiements élèves (Phase 6.4)
@@ -543,6 +601,8 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
 // Vérification publique d'un reçu de paiement (lien QR Code — aucune auth requise)
 Route::get('/payment-receipt/verify', [\App\Http\Controllers\Accounting\PaymentReceiptController::class, 'verify'])
     ->name('payment.receipt.verify');
+Route::get('/salary-receipt/verify', [\App\Http\Controllers\Accounting\SalaryReceiptController::class, 'verify'])
+    ->name('salary.receipt.verify');
 
 // En cas de route non trouvée
 Route::fallback(function () {

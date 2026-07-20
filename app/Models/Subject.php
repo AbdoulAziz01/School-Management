@@ -52,7 +52,7 @@ class Subject extends Model
     public function levels(): BelongsToMany
     {
         return $this->belongsToMany(Level::class, 'level_subject')
-                    ->withPivot('coefficient', 'is_compulsory')
+                    ->withPivot('coefficient', 'is_compulsory', 'is_active', 'max_grade', 'compositions_count', 'evaluation_type', 'settings')
                     ->withTimestamps();
     }
 

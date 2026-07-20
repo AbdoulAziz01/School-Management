@@ -43,6 +43,11 @@ class AccountingRoles
                 'parametrage.frais', 'parametrage.salaires', 'parametrage.modules',
                 'ecriture.consulter', 'journal.consulter', 'grand_livre.consulter', 'balance.consulter',
                 'caisse.consulter', 'personnel.compta.gerer',
+                // Exception voulue à la séparation des tâches : le directeur
+                // peut payer lui-même les salaires (profs/surveillants...),
+                // en toute transparence — chaque paiement enregistre qui l'a
+                // exécuté (SalaryPayment::paid_by), affiché sur le suivi.
+                'salaire.payer',
                 'rapport_financier.consulter', 'rapport_financier.exporter',
             ],
             self::COMPTABLE => [

@@ -30,6 +30,17 @@ class Level extends Model
         return $this->cycle === 'formation';
     }
 
+    public function isPrimaireCycle(): bool
+    {
+        return $this->cycle === 'primaire';
+    }
+
+    /** CM2 suit un schéma d'évaluation différent des autres classes du primaire (voir App\Support\Grading). */
+    public function isCm2(): bool
+    {
+        return $this->isPrimaireCycle() && strtoupper(trim((string) $this->name)) === 'CM2';
+    }
+
     /** Ordre pédagogique : primaire → collège → lycée → formation. */
     public function scopeOrderedPedagogically(Builder $query): Builder
     {
@@ -53,7 +64,7 @@ class Level extends Model
     public function subjects()
     {
         return $this->belongsToMany(Subject::class, 'level_subject')
-                    ->withPivot('coefficient', 'is_compulsory')
+                    ->withPivot('coefficient', 'is_compulsory', 'is_active', 'max_grade', 'compositions_count', 'evaluation_type', 'settings')
                     ->withTimestamps();
     }
 }

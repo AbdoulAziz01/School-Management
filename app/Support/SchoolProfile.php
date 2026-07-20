@@ -80,6 +80,7 @@ class SchoolProfile
         $attributes = [
             'name'                     => $validated['name'],
             'establishment_type'       => $validated['establishment_type'] ?? null,
+            'establishment_category'   => $validated['establishment_category'] ?? null,
             'motto'                    => $validated['motto'] ?? null,
             'authorization_number'     => $validated['authorization_number'] ?? null,
             'director_name'            => $validated['director_name'] ?? null,

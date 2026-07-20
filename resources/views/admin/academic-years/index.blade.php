@@ -2,6 +2,9 @@
 @extends('admin.layouts.app')
 
 @section('content')
+<a href="{{ route('admin.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+</a>
 <div class="flex-wrap pt-3 pb-2 mb-3 d-flex justify-content-between flex-md-nowrap align-items-center border-bottom">
     <h1 class="h2">Gestion des années scolaires</h1>
     <div class="mb-2 btn-toolbar mb-md-0">

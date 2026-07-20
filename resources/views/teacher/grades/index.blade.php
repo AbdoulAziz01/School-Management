@@ -91,8 +91,12 @@
                         <thead class="table-light">
                             <tr>
                                 <th rowspan="2" class="align-middle" style="min-width: 160px;">Élève</th>
-                                <th colspan="3" class="text-center border-bottom-0">Semestre 1</th>
-                                <th colspan="3" class="text-center border-bottom-0">Semestre 2</th>
+                                @if($isPrimaireContext ?? false)
+                                    <th colspan="{{ count($evaluationColumns) }}" class="text-center border-bottom-0">Compositions de l'année</th>
+                                @else
+                                    <th colspan="3" class="text-center border-bottom-0">Semestre 1</th>
+                                    <th colspan="3" class="text-center border-bottom-0">Semestre 2</th>
+                                @endif
                                 <th rowspan="2" class="text-center align-middle" style="min-width: 90px;">Moyenne</th>
                             </tr>
                             <tr>
@@ -126,7 +130,7 @@
                                         @php $grade = $findGrade($col['semester'], $col['type']); @endphp
                                         <td class="text-center p-1">
                                             @if($grade)
-                                                <span class="badge {{ $grade->grade >= 10 ? 'bg-success' : 'bg-danger' }}"
+                                                <span class="badge" style="background-color: {{ \App\Support\Grading\GradeSequence::gradeBadgeColor($grade->grade, $maxGrade ?? 20, $isPrimaireContext ?? false) }};"
                                                       title="{{ $col['label'] }} — enregistrée{{ $grade->canStillBeEditedByTeacher() ? '' : ' (déjà corrigée)' }}">
                                                     {{ number_format($grade->grade, 1) }}
                                                 </span>
@@ -144,7 +148,7 @@
                                     @endforeach
                                     <td class="text-center">
                                         @if($subjectAverage !== null)
-                                            <span class="badge {{ $subjectAverage >= 10 ? 'bg-success' : 'bg-danger' }}">
+                                            <span class="badge" style="background-color: {{ \App\Support\Grading\GradeSequence::gradeBadgeColor($subjectAverage, $maxGrade ?? 20, $isPrimaireContext ?? false) }};">
                                                 {{ number_format($subjectAverage, 2) }}
                                             </span>
                                         @else
@@ -158,10 +162,16 @@
                 </div>
                 <div class="px-3 py-2 border-top bg-light small text-muted">
                     <span class="me-3"><i class="fas fa-pen me-1"></i>Une note enregistrée peut être corrigée une seule fois (icône <i class="fas fa-pen"></i>) — l'administration est alors avertie par email.</span>
-                    <span class="me-3"><strong>S1 · D1</strong> = 1<sup>er</sup> devoir</span>
-                    <span class="me-3"><strong>S1 · D2</strong> = 2<sup>e</sup> devoir</span>
-                    <span class="me-3"><strong>S1 · Compo</strong> = composition</span>
-                    <span class="text-muted">(idem pour S2)</span>
+                    @if($isPrimaireContext ?? false)
+                        @foreach($evaluationColumns as $col)
+                            <span class="me-3"><strong>{{ $col['header'] }}</strong> = {{ $col['label'] }}</span>
+                        @endforeach
+                    @else
+                        <span class="me-3"><strong>S1 · D1</strong> = 1<sup>er</sup> devoir</span>
+                        <span class="me-3"><strong>S1 · D2</strong> = 2<sup>e</sup> devoir</span>
+                        <span class="me-3"><strong>S1 · Compo</strong> = composition</span>
+                        <span class="text-muted">(idem pour S2)</span>
+                    @endif
                 </div>
             @else
                 <div class="text-center py-4">

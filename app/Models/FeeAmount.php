@@ -28,7 +28,7 @@ class FeeAmount extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['amount', 'level_id', 'academic_year_id'])
+            ->logOnly(['amount', 'level_id', 'fee_type_id', 'academic_year_id'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Montant de frais {$eventName}");

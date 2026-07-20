@@ -61,6 +61,7 @@ class TeacherAttendanceController extends Controller
             ->merge(
                 \App\Models\TeacherAssignment::with('subject')
                     ->where('teacher_id', $teacher->id)
+                    ->active()
                     ->when($selectedClassId, fn ($q) => $q->where('class_id', $selectedClassId))
                     ->get()->pluck('subject')->filter()
             )->unique('id');
@@ -163,7 +164,7 @@ class TeacherAttendanceController extends Controller
             ->filter(fn (array $a) => ($a['status'] ?? '') === 'absent')
             ->pluck('user_id');
 
-        if ($absentIds->isNotEmpty()) {
+        if ($absentIds->isNotEmpty() && config('services.ultramsg.notify_parents_enabled')) {
             User::whereIn('id', $absentIds)
                 ->whereNotNull('parent_whatsapp')
                 ->get()
@@ -186,6 +187,53 @@ class TeacherAttendanceController extends Controller
             'class_id' => $request->class_id,
             'date'     => $date,
         ])->with('success', 'Appel enregistré. Les présences de cette date sont définitives.');
+    }
+
+    /**
+     * Historique des appels d'une classe : un jour par ligne, avec le
+     * décompte présents/absents/retards/excusés, pour que l'enseignant
+     * retrouve facilement ce qui a été saisi les jours précédents.
+     */
+    public function history(Request $request)
+    {
+        $teacher = Auth::user();
+        $classes = $teacher->assignedClasses()->with('level')->get();
+
+        $selectedClassId = $request->get('class_id');
+        $days = collect();
+        $selectedClass = null;
+
+        if ($selectedClassId) {
+            $selectedClass = $classes->firstWhere('id', (int) $selectedClassId);
+            if (! $selectedClass) {
+                return redirect()->route('teacher.attendance.history')
+                    ->with('error', 'Vous n\'avez pas accès à cette classe.');
+            }
+
+            $days = Attendance::withoutGlobalScopes()
+                ->where('class_id', $selectedClassId)
+                ->get()
+                ->groupBy(fn (Attendance $a) => $a->date->toDateString())
+                ->map(function ($rows, $date) {
+                    return [
+                        'date' => $date,
+                        'total' => $rows->count(),
+                        'present' => $rows->where('status', 'present')->count(),
+                        'absent' => $rows->where('status', 'absent')->count(),
+                        'late' => $rows->where('status', 'late')->count(),
+                        'excused' => $rows->where('status', 'excused')->count(),
+                    ];
+                })
+                ->sortByDesc('date')
+                ->values();
+        }
+
+        return view('teacher.attendance.history', compact(
+            'classes',
+            'selectedClassId',
+            'selectedClass',
+            'days',
+        ));
     }
 
     /**

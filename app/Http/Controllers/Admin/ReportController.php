@@ -7,6 +7,7 @@ use App\Models\AcademicYear;
 use App\Models\SchoolClass;
 use App\Services\Reports\BulletinReportService;
 use App\Support\DashboardAcademicYearContext;
+use App\Support\Reports\BulletinSheetFormatter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
@@ -16,7 +17,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ReportController extends Controller
 {
     public function __construct(
-        private BulletinReportService $reports
+        private BulletinReportService $reports,
+        private BulletinSheetFormatter $sheetFormatter
     ) {}
 
     public function index(Request $request)
@@ -26,6 +28,7 @@ class ReportController extends Controller
 
         $classes = $selectedYearId
             ? SchoolClass::query()
+                ->with('level')
                 ->where('academic_year_id', $selectedYearId)
                 ->orderBy('name')
                 ->get()
@@ -44,36 +47,188 @@ class ReportController extends Controller
         [$class, $year, $semester] = $this->validatedReportParams($request);
 
         $bulletins = $this->reports->buildClassSemesterBulletins($class, $year, $semester);
-        $schoolName = config('app.school_name', 'Établissement scolaire');
 
-        // Générer URL signée + QR code PNG base64 pour chaque bulletin
-        foreach ($bulletins as &$bulletin) {
+        $sheets = [];
+        foreach ($bulletins as $bulletin) {
             $verifyUrl = URL::signedRoute('bulletin.verify', [
                 'student_id'       => $bulletin['student_id'],
                 'class_id'         => $class->id,
                 'academic_year_id' => $year->id,
                 'semester'         => $semester,
             ]);
-            $bulletin['verifyUrl'] = $verifyUrl;
-            $bulletin['qrCode']    = base64_encode(
-                QrCode::format('png')->size(120)->errorCorrection('H')->generate($verifyUrl)
+
+            $sheets[] = $this->sheetFormatter->format(
+                school: $class->school,
+                academicYearName: $year->name,
+                periodLabel: 'Semestre '.$semester,
+                niveau: $bulletin['studentInfo']['level'],
+                classe: $bulletin['studentInfo']['class'],
+                student: [
+                    'name' => $bulletin['studentInfo']['name'],
+                    'dob' => $bulletin['studentInfo']['date_of_birth'],
+                    'matricule' => $bulletin['studentInfo']['identifier'],
+                ],
+                effectif: $bulletin['rankData']['total'],
+                rank: $bulletin['rankData'],
+                bulletinData: $bulletin['bulletinData'],
+                generalAverage: $bulletin['generalAverage'],
+                maxGrade: 20.0,
+                qrCodeUri: 'data:image/svg+xml;base64,'.base64_encode(
+                    QrCode::format('svg')->size(120)->errorCorrection('H')->generate($verifyUrl)
+                ),
             );
         }
-        unset($bulletin);
 
-        $pdf = Pdf::loadView('admin.reports.pdf.semester-class', [
-            'bulletins' => $bulletins,
-            'class' => $class,
-            'academicYear' => $year,
-            'semester' => $semester,
-            'schoolName' => $schoolName,
-            'generatedAt' => now()->format('d/m/Y H:i'),
+        $pdf = Pdf::loadView('reports.pdf.bulletin-sheets', [
+            'sheets' => $sheets,
+            'documentTitle' => 'Bulletins '.$class->name.' — S'.$semester,
         ])->setPaper('a4', 'portrait');
 
         $filename = sprintf(
             'bulletins_%s_S%d_%s.pdf',
             $this->slug($class->name),
             $semester,
+            $this->slug($year->name)
+        );
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Bulletins annuels complets de toute une classe en un seul PDF — pour
+     * le primaire (compositions annuelles, pas de semestres, une feuille
+     * par élève) comme pour le secondaire (S1 + S2, deux feuilles par
+     * élève — il n'existe pas de tableau combiné S1+S2 dans le "look"
+     * bulletin), à la différence du "rapport de fin d'année" qui n'est
+     * qu'un tableau de synthèse.
+     */
+    public function annualBulletinsPdf(Request $request)
+    {
+        [$class, $year] = array_slice($this->validatedReportParams($request, semesterRequired: false), 0, 2);
+        $bulletins = $this->reports->buildClassAnnualBulletins($class, $year);
+
+        $sheets = [];
+        foreach ($bulletins as $bulletin) {
+            $studentArr = [
+                'name' => $bulletin['studentInfo']['name'],
+                'dob' => $bulletin['studentInfo']['date_of_birth'],
+                'matricule' => $bulletin['studentInfo']['identifier'],
+            ];
+
+            if ($bulletin['isPrimaire']) {
+                $verifyUrl = URL::signedRoute('bulletin.verify', [
+                    'student_id'       => $bulletin['student_id'],
+                    'class_id'         => $class->id,
+                    'academic_year_id' => $year->id,
+                ]);
+
+                $sheets[] = $this->sheetFormatter->format(
+                    school: $class->school,
+                    academicYearName: $year->name,
+                    periodLabel: 'Année scolaire complète',
+                    niveau: $bulletin['studentInfo']['level'],
+                    classe: $bulletin['studentInfo']['class'],
+                    student: $studentArr,
+                    effectif: count($bulletins),
+                    rank: null,
+                    bulletinData: $bulletin['semestre1Data']['data'],
+                    generalAverage: $bulletin['moyenneAnnuelle'],
+                    maxGrade: $bulletin['overallMaxGrade'],
+                    qrCodeUri: 'data:image/svg+xml;base64,'.base64_encode(
+                        QrCode::format('svg')->size(120)->errorCorrection('H')->generate($verifyUrl)
+                    ),
+                );
+            } else {
+                foreach ([1 => 'semestre1Data', 2 => 'semestre2Data'] as $semesterNumber => $key) {
+                    $verifyUrl = URL::signedRoute('bulletin.verify', [
+                        'student_id'       => $bulletin['student_id'],
+                        'class_id'         => $class->id,
+                        'academic_year_id' => $year->id,
+                        'semester'         => $semesterNumber,
+                    ]);
+
+                    $sheets[] = $this->sheetFormatter->format(
+                        school: $class->school,
+                        academicYearName: $year->name,
+                        periodLabel: 'Semestre '.$semesterNumber,
+                        niveau: $bulletin['studentInfo']['level'],
+                        classe: $bulletin['studentInfo']['class'],
+                        student: $studentArr,
+                        effectif: count($bulletins),
+                        rank: null,
+                        bulletinData: $bulletin[$key]['data'],
+                        generalAverage: (float) $bulletin[$key]['moyenne'],
+                        maxGrade: $bulletin['overallMaxGrade'],
+                        qrCodeUri: 'data:image/svg+xml;base64,'.base64_encode(
+                            QrCode::format('svg')->size(120)->errorCorrection('H')->generate($verifyUrl)
+                        ),
+                    );
+                }
+            }
+        }
+
+        $pdf = Pdf::loadView('reports.pdf.bulletin-sheets', [
+            'sheets' => $sheets,
+            'documentTitle' => 'Bulletins annuels '.$class->name,
+        ])->setPaper('a4', 'portrait');
+
+        $filename = sprintf(
+            'bulletins_annuels_%s_%s.pdf',
+            $this->slug($class->name),
+            $this->slug($year->name)
+        );
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Relevé d'une seule composition (primaire) pour toute une classe —
+     * ex. "toutes les copies de la Composition 2" sans attendre le
+     * bulletin annuel complet.
+     */
+    public function compositionBulletinsPdf(Request $request)
+    {
+        [$class, $year] = array_slice($this->validatedReportParams($request, semesterRequired: false), 0, 2);
+
+        $composition = (int) $request->validate([
+            'composition' => 'required|integer|min:1|max:6',
+        ])['composition'];
+
+        $compositionType = 'composition'.$composition;
+        $compositionLabel = 'Composition '.$composition;
+
+        $bulletins = $this->reports->buildClassCompositionBulletins($class, $year, $compositionType);
+
+        $sheets = [];
+        foreach ($bulletins as $bulletin) {
+            $sheets[] = $this->sheetFormatter->format(
+                school: $class->school,
+                academicYearName: $year->name,
+                periodLabel: $compositionLabel,
+                niveau: $bulletin['studentInfo']['level'],
+                classe: $bulletin['studentInfo']['class'],
+                student: [
+                    'name' => $bulletin['studentInfo']['name'],
+                    'dob' => '-',
+                    'matricule' => $bulletin['studentInfo']['identifier'],
+                ],
+                effectif: count($bulletins),
+                rank: null,
+                bulletinData: $bulletin['bulletinData'],
+                generalAverage: (float) $bulletin['moyenne'],
+                maxGrade: $bulletin['overallMaxGrade'],
+            );
+        }
+
+        $pdf = Pdf::loadView('reports.pdf.bulletin-sheets', [
+            'sheets' => $sheets,
+            'documentTitle' => $compositionLabel.' — '.$class->name,
+        ])->setPaper('a4', 'portrait');
+
+        $filename = sprintf(
+            'composition_%d_%s_%s.pdf',
+            $composition,
+            $this->slug($class->name),
             $this->slug($year->name)
         );
 
@@ -161,7 +316,7 @@ class ReportController extends Controller
         $exportSemester = $semester;
         $gradeRows = $this->reports->buildGradesExportRows($class, $year, $exportSemester);
 
-        $headers = ['Identifiant', 'Élève', 'Classe', 'Matière', 'Code', 'Semestre', 'Type', 'Note', 'Coefficient', 'Date', 'Commentaire'];
+        $headers = ['Identifiant', 'Élève', 'Classe', 'Matière', 'Code', 'Semestre', 'Type', 'Note', 'Barème', 'Coefficient', 'Date', 'Commentaire'];
         $data = array_map(fn ($r) => [
             $r['identifiant'],
             $r['eleve'],
@@ -171,6 +326,7 @@ class ReportController extends Controller
             $r['semestre'],
             $r['type'],
             $r['note'],
+            $r['bareme'],
             $r['coefficient'],
             $r['date'],
             $r['appreciation'],

@@ -130,8 +130,9 @@
                 <i class="fas fa-arrow-left me-1"></i> Retour
             </a>
             @if((empty($isFormationSchool) || !$isFormationSchool) && !empty($canProcessClassPromotions))
+                @php $promotionMaxLabel = rtrim(rtrim(number_format($promotionPreview['max_grade'] ?? 20, 2), '0'), '.'); @endphp
                 <form method="POST" action="{{ route('admin.classes.process-promotions', $class) }}"
-                      onsubmit="return confirm('Traiter le passage en classe supérieure pour les élèves admis (notes complètes, moyenne ≥ {{ config('school.passing_grade_min', 10) }}/20) ?');">
+                      onsubmit="return confirm('Traiter le passage en classe supérieure pour les élèves admis (notes complètes, moyenne ≥ {{ $promotionPreview['passing_grade_min'] ?? config('school.passing_grade_min', 10) }}/{{ $promotionMaxLabel }}) ?');">
                     @csrf
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-level-up-alt me-1"></i> Passages en classe supérieure
@@ -253,8 +254,9 @@
                 <i class="fas fa-level-up-alt me-2"></i>
                 Passage en classe supérieure — Aperçu ({{ $promotionPreview['academic_year_name'] }})
             </h5>
+            @php $pmMax = rtrim(rtrim(number_format($promotionPreview['max_grade'] ?? 20, 2), '0'), '.'); @endphp
             <span class="badge bg-white text-success">
-                Seuil : {{ $promotionPreview['passing_grade_min'] }}/20 · même calcul que les statistiques de la classe
+                Seuil : {{ $promotionPreview['passing_grade_min'] }}/{{ $pmMax }} · même calcul que les statistiques de la classe
             </span>
         </div>
         <div class="card-body">
@@ -268,7 +270,7 @@
                 <div class="col-6 col-md-3">
                     <div class="p-3 text-center border border-danger rounded bg-danger bg-opacity-10">
                         <div class="display-6 fw-bold text-danger">{{ $promotionPreview['counts']['will_stay'] }}</div>
-                        <small class="text-muted">Redoublent (&lt; {{ $promotionPreview['passing_grade_min'] }}/20)</small>
+                        <small class="text-muted">Redoublent (&lt; {{ $promotionPreview['passing_grade_min'] }}/{{ $pmMax }})</small>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
@@ -313,7 +315,7 @@
                                         </td>
                                         <td>
                                             @if($student['annual_average'] !== null)
-                                                <span class="badge bg-success">{{ $student['annual_average'] }}/20</span>
+                                                <span class="badge bg-success">{{ $student['annual_average'] }}/{{ $pmMax }}</span>
                                             @else
                                                 —
                                             @endif
@@ -361,7 +363,7 @@
                                         </td>
                                         <td>
                                             @if($student['annual_average'] !== null)
-                                                <span class="badge bg-danger">{{ $student['annual_average'] }}/20</span>
+                                                <span class="badge bg-danger">{{ $student['annual_average'] }}/{{ $pmMax }}</span>
                                             @else
                                                 <span class="text-muted">—</span>
                                             @endif
@@ -424,7 +426,7 @@
                     — créez les classes du niveau supérieur pour la prochaine année scolaire.
                     <ul class="mb-0 mt-2 small">
                         @foreach($promotionPreview['no_target'] as $student)
-                            <li>{{ $student['name'] }} ({{ $student['annual_average'] }}/20) — <a href="{{ $student['url'] }}">Voir la fiche</a></li>
+                            <li>{{ $student['name'] }} ({{ $student['annual_average'] }}/{{ $pmMax }}) — <a href="{{ $student['url'] }}">Voir la fiche</a></li>
                         @endforeach
                     </ul>
                 </div>
@@ -446,12 +448,17 @@
             </h5>
         </div>
         <div class="card-body">
+            @php
+                $csMax = $classStats['max_grade'] ?? 20;
+                $csMaxLabel = rtrim(rtrim(number_format($csMax, 2), '0'), '.');
+                $csPassMin = rtrim(rtrim(number_format($csMax / 2, 2), '0'), '.');
+            @endphp
             <!-- Cartes de statistiques principales -->
             <div class="mb-4 row g-3 stat-cards-row align-items-stretch">
                 <div class="col-6 col-md-3">
                     <button type="button" class="w-100 btn text-center border rounded bg-light stat-card-btn"
                             data-bs-toggle="modal" data-bs-target="#classRankingModal">
-                        <div class="stat-card-score display-6 fw-bold" style="color: #fd7e14;">{{ $classStats['average'] }}/20</div>
+                        <div class="stat-card-score display-6 fw-bold" style="color: #fd7e14;">{{ $classStats['average'] }}/{{ $csMaxLabel }}</div>
                         <small class="text-muted stat-card-title"><i class="fas fa-chart-line me-1"></i>Moyenne Générale</small>
                         <small class="stat-card-meta text-muted">{{ $classStats['students_with_grades'] ?? 0 }} élève(s) noté(s)</small>
                         <small class="stat-card-action text-primary">Voir le classement</small>
@@ -461,7 +468,7 @@
                     @if(!empty($classStats['best_student']))
                         <button type="button" class="w-100 btn text-center border rounded bg-light stat-card-btn"
                                 data-bs-toggle="modal" data-bs-target="#bestStudentModal">
-                            <div class="stat-card-score display-6 fw-bold text-success">{{ $classStats['best_average'] }}/20</div>
+                            <div class="stat-card-score display-6 fw-bold text-success">{{ $classStats['best_average'] }}/{{ $csMaxLabel }}</div>
                             <small class="text-muted stat-card-title"><i class="fas fa-arrow-up me-1"></i>Meilleure Moyenne</small>
                             <small class="stat-card-meta text-success fw-semibold">{{ $classStats['best_student']['name'] }}</small>
                             <small class="stat-card-action text-primary">Voir l'élève</small>
@@ -477,7 +484,7 @@
                     @if(!empty($classStats['lowest_student']))
                         <button type="button" class="w-100 btn text-center border rounded bg-light stat-card-btn"
                                 data-bs-toggle="modal" data-bs-target="#lowestStudentModal">
-                            <div class="stat-card-score display-6 fw-bold text-danger">{{ $classStats['lowest_average'] }}/20</div>
+                            <div class="stat-card-score display-6 fw-bold text-danger">{{ $classStats['lowest_average'] }}/{{ $csMaxLabel }}</div>
                             <small class="text-muted stat-card-title"><i class="fas fa-arrow-down me-1"></i>Plus Basse Moyenne</small>
                             <small class="stat-card-meta text-danger fw-semibold">{{ $classStats['lowest_student']['name'] }}</small>
                             <small class="stat-card-action text-primary">Voir l'élève</small>
@@ -499,7 +506,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- Statistiques détaillées -->
             <div class="row g-3">
                 <!-- Répartition Réussite/Échec -->
@@ -508,12 +515,12 @@
                         <h6 class="mb-3"><i class="fas fa-users me-2"></i>Répartition des Résultats</h6>
                         <button type="button" class="mb-2 w-100 btn btn-sm btn-outline-success d-flex justify-content-between align-items-center"
                                 data-bs-toggle="modal" data-bs-target="#classPassFailModal">
-                            <span><i class="fas fa-check text-success me-2"></i>Élèves >= 10/20</span>
+                            <span><i class="fas fa-check text-success me-2"></i>Élèves >= {{ $csPassMin }}/{{ $csMaxLabel }}</span>
                             <span class="badge bg-success">{{ $classStats['pass_count'] }}</span>
                         </button>
                         <button type="button" class="mb-2 w-100 btn btn-sm btn-outline-danger d-flex justify-content-between align-items-center"
                                 data-bs-toggle="modal" data-bs-target="#classPassFailModal">
-                            <span><i class="fas fa-times text-danger me-2"></i>Élèves &lt; 10/20</span>
+                            <span><i class="fas fa-times text-danger me-2"></i>Élèves &lt; {{ $csPassMin }}/{{ $csMaxLabel }}</span>
                             <span class="badge bg-danger">{{ $classStats['fail_count'] }}</span>
                         </button>
                         <div class="d-flex justify-content-between">
@@ -587,7 +594,7 @@
                     <p class="mb-1 text-muted">Élève en tête de la classe</p>
                     <h4 class="mb-3">{{ $classStats['best_student']['name'] }}</h4>
                     <ul class="list-unstyled mb-0">
-                        <li><strong>Moyenne :</strong> {{ $classStats['best_average'] }}/20</li>
+                        <li><strong>Moyenne :</strong> {{ $classStats['best_average'] }}/{{ $csMaxLabel }}</li>
                         <li><strong>Identifiant :</strong> {{ $classStats['best_student']['identifier'] ?? '—' }}</li>
                         <li><strong>Email :</strong> {{ $classStats['best_student']['email'] ?? '—' }}</li>
                     </ul>
@@ -613,7 +620,7 @@
                     <p class="mb-1 text-muted">Élève à accompagner en priorité</p>
                     <h4 class="mb-3">{{ $classStats['lowest_student']['name'] }}</h4>
                     <ul class="list-unstyled mb-0">
-                        <li><strong>Moyenne :</strong> {{ $classStats['lowest_average'] }}/20</li>
+                        <li><strong>Moyenne :</strong> {{ $classStats['lowest_average'] }}/{{ $csMaxLabel }}</li>
                         <li><strong>Identifiant :</strong> {{ $classStats['lowest_student']['identifier'] ?? '—' }}</li>
                         <li><strong>Email :</strong> {{ $classStats['lowest_student']['email'] ?? '—' }}</li>
                     </ul>
@@ -652,7 +659,7 @@
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $student['name'] }}</td>
                                     <td><small>{{ $student['identifier'] ?? '—' }}</small></td>
-                                    <td class="text-end fw-bold">{{ $student['average'] }}/20</td>
+                                    <td class="text-end fw-bold">{{ $student['average'] }}/{{ $csMaxLabel }}</td>
                                     <td class="text-end">
                                         <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-primary">Voir la fiche</a>
                                     </td>
@@ -677,11 +684,11 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <h6 class="text-success"><i class="fas fa-check me-1"></i> Élèves admis (≥ 10/20)</h6>
+                            <h6 class="text-success"><i class="fas fa-check me-1"></i> Élèves admis (≥ {{ $csPassMin }}/{{ $csMaxLabel }})</h6>
                             <ul class="list-group list-group-flush">
                                 @forelse($classStats['passing_students'] ?? [] as $student)
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/20)</small></span>
+                                        <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/{{ $csMaxLabel }})</small></span>
                                         <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-success">Fiche</a>
                                     </li>
                                 @empty
@@ -690,11 +697,11 @@
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-danger"><i class="fas fa-times me-1"></i> Élèves en difficulté (&lt; 10/20)</h6>
+                            <h6 class="text-danger"><i class="fas fa-times me-1"></i> Élèves en difficulté (&lt; {{ $csPassMin }}/{{ $csMaxLabel }})</h6>
                             <ul class="list-group list-group-flush">
                                 @forelse($classStats['failing_students'] ?? [] as $student)
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/20)</small></span>
+                                        <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/{{ $csMaxLabel }})</small></span>
                                         <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-danger">Fiche</a>
                                     </li>
                                 @empty
@@ -710,11 +717,11 @@
 
     @php
         $bucketTitles = [
-            'excellent' => 'Élèves — Excellent (≥16)',
-            'good' => 'Élèves — Bien (14-15)',
-            'average' => 'Élèves — Assez bien (12-13)',
-            'passing' => 'Élèves — Passable (10-11)',
-            'failing' => 'Élèves — Insuffisant (<10)',
+            'excellent' => 'Élèves — Excellent (≥'.rtrim(rtrim(number_format($csMax * 0.8, 2), '0'), '.').')',
+            'good' => 'Élèves — Bien ('.rtrim(rtrim(number_format($csMax * 0.7, 2), '0'), '.').'-'.rtrim(rtrim(number_format($csMax * 0.8 - 0.01, 2), '0'), '.').')',
+            'average' => 'Élèves — Assez bien ('.rtrim(rtrim(number_format($csMax * 0.6, 2), '0'), '.').'-'.rtrim(rtrim(number_format($csMax * 0.7 - 0.01, 2), '0'), '.').')',
+            'passing' => 'Élèves — Passable ('.$csPassMin.'-'.rtrim(rtrim(number_format($csMax * 0.6 - 0.01, 2), '0'), '.').')',
+            'failing' => 'Élèves — Insuffisant (<'.$csPassMin.')',
         ];
     @endphp
     @foreach($bucketTitles as $bucketKey => $bucketTitle)
@@ -729,7 +736,7 @@
                         <ul class="list-group list-group-flush">
                             @forelse($classStats['students_by_bucket'][$bucketKey] ?? [] as $student)
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/20)</small></span>
+                                    <span>{{ $student['name'] }} <small class="text-muted">({{ $student['average'] }}/{{ $csMaxLabel }})</small></span>
                                     <a href="{{ $student['url'] }}" class="btn btn-sm btn-outline-primary">Fiche</a>
                                 </li>
                             @empty
@@ -770,7 +777,7 @@
                 <small class="text-muted">
                     <i class="fas fa-info-circle me-1"></i>
                     Moyenne mensuelle de la classe (notes du mois) — courbe avec variations d'un mois à l'autre.
-                    La ligne verte pointillée indique le seuil de réussite (10/20).
+                    La ligne verte pointillée indique le seuil de réussite ({{ $csPassMin }}/{{ $csMaxLabel }}).
                 </small>
             </div>
         </div>
@@ -980,6 +987,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const monthlyData = @json($classStats['monthly_averages']);
+    const chartMaxGrade = @json($classStats['max_grade'] ?? 20);
     const labels = monthlyData.map(item => item.month);
     const averages = monthlyData.map(item => item.average);
     const counts = monthlyData.map(item => item.count);
@@ -996,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', function() {
     gradient.addColorStop(0, 'rgba(253, 126, 20, 0.8)');
     gradient.addColorStop(1, 'rgba(253, 126, 20, 0.1)');
 
-    const passingLine = labels.map(() => 10);
+    const passingLine = labels.map(() => chartMaxGrade / 2);
 
     new Chart(ctx, {
         type: 'line',
@@ -1019,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     pointHoverRadius: 7
                 },
                 {
-                    label: 'Ligne de passage (10/20)',
+                    label: 'Ligne de passage (' + (chartMaxGrade / 2) + '/' + chartMaxGrade + ')',
                     data: passingLine,
                     borderColor: '#28a745',
                     borderWidth: 2,
@@ -1045,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (value === null || value === undefined) {
                                 return context.dataset.label + ' : —';
                             }
-                            return context.dataset.label + ' : ' + value + '/20';
+                            return context.dataset.label + ' : ' + value + '/' + chartMaxGrade;
                         },
                         afterLabel: function(context) {
                             const index = context.dataIndex;
@@ -1063,11 +1071,11 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 20,
+                    max: chartMaxGrade,
                     ticks: {
-                        stepSize: 2,
+                        stepSize: chartMaxGrade > 10 ? 2 : 1,
                         callback: function(value) {
-                            return value + '/20';
+                            return value + '/' + chartMaxGrade;
                         }
                     },
                     title: {

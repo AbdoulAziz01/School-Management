@@ -7,26 +7,39 @@
         /* Ticket 80mm — voir PaymentReceiptController::pdf() pour la taille
            de page (largeur fixe, hauteur généreuse pour éviter la pagination). */
         @page { margin: 0; }
+        /* Ni `width` explicite ni `box-sizing` sur body : DomPDF ne respecte
+           pas toujours box-sizing, ce qui faisait déborder le padding
+           au-delà de la page (les derniers caractères des montants étaient
+           coupés). En laissant body en `width: auto` (comportement par
+           défaut), son padding est automatiquement réservé à l'intérieur
+           de la page — aucun dépassement possible, quel que soit le
+           moteur de rendu. */
+        html, body { margin: 0; }
         body {
             font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
             color: #000;
-            margin: 0;
             padding: 8px 10px;
-            width: 100%;
         }
         .center { text-align: center; }
+        .school-logo { max-width: 60px; max-height: 60px; margin: 0 auto 4px; display: block; }
         .school-name { font-size: 13px; font-weight: bold; margin: 0 0 2px; }
         .school-meta { font-size: 9px; color: #333; margin: 0 0 6px; }
         .title { font-size: 11px; font-weight: bold; margin: 6px 0 2px; text-transform: uppercase; }
         .receipt-number { font-size: 10px; margin: 0 0 6px; }
         .divider { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-        table.info { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-        table.info td { padding: 1px 0; font-size: 9.5px; vertical-align: top; }
-        table.info td.label { width: 42%; color: #333; }
-        table.lines { width: 100%; border-collapse: collapse; margin-top: 4px; }
-        table.lines td { padding: 2px 0; font-size: 9.5px; vertical-align: top; }
-        table.lines td.amount { text-align: right; white-space: nowrap; }
+        /* table-layout:fixed : les largeurs de colonnes sont garanties par
+           la 1re ligne, aucun contenu ne peut pousser une colonne au-delà
+           de sa largeur — le libellé passe à la ligne (word-wrap) plutôt
+           que de repousser la colonne montant hors de la page. Le montant
+           reste sur sa propre colonne, jamais tronqué. */
+        table.info { width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 4px; }
+        table.info td { padding: 1px 0; font-size: 9.5px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
+        table.info td.label { width: 38%; color: #333; }
+        table.lines { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 4px; }
+        table.lines td { padding: 2px 4px 2px 0; font-size: 9.5px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
+        table.lines td.label { width: 55%; text-align: left; padding-right: 6px; }
+        table.lines td.amount { width: 45%; text-align: right; padding-right: 0; white-space: normal; }
         .total-row td { font-weight: bold; font-size: 11px; padding-top: 4px; }
         .qr-wrap { margin-top: 10px; text-align: center; }
         .qr-wrap img { width: 70px; height: 70px; }
@@ -36,6 +49,9 @@
 </head>
 <body>
     <div class="center">
+        @if($logoUri = \App\Support\SchoolLogoStorage::dataUri($payment->school))
+            <img src="{{ $logoUri }}" alt="Logo" class="school-logo">
+        @endif
         <p class="school-name">{{ $payment->school->name ?? 'Établissement' }}</p>
         @if($payment->school?->phone)
             <p class="school-meta">{{ $payment->school->phone }}</p>
@@ -59,12 +75,12 @@
     <table class="lines">
         @foreach($payment->allocations as $allocation)
             <tr>
-                <td>{{ $allocation->studentInvoice->label }}</td>
+                <td class="label">{{ $allocation->studentInvoice->label }}</td>
                 <td class="amount">{{ number_format($allocation->amount, 0, ',', ' ') }}</td>
             </tr>
         @endforeach
         <tr class="total-row">
-            <td>TOTAL</td>
+            <td class="label">TOTAL</td>
             <td class="amount">{{ number_format($payment->amount, 0, ',', ' ') }} FCFA</td>
         </tr>
     </table>

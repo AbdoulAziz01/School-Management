@@ -49,6 +49,23 @@
         </div>
     </div>
 
+    <div class="card-header bg-white border-top">
+        <h5 class="mb-0">Directeur de l'établissement <span class="text-muted small fw-normal">(optionnel, module Comptabilité — établissements « Privé »)</span></h5>
+    </div>
+    <div class="card-body row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Nom complet</label>
+            <input type="text" name="director_name" class="form-control @error('director_name') is-invalid @enderror" value="{{ old('director_name') }}">
+            @error('director_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Email directeur</label>
+            <input type="email" name="director_email" class="form-control @error('director_email') is-invalid @enderror" value="{{ old('director_email') }}">
+            @error('director_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div class="form-text">Doit être différent de l'email admin. Laissez les deux champs vides pour créer ce compte plus tard depuis la fiche établissement.</div>
+        </div>
+    </div>
+
     <div class="card-footer bg-white d-flex gap-2">
         <button type="submit" class="btn btn-primary">Créer l'établissement</button>
         <a href="{{ route('platform.schools.index') }}" class="btn btn-outline-secondary">Annuler</a>

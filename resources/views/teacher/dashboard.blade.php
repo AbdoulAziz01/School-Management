@@ -26,7 +26,7 @@
 {{-- Section Aperçu --}}
 <div class="mb-4 row g-4">
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
+        <a href="{{ route('teacher.classes.index') }}" class="card stat-card stat-card-link">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -38,14 +38,14 @@
                     </div>
                 </div>
                 <div class="mt-3">
-                    <a href="{{ route('teacher.classes.index') }}" class="btn btn-sm btn-outline-primary w-100">Voir mes classes</a>
+                    <span class="btn btn-sm btn-outline-primary w-100">Voir mes classes</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
-    
+
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
+        <a href="{{ ($singleClassId ?? null) ? route('teacher.classes.show', $singleClassId) . '#liste-eleves' : route('teacher.classes.index') }}" class="card stat-card stat-card-link">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -60,11 +60,11 @@
                     <small class="text-muted">Répartis dans {{ $classesCount ?? 0 }} classe(s)</small>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
-    
+
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
+        <a href="{{ ($singleClassId ?? null) ? route('teacher.classes.show', $singleClassId) . '#matieres-classe' : route('teacher.classes.index') }}" class="card stat-card stat-card-link">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -83,11 +83,11 @@
                     @endif
                 </div>
             </div>
-        </div>
+        </a>
     </div>
-    
+
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card stat-card">
+        <a href="{{ route('teacher.classes.index') }}" class="card stat-card stat-card-link">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -108,7 +108,7 @@
                     @endif
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -161,15 +161,18 @@
                             </thead>
                             <tbody>
                                 @foreach($recentGrades as $grade)
+                                @php
+                                    $maxGradeRow = $grade->max_grade_display ?? 20;
+                                @endphp
                                 <tr>
                                     <td>{{ $grade->user->name ?? 'N/A' }}</td>
                                     <td>{{ $grade->subject->name ?? 'N/A' }}</td>
                                     <td>
-                                        <span class="badge {{ $grade->grade >= 10 ? 'bg-success' : 'bg-danger' }}">
-                                            {{ number_format($grade->grade, 2) }}/20
+                                        <span class="badge {{ $grade->grade >= $maxGradeRow / 2 ? 'bg-success' : 'bg-danger' }}">
+                                            {{ number_format($grade->grade, 2) }}/{{ rtrim(rtrim(number_format($maxGradeRow, 2), '0'), '.') }}
                                         </span>
                                     </td>
-                                    <td>{{ ucfirst($grade->type ?? 'N/A') }}</td>
+                                    <td>{{ \App\Support\Grading\GradeSequence::labels()[$grade->type] ?? ucfirst($grade->type ?? 'N/A') }}</td>
                                     <td>{{ $grade->date ? $grade->date->format('d/m/Y') : 'N/A' }}</td>
                                 </tr>
                                 @endforeach
@@ -205,6 +208,12 @@
                 <p class="text-muted small mb-3">Sélectionnez une classe pour voir l'évolution des notes (D1, D2, Compo par semestre).</p>
                 <div class="list-group class-performance-list">
                     @foreach($classAverages as $index => $item)
+                        @php
+                            $itemMaxGrade = $item['max_grade'] ?? 20;
+                            $badgeColor = ($item['average'] ?? null) === null
+                                ? '#6c757d'
+                                : \App\Support\Grading\GradeSequence::gradeBadgeColor($item['average'], $itemMaxGrade, $item['is_primaire'] ?? false);
+                        @endphp
                         <button type="button"
                                 class="list-group-item list-group-item-action d-flex justify-content-between align-items-center class-performance-item {{ $index === 0 ? 'active' : '' }}"
                                 data-class-index="{{ $index }}">
@@ -212,8 +221,8 @@
                                 <i class="fas fa-users me-2 text-muted"></i>
                                 {{ $item['class']->display_name ?? ($item['class']->name ?? 'N/A') }}
                             </span>
-                            <span class="badge {{ ($item['average'] ?? null) === null ? 'bg-secondary' : ($item['average'] >= 10 ? 'bg-success' : 'bg-danger') }} rounded-pill">
-                                {{ ($item['average'] ?? null) !== null ? number_format($item['average'], 2).'/20' : '—' }}
+                            <span class="badge rounded-pill" style="background-color: {{ $badgeColor }};">
+                                {{ ($item['average'] ?? null) !== null ? number_format($item['average'], 2).'/'.rtrim(rtrim(number_format($itemMaxGrade, 2), '0'), '.') : '—' }}
                             </span>
                         </button>
                     @endforeach
@@ -228,15 +237,16 @@
                             <i class="fas fa-chart-line me-2"></i>
                             <span id="chart-class-title">{{ $classAverages[0]['class']->display_name ?? ($classAverages[0]['class']->name ?? 'Classe') }}</span>
                         </h6>
+                        @php $firstMaxGrade = $classAverages[0]['max_grade'] ?? 20; @endphp
                         <span class="small text-muted">
-                            Moyenne : <strong id="chart-class-average" class="{{ ($classAverages[0]['average'] ?? 0) >= 10 ? 'text-success' : 'text-danger' }}">{{ number_format($classAverages[0]['average'] ?? 0, 2) }}/20</strong>
+                            Moyenne : <strong id="chart-class-average" style="color: {{ \App\Support\Grading\GradeSequence::gradeBadgeColor($classAverages[0]['average'] ?? 0, $firstMaxGrade, $classAverages[0]['is_primaire'] ?? false) }};">{{ number_format($classAverages[0]['average'] ?? 0, 2) }}/{{ rtrim(rtrim(number_format($firstMaxGrade, 2), '0'), '.') }}</strong>
                         </span>
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                         <label for="chart-subject-select" class="small text-muted mb-0">Matière :</label>
                         <select id="chart-subject-select" class="form-select form-select-sm" style="max-width: 280px;"></select>
                     </div>
-                    <p class="text-muted small mb-3">Évolution S1 · D1 → D2 → Compo puis S2 · D1 → D2 → Compo — seuil : 10/20</p>
+                    <p id="chart-legend" class="text-muted small mb-3"></p>
                     <div id="chart-wrapper" class="subject-chart-wrapper">
                         <canvas id="subjectPerformanceChart"></canvas>
                     </div>
@@ -266,6 +276,17 @@
 
 @push('styles')
 <style>
+    .stat-card-link {
+        display: block;
+        text-decoration: none !important;
+        color: inherit !important;
+        cursor: pointer;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .stat-card-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.1);
+    }
     .class-performance-list .list-group-item {
         cursor: pointer;
         border-left: 3px solid transparent;
@@ -293,17 +314,28 @@
         const classData = JSON.parse(dataEl.textContent);
         const titleEl = document.getElementById('chart-class-title');
         const avgEl = document.getElementById('chart-class-average');
+        const legendEl = document.getElementById('chart-legend');
         const emptyEl = document.getElementById('chart-empty-msg');
         const wrapperEl = document.getElementById('chart-wrapper');
         const subjectSelect = document.getElementById('chart-subject-select');
         let chart = null;
         let currentClassIndex = 0;
 
-        function pointColor(avg) {
+        // Couleur par pourcentage de réussite (jamais un seuil absolu type
+        // "note >= 10", qui n'a de sens que sur /20) — 4 bandes pour le
+        // primaire (barème souvent /10), réussite/échec simple sinon.
+        function pointColor(avg, maxGrade, isPrimaire) {
             if (avg === null) return '#adb5bd';
-            if (avg >= 14) return '#198754';
-            if (avg >= 10) return '#f59e0b';
-            return '#dc3545';
+            const ratio = maxGrade > 0 ? avg / maxGrade : 0;
+            if (!isPrimaire) return ratio >= 0.5 ? '#198754' : '#dc3545';
+            if (ratio >= 0.9) return '#15803d';
+            if (ratio >= 0.7) return '#22c55e';
+            if (ratio >= 0.5) return '#f59e0b';
+            return '#dc2626';
+        }
+
+        function formatMax(maxGrade) {
+            return Number.isInteger(maxGrade) ? String(maxGrade) : maxGrade.toFixed(1);
         }
 
         function populateSubjectSelect(subjects, selectedIndex) {
@@ -311,7 +343,7 @@
             subjects.forEach(function (s, i) {
                 const opt = document.createElement('option');
                 opt.value = i;
-                opt.textContent = s.name + (s.average !== null ? ' (' + s.average.toFixed(2) + '/20)' : '');
+                opt.textContent = s.name + (s.average !== null ? ' (' + s.average.toFixed(2) + '/' + formatMax(s.max_grade || 20) + ')' : '');
                 subjectSelect.appendChild(opt);
             });
             subjectSelect.value = String(selectedIndex);
@@ -327,8 +359,14 @@
             const subject = subjects[subjectIndex];
             if (!subject) return;
 
+            const maxGrade = subject.max_grade || 20;
+            const isPrimaire = !!item.is_primaire;
             const evaluations = subject.evaluations || [];
             const withGrades = evaluations.filter(function (e) { return e.average !== null; });
+
+            legendEl.textContent = isPrimaire
+                ? 'Évolution des compositions — réussite à partir de ' + (maxGrade / 2).toFixed(1) + '/' + formatMax(maxGrade)
+                : 'Évolution S1 · D1 → D2 → Compo puis S2 · D1 → D2 → Compo — seuil : ' + (maxGrade / 2) + '/' + formatMax(maxGrade);
 
             if (withGrades.length === 0) {
                 wrapperEl.classList.add('d-none');
@@ -342,7 +380,7 @@
 
             const labels = evaluations.map(function (e) { return e.label; });
             const values = evaluations.map(function (e) { return e.average; });
-            const pointColors = evaluations.map(function (e) { return pointColor(e.average); });
+            const pointColors = evaluations.map(function (e) { return pointColor(e.average, maxGrade, isPrimaire); });
 
             if (chart) chart.destroy();
 
@@ -375,7 +413,7 @@
                                 label: function (ctx) {
                                     const ev = evaluations[ctx.dataIndex];
                                     if (!ev || ev.average === null) return 'Non saisi';
-                                    return ev.average.toFixed(2) + '/20 — ' + ev.count + ' note(s)';
+                                    return ev.average.toFixed(2) + '/' + formatMax(maxGrade) + ' — ' + ev.count + ' note(s)';
                                 }
                             }
                         }
@@ -383,9 +421,9 @@
                     scales: {
                         y: {
                             min: 0,
-                            max: 20,
-                            ticks: { stepSize: 2 },
-                            title: { display: true, text: 'Moyenne / 20' },
+                            max: maxGrade,
+                            ticks: { stepSize: maxGrade > 10 ? 2 : 1 },
+                            title: { display: true, text: 'Moyenne / ' + formatMax(maxGrade) },
                             grid: { color: '#e9ecef' }
                         },
                         x: {
@@ -403,7 +441,8 @@
                     afterDraw: function (c) {
                         const yScale = c.scales.y;
                         const ctx = c.ctx;
-                        const y = yScale.getPixelForValue(10);
+                        const passValue = maxGrade / 2;
+                        const y = yScale.getPixelForValue(passValue);
                         ctx.save();
                         ctx.strokeStyle = '#6c757d';
                         ctx.setLineDash([6, 4]);
@@ -414,7 +453,7 @@
                         ctx.stroke();
                         ctx.fillStyle = '#6c757d';
                         ctx.font = '10px sans-serif';
-                        ctx.fillText('10', c.chartArea.left - 18, y + 3);
+                        ctx.fillText(String(passValue), c.chartArea.left - 18, y + 3);
                         ctx.restore();
                     }
                 }]
@@ -431,9 +470,10 @@
                 btn.classList.toggle('active', parseInt(btn.dataset.classIndex, 10) === classIndex);
             });
 
+            const classMaxGrade = item.max_grade || 20;
             titleEl.textContent = item.class;
-            avgEl.textContent = item.average !== null ? Number(item.average).toFixed(2) + '/20' : '—';
-            avgEl.className = item.average !== null && item.average >= 10 ? 'text-success' : (item.average !== null ? 'text-danger' : 'text-muted');
+            avgEl.textContent = item.average !== null ? Number(item.average).toFixed(2) + '/' + formatMax(classMaxGrade) : '—';
+            avgEl.style.color = pointColor(item.average, classMaxGrade, !!item.is_primaire);
 
             const subjects = item.subjects || [];
             if (subjects.length === 0) {

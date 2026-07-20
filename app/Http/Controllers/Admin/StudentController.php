@@ -18,6 +18,8 @@ use App\Support\StudentGradeEvolution;
 use App\Support\FormationLmdSettings;
 use App\Support\FormationModuleGradeCalculator;
 use App\Support\SenegalGradeSequence;
+use App\Support\Grading\GradeSequence;
+use App\Support\Grading\PrimaryGradingSettings;
 use App\Support\TenantSchool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -725,20 +727,36 @@ public function pending()
             'school',
         ]);
 
-        // Colonnes d'évaluation (S1·D1 → S2·Compo)
+        // Colonnes d'évaluation : S1·D1 → S2·Compo (secondaire) ou C1 → CN
+        // à plat (primaire, N = nombre de compositions par défaut du
+        // niveau — les matières configurées avec plus de compositions que
+        // le défaut du niveau afficheront leurs colonnes en trop en "—"
+        // ici, cette vue synthétique ne gère qu'un nombre de colonnes
+        // commun à toutes les matières de l'élève).
+        $studentLevel = $student->class?->level;
+        $isPrimaireStudent = $studentLevel?->isPrimaireCycle() ?? false;
+
+        $evaluationSlots = $isPrimaireStudent
+            ? array_map(fn ($i) => [1, 'composition'.$i], range(1, PrimaryGradingSettings::defaults($studentLevel)->compositionsCount))
+            : (function () {
+                $slots = [];
+                foreach ([1, 2] as $semester) {
+                    foreach (SenegalGradeSequence::ORDER as $type) {
+                        $slots[] = [$semester, $type];
+                    }
+                }
+
+                return $slots;
+            })();
+
         $evaluationColumns = [];
-        foreach ([1, 2] as $semester) {
-            foreach (SenegalGradeSequence::ORDER as $type) {
-                $evaluationColumns[] = [
-                    'key'    => 's'.$semester.'_'.$type,
-                    'header' => 'S'.$semester.' · '.match ($type) {
-                        'devoir1'     => 'D1',
-                        'devoir2'     => 'D2',
-                        'composition' => 'Compo',
-                        default       => $type,
-                    },
-                ];
-            }
+        foreach ($evaluationSlots as [$semester, $type]) {
+            $evaluationColumns[] = [
+                'key'    => 's'.$semester.'_'.$type,
+                'header' => $isPrimaireStudent
+                    ? GradeSequence::shortLabel($type)
+                    : 'S'.$semester.' · '.GradeSequence::shortLabel($type),
+            ];
         }
 
         $useLmdGrading = (bool) $student->school?->usesLmdGrading();
@@ -753,25 +771,26 @@ public function pending()
             : $student->grades;
 
         // Notes groupées par matière avec une note par colonne d'évaluation
-        $gradesBySubject = $gradesForDisplay->groupBy('subject.name')->map(function ($subjectGrades) use ($useLmdGrading, $lmdSettings, $passingGradeMin) {
+        $studentSchoolClass = $student->class;
+        $gradesBySubject = $gradesForDisplay->groupBy('subject.name')->map(function ($subjectGrades) use ($useLmdGrading, $lmdSettings, $passingGradeMin, $evaluationSlots, $studentSchoolClass) {
             $official = $subjectGrades
-                ->whereIn('type', SenegalGradeSequence::ORDER)
-                ->whereIn('semester', [1, 2]);
+                ->whereIn('type', GradeSequence::allTypes());
 
             $subjectModel = $subjectGrades->first()?->subject;
             $moduleSettings = ($useLmdGrading && $subjectModel)
                 ? FormationLmdSettings::fromSubject($subjectModel)
                 : $lmdSettings;
             $modulePassingMin = $moduleSettings->passingGradeMin;
+            $maxGrade = (! $useLmdGrading && $studentSchoolClass && $subjectModel)
+                ? GradeSequence::maxGradeFor($studentSchoolClass, $subjectModel->id)
+                : 20.0;
 
             $slots = [];
-            foreach ([1, 2] as $semester) {
-                foreach (SenegalGradeSequence::ORDER as $type) {
-                    $grade = $official->first(
-                        fn ($g) => (int) $g->semester === $semester && $g->type === $type
-                    );
-                    $slots['s'.$semester.'_'.$type] = $grade !== null ? (float) $grade->grade : null;
-                }
+            foreach ($evaluationSlots as [$semester, $type]) {
+                $grade = $official->first(
+                    fn ($g) => (int) $g->semester === $semester && $g->type === $type
+                );
+                $slots['s'.$semester.'_'.$type] = $grade !== null ? (float) $grade->grade : null;
             }
 
             if ($useLmdGrading) {
@@ -783,7 +802,9 @@ public function pending()
                 $average = $official->isNotEmpty()
                     ? round((float) $official->avg('grade'), 2)
                     : null;
-                $lmdValidated = $average !== null && $average >= $passingGradeMin;
+                // Réussite = moitié du barème de la matière, jamais un seuil
+                // absolu fixe (10) qui n'a de sens que sur /20.
+                $lmdValidated = $average !== null && $maxGrade > 0 && $average >= $maxGrade / 2;
                 $lmdMode = null;
             }
 
@@ -792,17 +813,23 @@ public function pending()
                 'coefficient' => $subjectGrades->first()->subject->coefficient ?? 1,
                 'slots'       => $slots,
                 'average'     => $average,
+                'max_grade'   => $maxGrade,
                 'lmd_validated' => $lmdValidated,
                 'lmd_mode'    => FormationModuleGradeCalculator::modeLabel($lmdMode, $moduleSettings),
                 'lmd_formula' => $useLmdGrading ? $moduleSettings->shortLabel() : null,
-                'passing_min' => $useLmdGrading ? $modulePassingMin : $passingGradeMin,
+                'passing_min' => $useLmdGrading ? $modulePassingMin : round($maxGrade / 2, 2),
             ];
         })->sortKeys();
 
-        // Moyenne générale pondérée
+        // Moyenne générale pondérée, toujours normalisée sur 20 (chaque
+        // matière peut avoir son propre barème pour le primaire).
         $gradedSubjects = $gradesBySubject->filter(fn ($g) => $g['average'] !== null);
         $totalCoef = $gradedSubjects->sum('coefficient');
-        $weightedSum = $gradedSubjects->sum(fn ($g) => $g['average'] * $g['coefficient']);
+        $weightedSum = $gradedSubjects->sum(function ($g) {
+            $normalized = $g['max_grade'] > 0 ? ($g['average'] / $g['max_grade']) * 20 : $g['average'];
+
+            return $normalized * $g['coefficient'];
+        });
         $generalAverage = $totalCoef > 0 ? round($weightedSum / $totalCoef, 2) : 0;
 
         // Récupérer les absences
@@ -848,6 +875,7 @@ public function pending()
             'useLmdGrading' => $useLmdGrading,
             'lmdFormulaLabel' => $useLmdGrading ? 'Pondération CC / Examen définie par module' : null,
             'passingGradeMin' => $passingGradeMin,
+            'isPrimaireStudent' => $isPrimaireStudent,
         ]);
     }
 

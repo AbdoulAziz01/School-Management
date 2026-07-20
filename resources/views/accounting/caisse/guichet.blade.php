@@ -5,38 +5,54 @@
 @section('content')
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="card h-100 text-center">
+        <a href="{{ route('caisse.sessions.index') }}" class="card h-100 text-center stat-card-link">
             <div class="card-body py-3">
                 <div class="small text-muted mb-1">Fond de caisse</div>
                 <div class="h5 mb-0">{{ number_format($summary['opening_balance'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card h-100 text-center">
+        <a href="{{ route('caisse.history') }}" class="card h-100 text-center stat-card-link">
             <div class="card-body py-3">
                 <div class="small text-muted mb-1">Encaissé aujourd'hui</div>
                 <div class="h5 mb-0 text-success">{{ number_format($summary['encaissements'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card h-100 text-center">
+        <a href="{{ route('caisse.history') }}" class="card h-100 text-center stat-card-link">
             <div class="card-body py-3">
                 <div class="small text-muted mb-1">Solde attendu</div>
                 <div class="h5 mb-0">{{ number_format($summary['expected_balance'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card h-100 text-center">
+        <a href="{{ route('caisse.history') }}" class="card h-100 text-center stat-card-link">
             <div class="card-body py-3">
                 <div class="small text-muted mb-1">Paiements</div>
                 <div class="h5 mb-0">{{ $summary['payments_count'] }}</div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
+
+@push('styles')
+<style>
+    .stat-card-link {
+        display: block;
+        text-decoration: none !important;
+        color: inherit !important;
+        cursor: pointer;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .stat-card-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+    }
+</style>
+@endpush
 
 <div class="card mb-4">
     <div class="card-body">

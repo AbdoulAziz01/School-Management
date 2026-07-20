@@ -3,10 +3,13 @@
 namespace App\Services\Reports;
 
 use App\Models\AcademicYear;
+use App\Models\Attendance;
 use App\Models\Grade;
 use App\Models\SchoolClass;
 use App\Models\User;
 use App\Services\SchoolBot\BulletinComputation;
+use App\Support\Grading\GradeSequence;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class BulletinReportService
@@ -125,7 +128,50 @@ class BulletinReportService
             'rankData' => ['rank' => $rank, 'total' => $rankTotal ?? 0],
             'classStats' => $classStats ?? ['average' => null, 'highest' => null, 'lowest' => null],
             'usesLmd' => $class?->school?->usesLmdGrading() ?? false,
+            'absenceCount' => $this->countAbsences($student, $this->semesterDateRange($academicYear, $semester)),
         ];
+    }
+
+    /**
+     * Nombre d'absences d'un élève sur une période donnée (bornes
+     * incluses). Sans bornes, compte toutes les absences enregistrées.
+     *
+     * @param  array{0: ?Carbon, 1: ?Carbon}  $range
+     */
+    private function countAbsences(User $student, array $range): int
+    {
+        [$start, $end] = $range;
+
+        return Attendance::where('user_id', $student->id)
+            ->where('status', 'absent')
+            ->when($start && $end, fn ($q) => $q->whereBetween('date', [$start->toDateString(), $end->toDateString()]))
+            ->count();
+    }
+
+    /**
+     * Découpe la période de l'année scolaire en deux semestres, au même
+     * pivot que BulletinComputation::getCurrentSemester() (fin janvier /
+     * début février) — Attendance n'a pas de colonne semestre.
+     *
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function semesterDateRange(AcademicYear $academicYear, int $semester): array
+    {
+        if (! $academicYear->start_date || ! $academicYear->end_date) {
+            return [null, null];
+        }
+
+        $start = Carbon::parse($academicYear->start_date);
+        $end = Carbon::parse($academicYear->end_date);
+
+        $pivot = Carbon::create($start->year, 2, 1);
+        if ($pivot->lt($start)) {
+            $pivot->addYear();
+        }
+
+        return $semester === 1
+            ? [$start, $pivot->copy()->subDay()]
+            : [$pivot, $end];
     }
 
     /**
@@ -136,36 +182,221 @@ class BulletinReportService
     public function buildClassAnnualReport(SchoolClass $class, AcademicYear $academicYear): array
     {
         $class->loadMissing(['level', 'school']);
+        $isPrimaire = $class->level?->isPrimaireCycle() ?? false;
+        $overallMaxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($class->level);
         $students = $this->approvedStudentsInClass($class);
         $rows = [];
 
         foreach ($students as $student) {
-            $s1 = $this->getSemesterSummary($student, $class, $academicYear, 1);
-            $s2 = $this->getSemesterSummary($student, $class, $academicYear, 2);
+            if ($isPrimaire) {
+                // Primaire : pas de semestres — moyenne annuelle calculée
+                // directement à partir des compositions (voir
+                // App\Support\Grading). Le S1/S2 des autres cycles n'a pas
+                // de sens ici, on ne le réutilise donc pas.
+                $moyenneAnnuelle = $this->getAnnualSummary($student, $class, $academicYear)['moyenne'];
+                $s1Display = $moyenneAnnuelle;
+                $s2Display = 0.0;
+            } else {
+                $s1 = $this->getSemesterSummary($student, $class, $academicYear, 1);
+                $s2 = $this->getSemesterSummary($student, $class, $academicYear, 2);
 
-            $moyenneAnnuelle = 0.0;
-            if ($s1['moyenne'] > 0 && $s2['moyenne'] > 0) {
-                $moyenneAnnuelle = round(($s1['moyenne'] + $s2['moyenne']) / 2, 2);
-            } elseif ($s1['moyenne'] > 0) {
-                $moyenneAnnuelle = $s1['moyenne'];
-            } elseif ($s2['moyenne'] > 0) {
-                $moyenneAnnuelle = $s2['moyenne'];
+                $moyenneAnnuelle = 0.0;
+                if ($s1['moyenne'] > 0 && $s2['moyenne'] > 0) {
+                    $moyenneAnnuelle = round(($s1['moyenne'] + $s2['moyenne']) / 2, 2);
+                } elseif ($s1['moyenne'] > 0) {
+                    $moyenneAnnuelle = $s1['moyenne'];
+                } elseif ($s2['moyenne'] > 0) {
+                    $moyenneAnnuelle = $s2['moyenne'];
+                }
+                $s1Display = $s1['moyenne'];
+                $s2Display = $s2['moyenne'];
             }
 
             $rows[] = [
                 'identifier' => $student->identifier ?? '-',
                 'name' => $student->name,
-                'semestre1' => $s1['moyenne'],
-                'semestre2' => $s2['moyenne'],
+                'semestre1' => $s1Display,
+                'semestre2' => $s2Display,
                 'moyenne_annuelle' => $moyenneAnnuelle,
-                'decision' => $this->bulletinComputation->getDecisionText($moyenneAnnuelle),
-                'mention' => $this->bulletinComputation->getMention($moyenneAnnuelle),
+                'max_grade' => $overallMaxGrade,
+                'decision' => $this->bulletinComputation->getDecisionText($moyenneAnnuelle, $overallMaxGrade),
+                'mention' => $this->bulletinComputation->getMention($moyenneAnnuelle, $overallMaxGrade),
             ];
         }
 
         usort($rows, fn ($a, $b) => $b['moyenne_annuelle'] <=> $a['moyenne_annuelle']);
 
         return $rows;
+    }
+
+    /**
+     * Bulletins annuels complets (toutes les matières, pas juste la
+     * synthèse) pour toute une classe en un seul PDF — équivalent
+     * "classe complète" du bulletin annuel élève
+     * (StudentBulletinController::annual()), pour le primaire (3
+     * compositions, pas de semestres) comme pour le secondaire (S1 + S2).
+     *
+     * @return list<array<string, mixed>>
+     */
+    /**
+     * Bulletin annuel (compositions, pas de semestre) d'UN élève —
+     * utilisé par BulletinVerifyController pour vérifier l'authenticité
+     * d'un bulletin annuel primaire via QR code (le secondaire, lui,
+     * réutilise buildSemesterBulletin() une fois par semestre).
+     *
+     * @return array<string, mixed>
+     */
+    public function buildAnnualBulletinForStudent(User $student, SchoolClass $class, AcademicYear $academicYear): array
+    {
+        $class->loadMissing(['level', 'school']);
+        $level = $class->level;
+        $overallMaxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($level);
+
+        $grades = Grade::where('user_id', $student->id)
+            ->where('academic_year_id', $academicYear->id)
+            ->with('subject')
+            ->get();
+
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school);
+        $generalAverage = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
+
+        return [
+            'student_id' => $student->id,
+            'studentInfo' => [
+                'name' => $student->name,
+                'class' => $class->name,
+                'serie' => $level?->serie,
+                'identifier' => $student->identifier ?? '-',
+                'academic_year' => $academicYear->name,
+                'date_of_birth' => $student->date_of_birth?->format('d/m/Y') ?? '-',
+                'level' => $level?->name ?? '-',
+            ],
+            'bulletinData' => $bulletinData,
+            'generalAverage' => $generalAverage,
+            'rankData' => ['rank' => null, 'total' => 0],
+            'overallMaxGrade' => $overallMaxGrade,
+        ];
+    }
+
+    public function buildClassAnnualBulletins(SchoolClass $class, AcademicYear $academicYear): array
+    {
+        $class->loadMissing(['level', 'school']);
+        $level = $class->level;
+        $isPrimaire = $level?->isPrimaireCycle() ?? false;
+        $overallMaxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($level);
+        $students = $this->approvedStudentsInClass($class);
+        $absenceRange = [
+            $academicYear->start_date ? Carbon::parse($academicYear->start_date) : null,
+            $academicYear->end_date ? Carbon::parse($academicYear->end_date) : null,
+        ];
+
+        $bulletins = [];
+        foreach ($students as $student) {
+            if ($isPrimaire) {
+                $grades = Grade::where('user_id', $student->id)
+                    ->where('academic_year_id', $academicYear->id)
+                    ->with('subject')
+                    ->get();
+
+                $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school);
+                $moyenneAnnuelle = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
+
+                $semestre1Data = ['data' => $bulletinData, 'moyenne' => $moyenneAnnuelle];
+                $semestre2Data = ['data' => [], 'moyenne' => 0];
+            } else {
+                $sem1 = $this->buildSemesterBulletin($student, $class, $academicYear, 1);
+                $sem2 = $this->buildSemesterBulletin($student, $class, $academicYear, 2);
+                $semestre1Data = ['data' => $sem1['bulletinData'], 'moyenne' => $sem1['generalAverage']];
+                $semestre2Data = ['data' => $sem2['bulletinData'], 'moyenne' => $sem2['generalAverage']];
+
+                $moyenneAnnuelle = 0.0;
+                if ($semestre1Data['moyenne'] > 0 && $semestre2Data['moyenne'] > 0) {
+                    $moyenneAnnuelle = round(($semestre1Data['moyenne'] + $semestre2Data['moyenne']) / 2, 2);
+                } elseif ($semestre1Data['moyenne'] > 0) {
+                    $moyenneAnnuelle = $semestre1Data['moyenne'];
+                } elseif ($semestre2Data['moyenne'] > 0) {
+                    $moyenneAnnuelle = $semestre2Data['moyenne'];
+                }
+            }
+
+            $ratio = $overallMaxGrade > 0 ? $moyenneAnnuelle / $overallMaxGrade : 0;
+            $decisionColor = match (true) {
+                $ratio >= 10 / 20 => 'success',
+                $ratio >= 8 / 20 => 'warning',
+                default => 'danger',
+            };
+
+            $bulletins[] = [
+                'student_id' => $student->id,
+                'studentInfo' => [
+                    'name' => $student->name,
+                    'class' => $class->name,
+                    'serie' => $level?->serie,
+                    'identifier' => $student->identifier ?? '-',
+                    'academic_year' => $academicYear->name,
+                    'date_of_birth' => $student->date_of_birth?->format('d/m/Y') ?? '-',
+                    'level' => $level?->name ?? '-',
+                ],
+                'semestre1Data' => $semestre1Data,
+                'semestre2Data' => $semestre2Data,
+                'moyenneAnnuelle' => $moyenneAnnuelle,
+                'decision' => [
+                    'text' => $this->bulletinComputation->getDecisionText($moyenneAnnuelle, $overallMaxGrade),
+                    'color' => $decisionColor,
+                    'mention' => $ratio >= 12 / 20 ? $this->bulletinComputation->getMention($moyenneAnnuelle, $overallMaxGrade) : null,
+                ],
+                'isPrimaire' => $isPrimaire,
+                'overallMaxGrade' => $overallMaxGrade,
+                'absenceCount' => $this->countAbsences($student, $absenceRange),
+            ];
+        }
+
+        return $bulletins;
+    }
+
+    /**
+     * Relevé d'une seule composition (primaire) pour toute une classe —
+     * une note par matière (pas de moyenne sur plusieurs compositions),
+     * pour les cas où l'admin veut sortir "toutes les copies de la
+     * composition 2" sans attendre la fin de l'année.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function buildClassCompositionBulletins(SchoolClass $class, AcademicYear $academicYear, string $compositionType): array
+    {
+        $class->loadMissing(['level', 'school']);
+        $level = $class->level;
+        $overallMaxGrade = $this->bulletinComputation->referenceMaxGradeForLevel($level);
+        $students = $this->approvedStudentsInClass($class);
+
+        $bulletins = [];
+        foreach ($students as $student) {
+            $grades = Grade::where('user_id', $student->id)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('type', $compositionType)
+                ->with('subject')
+                ->get();
+
+            $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school);
+            $moyenne = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
+
+            $bulletins[] = [
+                'student_id' => $student->id,
+                'studentInfo' => [
+                    'name' => $student->name,
+                    'class' => $class->name,
+                    'serie' => $level?->serie,
+                    'identifier' => $student->identifier ?? '-',
+                    'academic_year' => $academicYear->name,
+                    'level' => $level?->name ?? '-',
+                ],
+                'bulletinData' => $bulletinData,
+                'moyenne' => $moyenne,
+                'overallMaxGrade' => $overallMaxGrade,
+            ];
+        }
+
+        return $bulletins;
     }
 
     /**
@@ -197,6 +428,7 @@ class BulletinReportService
                 'semestre' => $grade->semester,
                 'type' => $grade->type,
                 'note' => $grade->grade,
+                'bareme' => $grade->subject_id ? GradeSequence::maxGradeFor($class, (int) $grade->subject_id) : 20.0,
                 'coefficient' => $grade->coefficient,
                 'date' => $grade->date?->format('Y-m-d') ?? '',
                 'appreciation' => $grade->appreciation ?? '',
@@ -227,6 +459,25 @@ class BulletinReportService
         $bulletin = $this->buildSemesterBulletin($student, $class, $academicYear, $semester);
 
         return ['moyenne' => (float) ($bulletin['generalAverage'] ?? 0)];
+    }
+
+    /**
+     * Primaire : moyenne annuelle directe (toutes les notes de l'année,
+     * pas de découpage semestriel — voir buildClassAnnualReport()).
+     *
+     * @return array{moyenne: float}
+     */
+    private function getAnnualSummary(User $student, SchoolClass $class, AcademicYear $academicYear): array
+    {
+        $grades = Grade::where('user_id', $student->id)
+            ->where('academic_year_id', $academicYear->id)
+            ->with('subject')
+            ->get();
+
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $class->level, $class->school);
+        $moyenne = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
+
+        return ['moyenne' => $moyenne];
     }
 
     /**

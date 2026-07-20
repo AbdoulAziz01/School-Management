@@ -26,8 +26,8 @@ class PaymentCorrectionController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('receipt_number', 'like', "%{$search}%")
-                    ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', "%{$search}%"));
+                $q->where('receipt_number', 'ilike', "%{$search}%")
+                    ->orWhereHas('student', fn ($sq) => $sq->where('name', 'ilike', "%{$search}%"));
             });
         }
 

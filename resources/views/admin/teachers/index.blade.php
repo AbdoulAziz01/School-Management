@@ -13,6 +13,9 @@
                         <a href="{{ route('admin.teachers.create') }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus me-1"></i> Ajouter un enseignant
                         </a>
+                        <a href="{{ route('admin.teachers.import') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-file-import me-1"></i> Importer
+                        </a>
                     </div>
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <form action="{{ route('admin.teachers.index') }}" method="GET" class="d-flex gap-2">
@@ -54,9 +57,10 @@
                                         <th>Nom</th>
                                         <th>Email</th>
                                         <th>Téléphone</th>
+                                        <th>Classe(s)</th>
                                         <th>Statut</th>
                                         <th>Date d'inscription</th>
-                                        <th style="min-width: 200px;">Actions</th>
+                                        <th class="text-end" style="width: 70px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -67,6 +71,13 @@
                                             <td>{{ $teacher->email }}</td>
                                             <td>{{ $teacher->phone ?? 'Non renseigné' }}</td>
                                             <td>
+                                                @forelse($teacher->assignedClasses as $class)
+                                                    <span class="badge bg-light text-dark border">{{ $class->name }}</span>
+                                                @empty
+                                                    <span class="text-muted small">Aucune</span>
+                                                @endforelse
+                                            </td>
+                                            <td>
                                                 @if($teacher->status == 'approved')
                                                     <span class="badge bg-success">Approuvé</span>
                                                 @elseif($teacher->status == 'pending')
@@ -76,22 +87,41 @@
                                                 @endif
                                             </td>
                                             <td>{{ $teacher->created_at->format('d/m/Y') }}</td>
-                                            <td>
-                                                <a href="{{ route('admin.teachers.show', $teacher) }}" class="btn btn-sm btn-info" title="Voir">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('admin.teachers.edit', $teacher) }}" class="btn btn-sm btn-warning" title="Modifier">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <a href="{{ route('admin.teachers.classes.edit', $teacher) }}" class="btn btn-sm btn-primary" title="Affectations">
-                                                    <i class="fas fa-chalkboard"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-danger" title="Supprimer"
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#deleteTeacherModal{{ $teacher->id }}">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                                
+                                            <td class="text-end">
+                                                {{-- Menu compact (au lieu de 4 boutons côte à côte) : la colonne
+                                                     Actions ne pousse plus le tableau hors de l'écran. --}}
+                                                <div class="dropdown">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown"
+                                                            data-bs-strategy="fixed" data-bs-boundary="viewport" aria-expanded="false" title="Actions">
+                                                        <i class="fas fa-ellipsis-vertical"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.teachers.show', $teacher) }}">
+                                                                <i class="fas fa-eye me-2 text-info"></i>Voir
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.teachers.edit', $teacher) }}">
+                                                                <i class="fas fa-edit me-2 text-warning"></i>Modifier
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.teachers.classes.edit', $teacher) }}">
+                                                                <i class="fas fa-chalkboard me-2 text-primary"></i>Affectations
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item text-danger"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#deleteTeacherModal{{ $teacher->id }}">
+                                                                <i class="fas fa-trash me-2"></i>Supprimer
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+
                                                 <!-- Modal de confirmation de suppression -->
                                                 <div class="modal fade" id="deleteTeacherModal{{ $teacher->id }}" tabindex="-1" aria-hidden="true">
                                                     <div class="modal-dialog">

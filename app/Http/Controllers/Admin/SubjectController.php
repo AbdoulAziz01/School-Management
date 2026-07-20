@@ -35,8 +35,8 @@ class SubjectController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('code', 'ilike', "%{$search}%");
             });
         }
         
@@ -44,8 +44,14 @@ class SubjectController extends Controller
         if ($request->filled('status')) {
             $query->where('is_active', $request->status === 'active');
         }
-        
-        $subjects = $query->orderBy('name')->paginate(15);
+
+        // Filtre par cycle (primaire / collège / lycée)
+        if ($request->filled('cycle')) {
+            $cycle = $request->cycle;
+            $query->whereHas('levels', fn ($q) => $q->where('levels.cycle', $cycle));
+        }
+
+        $subjects = $query->orderBy('name')->paginate(15)->withQueryString();
 
         $levelsCount = Level::count();
         $isFormationSchool = $school?->isFormation() ?? false;

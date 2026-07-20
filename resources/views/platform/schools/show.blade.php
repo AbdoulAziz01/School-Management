@@ -503,7 +503,7 @@
     <div class="col-lg-7">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 class="mb-0 fs-6">Admin & surveillants</h5>
+                <h5 class="mb-0 fs-6">Personnel de direction</h5>
                 <span class="badge bg-secondary">{{ $staffMembers->count() }} compte(s)</span>
             </div>
 
@@ -515,11 +515,16 @@
                 @endphp
                 <div class="staff-mobile-card">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                        @if($member->role === 'admin')
-                            <span class="badge bg-primary">Admin</span>
-                        @else
-                            <span class="badge bg-info text-dark">Surveillant</span>
-                        @endif
+                        @php
+                            $roleBadge = [
+                                'admin' => ['bg-primary', 'Admin'],
+                                'surveillant' => ['bg-info text-dark', 'Surveillant'],
+                                'directeur' => ['bg-dark', 'Directeur'],
+                                'comptable' => ['bg-success', 'Comptable'],
+                                'caissier' => ['bg-warning text-dark', 'Caissier'],
+                            ][$member->role] ?? ['bg-secondary', $member->role];
+                        @endphp
+                        <span class="badge {{ $roleBadge[0] }}">{{ $roleBadge[1] }}</span>
                         <code class="staff-id user-select-all">{{ $member->identifier }}</code>
                     </div>
                     <p class="staff-name mb-0">{{ $member->name }}</p>
@@ -572,11 +577,16 @@
                                 <td>{{ $member->name }}</td>
                                 <td><small>{{ $member->email }}</small></td>
                                 <td>
-                                    @if($member->role === 'admin')
-                                        <span class="badge bg-primary">Admin</span>
-                                    @else
-                                        <span class="badge bg-info text-dark">Surveillant</span>
-                                    @endif
+                                    @php
+                                        $roleBadge = [
+                                            'admin' => ['bg-primary', 'Admin'],
+                                            'surveillant' => ['bg-info text-dark', 'Surveillant'],
+                                            'directeur' => ['bg-dark', 'Directeur'],
+                                            'comptable' => ['bg-success', 'Comptable'],
+                                            'caissier' => ['bg-warning text-dark', 'Caissier'],
+                                        ][$member->role] ?? ['bg-secondary', $member->role];
+                                    @endphp
+                                    <span class="badge {{ $roleBadge[0] }}">{{ $roleBadge[1] }}</span>
                                 </td>
                                 <td>
                                     @php
@@ -626,7 +636,7 @@
     {{-- Formulaire ajout admin / surveillant --}}
     <div class="col-lg-5">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white"><h5 class="mb-0 fs-6">Ajouter admin ou surveillant</h5></div>
+            <div class="card-header bg-white"><h5 class="mb-0 fs-6">Ajouter un compte</h5></div>
             <div class="card-body">
                 <form method="POST" action="{{ route('platform.schools.admins.store', $school) }}">
                     @csrf
@@ -635,6 +645,11 @@
                         <select name="staff_role" class="form-select form-select-sm" required>
                             <option value="admin">Administrateur (ADM…)</option>
                             <option value="surveillant">Surveillant (SUR…)</option>
+                            @if($school->isPrivateEstablishment())
+                                <option value="{{ \App\Models\User::ROLE_DIRECTEUR }}">Directeur (DIR…)</option>
+                                <option value="{{ \App\Models\User::ROLE_COMPTABLE }}">Comptable (CPT…)</option>
+                                <option value="{{ \App\Models\User::ROLE_CAISSIER }}">Caissier (CAI…)</option>
+                            @endif
                         </select>
                     </div>
                     <div class="mb-3">

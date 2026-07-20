@@ -81,6 +81,11 @@
                                 <div class="alert alert-warning mb-0">
                                     Aucune matière pour cette classe. Affectez des matières au niveau ou à la classe d'abord.
                                 </div>
+                            @elseif(! $nextAvailableSlot && ! old('day_of_week'))
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Emploi du temps complet pour cette classe — tous les créneaux de la semaine sont occupés.
+                                </div>
                             @else
                                 <form method="POST" action="{{ route('admin.schedules.store', $class) }}">
                                     @csrf
@@ -88,7 +93,7 @@
                                         <label for="day_of_week" class="form-label">Jour <span class="text-danger">*</span></label>
                                         <select name="day_of_week" id="day_of_week" class="form-select @error('day_of_week') is-invalid @enderror" required>
                                             @foreach($days as $num => $name)
-                                                <option value="{{ $num }}" {{ (int) old('day_of_week') === $num ? 'selected' : '' }}>{{ $name }}</option>
+                                                <option value="{{ $num }}" {{ (int) old('day_of_week', $nextAvailableSlot['day'] ?? 1) === $num ? 'selected' : '' }}>{{ $name }}</option>
                                             @endforeach
                                         </select>
                                         @error('day_of_week')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -97,12 +102,13 @@
                                         <label for="time_slot" class="form-label">Horaire <span class="text-danger">*</span></label>
                                         <select name="time_slot" id="time_slot" class="form-select @error('time_slot') is-invalid @enderror" required>
                                             @foreach($timeSlots as $slot)
-                                                <option value="{{ $slot['label'] }}" {{ old('time_slot') === $slot['label'] ? 'selected' : '' }}>
+                                                <option value="{{ $slot['label'] }}" {{ old('time_slot', $nextAvailableSlot['time_slot'] ?? null) === $slot['label'] ? 'selected' : '' }}>
                                                     {{ $slot['label'] }}
                                                 </option>
                                             @endforeach
                                         </select>
                                         @error('time_slot')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        <small class="text-muted">Prochain créneau libre proposé automatiquement — modifiable si besoin.</small>
                                     </div>
                                     <div class="mb-3">
                                         <label for="subject_id" class="form-label">Matière <span class="text-danger">*</span></label>
@@ -124,14 +130,24 @@
                                         et cochez la matière + la classe, puis enregistrez.
                                     </div>
                                     <div class="mb-3">
-                                        <label for="teacher_id" class="form-label">Professeur <span class="text-danger">*</span></label>
+                                        <label for="teacher_id" class="form-label">
+                                            Professeur <span class="text-danger">*</span>
+                                            <i class="fas fa-magic text-muted ms-1" title="Rempli automatiquement"></i>
+                                        </label>
+                                        {{-- Verrouillé (lecture seule) quand un seul professeur est affecté à
+                                             la matière ; select classique s'il y en a plusieurs — voir
+                                             refreshTeachers() ci-dessous. --}}
+                                        <input type="text" id="teacher_display" class="form-control bg-light d-none" disabled>
                                         <select name="teacher_id" id="teacher_id" class="form-select @error('teacher_id') is-invalid @enderror" required>
                                             <option value="">— Choisir une matière d'abord —</option>
                                         </select>
                                         @error('teacher_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="mb-3">
-                                        <label for="room" class="form-label">Salle</label>
+                                        <label for="room" class="form-label">
+                                            Salle
+                                            <small class="text-muted" id="room-suggestion-hint" style="display:none;">(suggestion — modifiable)</small>
+                                        </label>
                                         <input type="text" name="room" id="room" class="form-control @error('room') is-invalid @enderror"
                                                value="{{ old('room') }}" placeholder="Ex. Salle A12">
                                         @error('room')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -208,12 +224,20 @@
 @push('scripts')
 <script>
     const teachersBySubject = @json($teachersBySubjectJson);
+    const roomSuggestions = @json($roomSuggestions ?? []);
+    let roomWasAutoFilled = false;
 
+    // Champ Professeur : rempli automatiquement dès qu'une matière est
+    // choisie — verrouillé (lecture seule) s'il n'y a qu'un seul
+    // professeur affecté, select classique s'il y en a plusieurs, alerte
+    // si aucun. L'utilisateur n'a jamais à chercher un professeur lui-même.
     function refreshTeachers() {
-        const subjectId = document.getElementById('subject_id')?.value;
+        const subjectSelect = document.getElementById('subject_id');
+        const subjectId = subjectSelect?.value;
         const select = document.getElementById('teacher_id');
+        const display = document.getElementById('teacher_display');
         const alertBox = document.getElementById('no-teacher-alert');
-        if (!select) return;
+        if (!select || !display) return;
 
         select.innerHTML = '<option value="">— Choisir —</option>';
         const list = teachersBySubject[subjectId] || teachersBySubject[String(subjectId)] || [];
@@ -226,6 +250,18 @@
             select.appendChild(opt);
         });
 
+        if (list.length === 1) {
+            // Un seul professeur affecté : auto-sélectionné et verrouillé,
+            // aucune action requise de l'utilisateur.
+            select.value = String(list[0].id);
+            select.classList.add('d-none');
+            display.classList.remove('d-none');
+            display.value = list[0].name;
+        } else {
+            select.classList.remove('d-none');
+            display.classList.add('d-none');
+        }
+
         if (alertBox) {
             if (subjectId && list.length === 0) {
                 alertBox.classList.remove('d-none');
@@ -235,7 +271,25 @@
                 select.disabled = false;
             }
         }
+
+        // Suggestion de salle : ne remplace jamais une saisie manuelle de
+        // l'utilisateur, seulement une précédente suggestion auto ou un
+        // champ vide.
+        const roomInput = document.getElementById('room');
+        const roomHint = document.getElementById('room-suggestion-hint');
+        if (roomInput && (roomInput.value === '' || roomWasAutoFilled)) {
+            const suggestion = roomSuggestions[subjectId] || roomSuggestions[String(subjectId)] || '';
+            roomInput.value = suggestion;
+            roomWasAutoFilled = suggestion !== '';
+            if (roomHint) roomHint.style.display = roomWasAutoFilled ? 'inline' : 'none';
+        }
     }
+
+    document.getElementById('room')?.addEventListener('input', function () {
+        roomWasAutoFilled = false;
+        const roomHint = document.getElementById('room-suggestion-hint');
+        if (roomHint) roomHint.style.display = 'none';
+    });
 
     document.getElementById('subject_id')?.addEventListener('change', refreshTeachers);
     refreshTeachers();

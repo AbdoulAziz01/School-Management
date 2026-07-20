@@ -43,27 +43,33 @@
 
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a href="{{ route('directeur.salaries.index', ['role_group' => 'teachers']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && request('role_group') === 'teachers' ? 'active' : '' }}">
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'teachers']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.index') && request('role_group') === 'teachers' ? 'active' : '' }}">
                 <i class="fas fa-chalkboard-teacher"></i>
                 <span>Enseignants</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ route('directeur.salaries.index', ['role_group' => 'surveillants']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && request('role_group') === 'surveillants' ? 'active' : '' }}">
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'surveillants']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.index') && request('role_group') === 'surveillants' ? 'active' : '' }}">
                 <i class="fas fa-user-shield"></i>
                 <span>Surveillants</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ route('directeur.salaries.index', ['role_group' => 'admin']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && request('role_group') === 'admin' ? 'active' : '' }}">
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'admin']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.index') && request('role_group') === 'admin' ? 'active' : '' }}">
                 <i class="fas fa-user-tie"></i>
                 <span>Personnel administratif</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ route('directeur.salaries.index') }}" class="nav-link {{ request()->routeIs('directeur.salaries.*') && ! request()->has('role_group') ? 'active' : '' }}">
+            <a href="{{ route('directeur.salaries.index') }}" class="nav-link {{ request()->routeIs('directeur.salaries.index') && ! request()->has('role_group') ? 'active' : '' }}">
                 <i class="fas fa-list"></i>
                 <span>Tout le personnel</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.salaries.checklist') }}" class="nav-link {{ request()->routeIs('directeur.salaries.checklist') ? 'active' : '' }}">
+                <i class="fas fa-clipboard-check"></i>
+                <span>Suivi des paiements</span>
             </a>
         </li>
     </ul>
@@ -95,9 +101,15 @@
 
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a href="{{ route('directeur.personnel.index') }}" class="nav-link {{ request()->routeIs('directeur.personnel.*') ? 'active' : '' }}">
+            <a href="{{ route('directeur.personnel.index') }}" class="nav-link {{ request()->routeIs('directeur.personnel.*') && ! request()->routeIs('directeur.personnel.create') ? 'active' : '' }}">
                 <i class="fas fa-address-book"></i>
                 <span>Personnel & Élèves</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.personnel.create') }}" class="nav-link {{ request()->routeIs('directeur.personnel.create') ? 'active' : '' }}">
+                <i class="fas fa-user-plus"></i>
+                <span>Comptables & Caissiers</span>
             </a>
         </li>
     </ul>

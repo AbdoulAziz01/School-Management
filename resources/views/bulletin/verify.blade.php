@@ -42,7 +42,7 @@
                 <tr><th>Classe</th><td>{{ $bulletin['studentInfo']['class'] }}</td></tr>
                 <tr><th>Niveau</th><td>{{ $bulletin['studentInfo']['level'] }}{{ $bulletin['studentInfo']['serie'] ? ' — '.$bulletin['studentInfo']['serie'] : '' }}</td></tr>
                 <tr><th>Année scolaire</th><td>{{ $year->name }}</td></tr>
-                <tr><th>Semestre</th><td>{{ $semester }}</td></tr>
+                <tr><th>Période</th><td>{{ $semester !== null ? 'Semestre '.$semester : 'Année scolaire complète' }}</td></tr>
             </table>
 
             {{-- Résultat --}}
@@ -71,8 +71,9 @@
                 <tfoot>
                     <tr class="table-warning fw-bold">
                         <td colspan="2">Moyenne générale</td>
+                        @php $verifyMaxLabel = rtrim(rtrim(number_format($bulletin['overallMaxGrade'] ?? 20, 2), '0'), '.'); @endphp
                         <td class="text-center">
-                            {{ $bulletin['generalAverage'] > 0 ? number_format($bulletin['generalAverage'], 2).'/20' : '—' }}
+                            {{ $bulletin['generalAverage'] > 0 ? number_format($bulletin['generalAverage'], 2).'/'.$verifyMaxLabel : '—' }}
                         </td>
                         <td colspan="2" class="text-center">
                             @if($bulletin['rankData']['rank'])

@@ -18,6 +18,7 @@ class TeacherScheduleController extends Controller
 
         $assignments = TeacherAssignment::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
+            ->active()
             ->when($currentYear, fn ($q) => $q->where('academic_year_id', $currentYear->id))
             ->get();
 

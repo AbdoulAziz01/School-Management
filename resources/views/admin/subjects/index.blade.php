@@ -17,16 +17,22 @@
                     </div>
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <form action="{{ route('admin.subjects.index') }}" method="GET" class="d-flex gap-2">
-                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Rechercher..." value="{{ request('search') }}" style="min-width: 200px;">
-                            <select name="status" class="form-select form-select-sm" style="min-width: 120px;">
-                                <option value="">Tous</option>
+                            <input type="text" name="search" aria-label="Rechercher une matière" class="form-control form-control-sm" placeholder="Rechercher..." value="{{ request('search') }}" style="min-width: 200px;">
+                            <select name="status" aria-label="Filtrer par statut" class="form-select form-select-sm" style="min-width: 120px;" onchange="this.form.submit()">
+                                <option value="">Statut : tous</option>
                                 <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Actives</option>
                                 <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactives</option>
+                            </select>
+                            <select name="cycle" aria-label="Filtrer par niveau" class="form-select form-select-sm" style="min-width: 140px;" onchange="this.form.submit()">
+                                <option value="">Niveau : tous</option>
+                                <option value="primaire" {{ request('cycle') == 'primaire' ? 'selected' : '' }}>Primaire</option>
+                                <option value="college" {{ request('cycle') == 'college' ? 'selected' : '' }}>Collège</option>
+                                <option value="lycee" {{ request('cycle') == 'lycee' ? 'selected' : '' }}>Lycée</option>
                             </select>
                             <button type="submit" class="btn btn-sm btn-primary">
                                 <i class="fas fa-search"></i>
                             </button>
-                            @if(request('search') || request('status'))
+                            @if(request('search') || request('status') || request('cycle'))
                                 <a href="{{ route('admin.subjects.index') }}" class="btn btn-sm btn-outline-secondary">
                                     <i class="fas fa-times"></i>
                                 </a>
@@ -50,7 +56,7 @@
                     
                     @if($subjects->isEmpty())
                         <div class="alert alert-info">
-                            @if(request('search') || request('status'))
+                            @if(request('search') || request('status') || request('cycle'))
                                 Aucun{{ !empty($isFormationSchool) && $isFormationSchool ? ' module' : 'e matière' }} ne correspond à votre recherche.
                             @else
                                 Aucun{{ !empty($isFormationSchool) && $isFormationSchool ? ' module' : 'e matière' }} n'a été créé{{ !empty($isFormationSchool) && $isFormationSchool ? '' : 'e' }} pour le moment.
@@ -82,12 +88,26 @@
                                                 </td>
                                             @endif
                                             <td>
-                                                <span class="badge mb-1" style="background-color: #fd7e14;">{{ $subject->teachers->count() }} professeur(s)</span>
+                                                <span class="badge" style="background-color: #fd7e14;">{{ $subject->teachers->count() }} professeur(s)</span>
                                                 @if($subject->teachers->count() > 0)
-                                                    <div class="small text-muted">
-                                                        @foreach($subject->teachers as $teacher)
-                                                            <span class="d-block"><i class="fas fa-user-tie me-1"></i>{{ $teacher->name }}</span>
-                                                        @endforeach
+                                                    <a href="#" class="small ms-1" data-bs-toggle="modal" data-bs-target="#teachersModal{{ $subject->id }}">Voir tout</a>
+
+                                                    <div class="modal fade" id="teachersModal{{ $subject->id }}" tabindex="-1" aria-hidden="true">
+                                                        <div class="modal-dialog">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header">
+                                                                    <h5 class="modal-title">Professeurs — {{ $subject->name }}</h5>
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <ul class="list-unstyled mb-0">
+                                                                        @foreach($subject->teachers as $teacher)
+                                                                            <li class="py-1"><i class="fas fa-user-tie me-2 text-muted"></i>{{ $teacher->name }}</li>
+                                                                        @endforeach
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 @endif
                                             </td>

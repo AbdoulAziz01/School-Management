@@ -296,6 +296,9 @@
 @endpush
 
 @section('content')
+<a href="{{ route('student.dashboard') }}" class="d-inline-flex align-items-center text-decoration-none mb-3 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Tableau de bord
+</a>
 <div class="container-fluid">
 
     {{-- ── En-tête ── --}}
@@ -345,19 +348,27 @@
         <div class="stats-strip-item">
             <div>
                 <span class="ss-value accent">{{ $generalAverage !== null ? number_format($generalAverage, 2) : '—' }}</span>
-                @if($generalAverage !== null)<span class="ss-denom">/20</span>@endif
+                @if($generalAverage !== null)<span class="ss-denom">/{{ rtrim(rtrim(number_format($overallMaxGrade ?? 20, 2), '0'), '.') }}</span>@endif
             </div>
             <div class="ss-label">Moy. générale</div>
             @if($generalAverage !== null)
                 <div class="ss-progress-wrap">
                     <div class="ss-progress-track">
-                        <div class="ss-progress-fill" style="width:{{ min(100, $generalAverage / 20 * 100) }}%;"></div>
+                        <div class="ss-progress-fill" style="width:{{ min(100, $generalAverage / ($overallMaxGrade ?: 20) * 100) }}%;"></div>
                     </div>
                 </div>
             @endif
         </div>
+        @php
+            $bestSubject = $grades->isNotEmpty()
+                ? $grades->sortByDesc(fn ($g) => $g['max_grade'] > 0 ? $g['average'] / $g['max_grade'] : 0)->first()
+                : null;
+        @endphp
         <div class="stats-strip-item">
-            <div><span class="ss-value">{{ number_format((float)$grades->max('average'), 2) }}</span><span class="ss-denom">/20</span></div>
+            <div>
+                <span class="ss-value">{{ $bestSubject ? number_format((float) $bestSubject['average'], 2) : '—' }}</span>
+                @if($bestSubject)<span class="ss-denom">/{{ rtrim(rtrim(number_format($bestSubject['max_grade'], 2), '0'), '.') }}</span>@endif
+            </div>
             <div class="ss-label">Meilleure mat.</div>
         </div>
         <div class="stats-strip-item">
@@ -397,7 +408,8 @@
             @php
                 $subjectSlug  = Str::slug($subjectData['subject']);
                 $avg          = (float) $subjectData['average'];
-                $progressPct  = min(100, $avg / 20 * 100);
+                $subjectMax   = $subjectData['max_grade'] ?? 20;
+                $progressPct  = $subjectMax > 0 ? min(100, $avg / $subjectMax * 100) : 0;
                 $headerColor  = $subjectData['subject_color'] ?? '#f59e0b';
                 $visibleGrades = $subjectData['grades']->take(4);
                 $hiddenGrades  = $subjectData['grades']->slice(4);
@@ -414,7 +426,7 @@
                             </h6>
                             <div class="avg-score-pill">
                                 <span class="val">{{ number_format($avg, 2) }}</span>
-                                <span class="denom">/20</span>
+                                <span class="denom">/{{ rtrim(rtrim(number_format($subjectMax, 2), '0'), '.') }}</span>
                             </div>
                         </div>
                         <div class="d-flex align-items-center justify-content-between" style="font-size:0.75rem;opacity:.85;color:#fff;">
@@ -435,10 +447,11 @@
                             @foreach($visibleGrades as $grade)
                                 @php
                                     $gradeValue = $grade->grade !== null ? (float) $grade->grade : null;
-                                    $scoreClass = $gradeValue === null ? '' :
-                                        ($gradeValue >= 16 ? 'score-excellent' :
-                                        ($gradeValue >= 12 ? 'score-good'      :
-                                        ($gradeValue >= 10 ? 'score-average'   : 'score-poor')));
+                                    $gradeRatio = $gradeValue !== null && $subjectMax > 0 ? $gradeValue / $subjectMax : null;
+                                    $scoreClass = $gradeRatio === null ? '' :
+                                        ($gradeRatio >= 0.8 ? 'score-excellent' :
+                                        ($gradeRatio >= 0.6 ? 'score-good'      :
+                                        ($gradeRatio >= 0.5 ? 'score-average'   : 'score-poor')));
                                     $typeRaw   = strtolower($grade->type ?? '');
                                     $iconClass = str_contains($typeRaw,'examen') ? 'pill-icon-exam' :
                                                 (str_contains($typeRaw,'compos') ? 'pill-icon-compo' :
@@ -446,7 +459,7 @@
                                     $iconChar  = str_contains($typeRaw,'examen') ? 'E' :
                                                 (str_contains($typeRaw,'compos') ? 'C' :
                                                 (str_contains($typeRaw,'devoir') ? 'D' : '?'));
-                                    $typeLabel = \App\Support\SenegalGradeSequence::LABELS[$grade->type] ?? ucfirst($grade->type ?? 'Devoir');
+                                    $typeLabel = \App\Support\Grading\GradeSequence::labels()[$grade->type] ?? ucfirst($grade->type ?? '—');
                                     $dateLabel = $grade->date
                                         ? $grade->date->format('d/m/Y')
                                         : ($grade->created_at ? $grade->created_at->format('d/m/Y') : '—');
@@ -461,7 +474,7 @@
                                     </div>
                                     @if($gradeValue !== null)
                                         <span class="grade-pill-score {{ $scoreClass }}">
-                                            {{ number_format($gradeValue, 2) }}/20
+                                            {{ number_format($gradeValue, 2) }}/{{ rtrim(rtrim(number_format($subjectMax, 2), '0'), '.') }}
                                         </span>
                                     @else
                                         <span class="grade-pill-score" style="background:#f1f5f9;color:#94a3b8;">—</span>
@@ -476,10 +489,11 @@
                                     @foreach($hiddenGrades as $grade)
                                         @php
                                             $gradeValue = $grade->grade !== null ? (float) $grade->grade : null;
-                                            $scoreClass = $gradeValue === null ? '' :
-                                                ($gradeValue >= 16 ? 'score-excellent' :
-                                                ($gradeValue >= 12 ? 'score-good'      :
-                                                ($gradeValue >= 10 ? 'score-average'   : 'score-poor')));
+                                            $gradeRatio = $gradeValue !== null && $subjectMax > 0 ? $gradeValue / $subjectMax : null;
+                                            $scoreClass = $gradeRatio === null ? '' :
+                                                ($gradeRatio >= 0.8 ? 'score-excellent' :
+                                                ($gradeRatio >= 0.6 ? 'score-good'      :
+                                                ($gradeRatio >= 0.5 ? 'score-average'   : 'score-poor')));
                                             $typeRaw   = strtolower($grade->type ?? '');
                                             $iconClass = str_contains($typeRaw,'examen') ? 'pill-icon-exam' :
                                                         (str_contains($typeRaw,'compos') ? 'pill-icon-compo' :
@@ -487,7 +501,7 @@
                                             $iconChar  = str_contains($typeRaw,'examen') ? 'E' :
                                                         (str_contains($typeRaw,'compos') ? 'C' :
                                                         (str_contains($typeRaw,'devoir') ? 'D' : '?'));
-                                            $typeLabel = \App\Support\SenegalGradeSequence::LABELS[$grade->type] ?? ucfirst($grade->type ?? 'Devoir');
+                                            $typeLabel = \App\Support\Grading\GradeSequence::labels()[$grade->type] ?? ucfirst($grade->type ?? '—');
                                             $dateLabel = $grade->date
                                                 ? $grade->date->format('d/m/Y')
                                                 : ($grade->created_at ? $grade->created_at->format('d/m/Y') : '—');
@@ -502,7 +516,7 @@
                                             </div>
                                             @if($gradeValue !== null)
                                                 <span class="grade-pill-score {{ $scoreClass }}">
-                                                    {{ number_format($gradeValue, 2) }}/20
+                                                    {{ number_format($gradeValue, 2) }}/{{ rtrim(rtrim(number_format($subjectMax, 2), '0'), '.') }}
                                                 </span>
                                             @else
                                                 <span class="grade-pill-score" style="background:#f1f5f9;color:#94a3b8;">—</span>
@@ -601,7 +615,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var gradient = ctx.createLinearGradient(0, 0, 0, 260);
     gradient.addColorStop(0, 'rgba(245,158,11,0.75)');
     gradient.addColorStop(1, 'rgba(245,158,11,0.05)');
-    var passingLine = labels.map(function() { return 10; });
+    var chartMaxGrade = @json($overallMaxGrade ?? 20);
+    var passValue = chartMaxGrade / 2;
+    var passingLine = labels.map(function() { return passValue; });
 
     new Chart(ctx, {
         type: 'line',
@@ -623,7 +639,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     pointHoverRadius: 6
                 },
                 {
-                    label: 'Seuil de réussite (10/20)',
+                    label: 'Seuil de réussite (' + passValue + '/' + chartMaxGrade + ')',
                     data: passingLine,
                     borderColor: '#1cc88a',
                     borderWidth: 1.5,
@@ -644,7 +660,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     callbacks: {
                         label: function(ctx) {
                             var v = ctx.parsed.y;
-                            return ctx.dataset.label + ' : ' + (v === null || v === undefined ? '—' : v + '/20');
+                            return ctx.dataset.label + ' : ' + (v === null || v === undefined ? '—' : v + '/' + chartMaxGrade);
                         },
                         afterLabel: function(ctx) {
                             if (ctx.datasetIndex === 0 && counts[ctx.dataIndex])
@@ -656,8 +672,8 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             scales: {
                 y: {
-                    beginAtZero: true, max: 20,
-                    ticks: { stepSize: 2, callback: function(v) { return v + '/20'; } },
+                    beginAtZero: true, max: chartMaxGrade,
+                    ticks: { stepSize: chartMaxGrade > 10 ? 2 : 1, callback: function(v) { return v + '/' + chartMaxGrade; } },
                     title: { display: true, text: 'Moyenne' }
                 },
                 x: {

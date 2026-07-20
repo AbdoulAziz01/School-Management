@@ -12,70 +12,86 @@
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.ledger.index') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Solde de trésorerie</div>
                 <div class="h4 mb-0">{{ number_format($summary['solde_actuel'], 0, ',', ' ') }} <span class="fs-6 text-muted">FCFA</span></div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.ledger.index') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Recettes du jour</div>
                 <div class="h5 mb-0 text-success">{{ number_format($summary['recettes_jour'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.expenses.index') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Dépenses du jour</div>
                 <div class="h5 mb-0 text-danger">{{ number_format($summary['depenses_jour'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.students.debtors') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Élèves débiteurs</div>
                 <div class="h5 mb-0 text-warning">{{ $summary['eleves_debiteurs'] }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.ledger.index') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Recettes du mois</div>
                 <div class="h5 mb-0 text-success">{{ number_format($summary['recettes_mois'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.expenses.index') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Dépenses du mois</div>
                 <div class="h5 mb-0 text-danger">{{ number_format($summary['depenses_mois'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.salaries.index') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Masse salariale mensuelle</div>
                 <div class="h5 mb-0">{{ number_format($summary['masse_salariale'], 0, ',', ' ') }}</div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100">
+        <a href="{{ route('comptable.payments.index') }}" class="card h-100 stat-card-link">
             <div class="card-body">
                 <div class="small text-muted mb-1">Factures en attente</div>
                 <div class="h5 mb-0">{{ $summary['paiements_en_attente'] }}</div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
+
+@push('styles')
+<style>
+    .stat-card-link {
+        display: block;
+        text-decoration: none !important;
+        color: inherit !important;
+        cursor: pointer;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .stat-card-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+    }
+</style>
+@endpush
 
 <div class="row g-4">
     <div class="col-lg-7">

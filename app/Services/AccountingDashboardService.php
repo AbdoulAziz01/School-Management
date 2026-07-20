@@ -129,6 +129,8 @@ class AccountingDashboardService
      */
     public function debtorsList(School $school): Collection
     {
+        $cycleRank = ['primaire' => 1, 'college' => 2, 'lycee' => 3, 'formation' => 4];
+
         return User::where('school_id', $school->id)
             ->whereIn('role', User::ROLE_STUDENT_ALIASES)
             ->whereHas('studentInvoices', function ($q) {
@@ -136,7 +138,7 @@ class AccountingDashboardService
             })
             ->with(['studentInvoices' => function ($q) {
                 $q->whereIn('status', [StudentInvoice::STATUS_PENDING, StudentInvoice::STATUS_PARTIAL]);
-            }, 'schoolClass'])
+            }, 'schoolClass.level'])
             ->orderBy('name')
             ->get()
             ->map(fn (User $student) => [
@@ -144,7 +146,18 @@ class AccountingDashboardService
                 'total_due' => round((float) $student->studentInvoices->sum(
                     fn (StudentInvoice $invoice) => $invoice->balanceDue()
                 ), 2),
-            ]);
+            ])
+            // Tri pédagogique (CI → ... → Terminale) plutôt qu'alphabétique
+            // sur le nom de l'élève, pour permettre un regroupement par
+            // classe lisible côté vue.
+            ->sortBy(function (array $row) use ($cycleRank) {
+                $class = $row['student']->schoolClass;
+                $rank = $cycleRank[$class?->level?->cycle] ?? 99;
+                $order = $class?->level?->order ?? 999;
+
+                return sprintf('%02d-%03d-%s-%s', $rank, $order, $class?->name ?? 'zzz', $row['student']->name);
+            })
+            ->values();
     }
 
     /**

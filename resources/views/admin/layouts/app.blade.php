@@ -550,6 +550,50 @@
         a:hover {
             color: #b45309;
         }
+
+        /* ── Modales ancrées à droite ──────────────────────────────
+           Préférence utilisateur : plus aucune modale centrée à
+           l'écran. Règle globale (aucune modale, présente ou future,
+           n'a besoin d'être modifiée individuellement) : toute modale
+           Bootstrap standard glisse depuis la droite et occupe toute
+           la hauteur, quelle que soit sa taille (modal-lg, modal-xl,
+           modal-dialog-centered…). */
+        .modal .modal-dialog {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            left: auto !important;
+            margin: 0 !important;
+            max-width: 480px !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 100% !important;
+            display: block !important;
+        }
+        .modal .modal-content {
+            height: 100%;
+            border-radius: 0;
+            border: none;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal .modal-body {
+            overflow-y: auto;
+            flex: 1 1 auto;
+        }
+        .modal.fade .modal-dialog {
+            transform: translateX(100%);
+            transition: transform 0.25s ease-out;
+        }
+        .modal.fade.show .modal-dialog {
+            transform: translateX(0);
+        }
+        @media (max-width: 576px) {
+            .modal .modal-dialog {
+                max-width: 100% !important;
+            }
+        }
     </style>
     @include('partials.portal-top-navbar-styles')
     @stack('styles')

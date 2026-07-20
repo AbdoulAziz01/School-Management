@@ -15,7 +15,14 @@
     .stat-card:hover {
         transform: translateY(-5px);
     }
-    
+
+    .stat-card-link {
+        display: block;
+        text-decoration: none !important;
+        color: inherit !important;
+        cursor: pointer;
+    }
+
     .stat-label {
         color: #6c757d;
         font-size: 0.875rem;
@@ -89,7 +96,7 @@
     <!-- Cartes de statistiques -->
     <div class="mb-4 row g-4">
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card stat-card">
+            <a href="{{ route('admin.registrations.pending') }}" class="card stat-card stat-card-link">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -101,20 +108,20 @@
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{{ route('admin.registrations.pending') }}" class="btn btn-sm btn-outline-primary w-100">Voir les inscriptions</a>
+                        <span class="btn btn-sm btn-outline-primary w-100">Voir les inscriptions</span>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
-        
+
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card stat-card">
+            <a href="{{ route('admin.classes.index') }}" class="card stat-card stat-card-link">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="stat-label">
                                 Total des classes
-                                @if($selectedYear)                                  
+                                @if($selectedYear)
                                     <span class="text-muted fw-normal">({{ $selectedYear->name }})</span>
                                 @endif
                             </h6>
@@ -124,15 +131,15 @@
                             <i class="fas fa-chalkboard text-success fs-4"></i>
                         </div>
                     </div>
-                    <div class="mt-3">  
-                        <a href="{{ route('admin.classes.index') }}" class="btn btn-sm btn-outline-success w-100">Voir les classes</a>
+                    <div class="mt-3">
+                        <span class="btn btn-sm btn-outline-success w-100">Voir les classes</span>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
-        
+
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card stat-card">
+            <a href="{{ route('admin.students.index') }}" class="card stat-card stat-card-link">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -149,14 +156,14 @@
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-warning w-100">Voir les élèves</a>
+                        <span class="btn btn-sm btn-outline-warning w-100">Voir les élèves</span>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
-        
+
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card stat-card">
+            <a href="{{ route('admin.academic-years.index') }}" class="card stat-card stat-card-link">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -179,10 +186,10 @@
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{{ route('admin.academic-years.index') }}" class="btn btn-sm btn-outline-info w-100">Gérer les années</a>
+                        <span class="btn btn-sm btn-outline-info w-100">Gérer les années</span>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
