@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\TeacherAssignment;
 use App\Models\AcademicYear;
 use App\Support\TenantSchool;
+use App\Support\TeacherClassResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +26,7 @@ class TeacherAttendanceController extends Controller
         $teacher     = Auth::user();
         $currentYear = AcademicYear::where('is_current', true)->first();
 
-        $classes = $teacher->assignedClasses()->with('level')->get();
+        $classes = TeacherClassResolver::forTeacher($teacher, $currentYear);
 
         $selectedClassId = $request->get('class_id');
         $selectedDate    = $request->get('date', Carbon::today()->format('Y-m-d'));
@@ -34,9 +35,7 @@ class TeacherAttendanceController extends Controller
 
         if ($selectedClassId) {
             // Garde-fou IDOR : l'enseignant doit être affecté à cette classe
-            $hasAccess = $teacher->assignedClasses()
-                ->where('classes.id', $selectedClassId)
-                ->exists();
+            $hasAccess = TeacherClassResolver::hasAccess($teacher, (int) $selectedClassId, $currentYear);
 
             if (! $hasAccess) {
                 return redirect()->route('teacher.attendance.index')
@@ -95,9 +94,7 @@ class TeacherAttendanceController extends Controller
         $teacher = Auth::user();
 
         // Garde-fou : prof affecté à la classe ?
-        $hasAccess = $teacher->assignedClasses()
-            ->where('classes.id', $request->class_id)
-            ->exists();
+        $hasAccess = TeacherClassResolver::hasAccess($teacher, (int) $request->class_id);
 
         if (! $hasAccess) {
             return back()->with('error', 'Vous n\'avez pas accès à cette classe.');
@@ -197,7 +194,8 @@ class TeacherAttendanceController extends Controller
     public function history(Request $request)
     {
         $teacher = Auth::user();
-        $classes = $teacher->assignedClasses()->with('level')->get();
+        $currentYear = AcademicYear::where('is_current', true)->first();
+        $classes = TeacherClassResolver::forTeacher($teacher, $currentYear);
 
         $selectedClassId = $request->get('class_id');
         $days = collect();
@@ -270,8 +268,8 @@ class TeacherAttendanceController extends Controller
         // Vérifier que l'enseignant a accès à cet élève via class_teacher
         $teacher = Auth::user();
         
-        $hasAccess = $teacher->assignedClasses()->where('classes.id', $student->class_id)->exists();
-        
+        $hasAccess = TeacherClassResolver::hasAccess($teacher, (int) $student->class_id);
+
         if (!$hasAccess) {
             return back()->with('error', 'Vous n\'avez pas accès à cet élève.');
         }

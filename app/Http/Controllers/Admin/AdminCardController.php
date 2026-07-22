@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SchoolClass;
 use App\Models\User;
+use App\Support\SchoolModules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -50,8 +51,30 @@ final class AdminCardController extends Controller
 
         $students = $query->orderBy('last_name')->orderBy('first_name')->paginate(24)->withQueryString();
         $classes  = SchoolClass::orderBy('name')->get();
+        $cardsEnabled = SchoolModules::isEnabled($school, SchoolModules::STUDENT_CARDS);
 
-        return view('admin.cards.index', compact('students', 'classes', 'school'));
+        return view('admin.cards.index', compact('students', 'classes', 'school', 'cardsEnabled'));
+    }
+
+    /**
+     * Active/désactive l'accès des élèves à leur carte scolaire (menu
+     * "Ma Carte Scolaire" + page). Tant que ce n'est pas activé par
+     * l'admin, la fonctionnalité reste invisible côté élève — voir
+     * StudentCardController::show() et le menu élève.
+     */
+    public function toggleEnabled(): RedirectResponse
+    {
+        $school = Auth::user()->school;
+
+        if (SchoolModules::isEnabled($school, SchoolModules::STUDENT_CARDS)) {
+            SchoolModules::disable($school, SchoolModules::STUDENT_CARDS);
+            $message = 'Les cartes scolaires ont été désactivées : les élèves ne peuvent plus y accéder.';
+        } else {
+            SchoolModules::enable($school, SchoolModules::STUDENT_CARDS);
+            $message = 'Les cartes scolaires sont activées : les élèves peuvent désormais voir leur carte.';
+        }
+
+        return redirect()->route('admin.cards.index')->with('success', $message);
     }
 
     // ── Aperçu de la carte d'un élève ────────────────────────────────────────

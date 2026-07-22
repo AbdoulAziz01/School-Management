@@ -8,6 +8,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\SchoolModules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
@@ -17,10 +18,18 @@ final class StudentCardController extends Controller
 {
     // ── Vue carte scolaire (recto/verso imprimable) ───────────────────────────
 
-    public function show(): View
+    public function show(): View|RedirectResponse
     {
         $student = auth()->user();
         $student->load(['schoolClass.level', 'school']);
+
+        // Fonctionnalité invisible côté élève tant que l'admin ne l'a pas
+        // explicitement activée (voir admin/cards — "Activer pour les
+        // élèves"), même en accès direct par URL.
+        if (! SchoolModules::isEnabled($student->school, SchoolModules::STUDENT_CARDS)) {
+            return redirect()->route('student.dashboard')
+                ->with('error', "La carte scolaire n'est pas encore disponible. Contactez l'administration.");
+        }
 
         // URL signée valide 1 an — encodée dans le QR verso
         // À chaque scan : signature vérifiée cryptographiquement par Laravel

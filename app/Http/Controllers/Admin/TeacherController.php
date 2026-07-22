@@ -34,7 +34,11 @@ class TeacherController extends Controller
     public function index(Request $request)
     {
         $query = User::whereIn('role', User::ROLE_TEACHER_ALIASES)
-            ->with(['assignedClasses' => fn ($q) => $q->whereHas('academicYear', fn ($ay) => $ay->where('is_current', true))]);
+            ->with([
+                'assignedClasses' => fn ($q) => $q->whereHas('academicYear', fn ($ay) => $ay->where('is_current', true)),
+                'teacherAssignments' => fn ($q) => $q->active()->whereHas('academicYear', fn ($ay) => $ay->where('is_current', true)),
+                'teacherAssignments.schoolClass',
+            ]);
 
         // Recherche par nom, email ou identifiant
         if ($request->filled('search')) {
@@ -155,7 +159,13 @@ class TeacherController extends Controller
     public function show($id)
     {
         $teacher = User::whereIn('role', User::ROLE_TEACHER_ALIASES)
-            ->with(['assignedClasses.level', 'assignedClasses.academicYear', 'assignedClasses.students', 'subjects'])
+            ->with([
+                'assignedClasses.level', 'assignedClasses.academicYear', 'assignedClasses.students', 'subjects',
+                'teacherAssignments' => fn ($q) => $q->active(),
+                'teacherAssignments.schoolClass.level',
+                'teacherAssignments.schoolClass.academicYear',
+                'teacherAssignments.schoolClass.students',
+            ])
             ->findOrFail($id);
 
         $pendingCredentials = $this->credentials->resolvePending($teacher);

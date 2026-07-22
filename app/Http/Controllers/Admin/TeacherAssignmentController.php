@@ -39,9 +39,22 @@ class TeacherAssignmentController extends Controller
     public function createAssignment(User $teacher)
     {
         $academicYears = \App\Models\AcademicYear::orderBy('start_date', 'desc')->get();
-        $subjects = \App\Models\Subject::orderBy('name')->get();
-        
-        return view('admin.teachers.create-assignment', compact('teacher', 'academicYears', 'subjects'));
+
+        return view('admin.teachers.create-assignment', compact('teacher', 'academicYears'));
+    }
+
+    /**
+     * Matières que cet enseignant peut se voir affecter pour cette classe
+     * (ses matières générales — teacher_subjects — filtrées par les
+     * matières actives du niveau, voir TeacherSubjectResolver). Alimente
+     * le select "Matière" du formulaire d'affectation en AJAX, pour éviter
+     * de présenter la liste complète des matières de l'établissement.
+     */
+    public function getSubjectsForTeacherClass(User $teacher, SchoolClass $class)
+    {
+        $subjects = \App\Support\TeacherSubjectResolver::forClass($teacher, $class);
+
+        return response()->json($subjects->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values());
     }
     
     /**
@@ -75,9 +88,14 @@ class TeacherAssignmentController extends Controller
                     ->with('error', 'Cette affectation existe déjà.');
             }
             
-            // Créer l'affectation
+            // Créer l'affectation. school_id est fixé explicitement à partir
+            // de l'enseignant (plutôt que de dépendre du contexte tenant en
+            // session) : c'est la valeur correcte dans tous les cas et ça
+            // évite une violation NOT NULL si le contexte session n'est pas
+            // celui attendu au moment de l'appel.
             $assignment = new TeacherAssignment($validated);
             $assignment->teacher_id = $teacher->id;
+            $assignment->school_id = $teacher->school_id;
             $assignment->save();
             
             DB::commit();

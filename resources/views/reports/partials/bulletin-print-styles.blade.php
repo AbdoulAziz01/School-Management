@@ -128,8 +128,6 @@
     .stamp-circle {
         width: 64px;
         height: 64px;
-        border-radius: 50%;
-        border: 1.5px dashed #1a5f2a;
         display: inline-block;
         text-align: center;
         vertical-align: middle;

@@ -117,6 +117,23 @@
 @endpush
 
 @section('content')
+    @php
+        // Titulaire primaire (class_teacher) + professeurs par matière
+        // (TeacherAssignment, collège/lycée) : les deux voies d'affectation
+        // possibles pour une classe (voir aussi admin/classes/index.blade.php).
+        $classTeachers = $class->teachers
+            ->concat($class->teacherAssignments->pluck('teacher')->filter())
+            ->unique('id')
+            ->map(function ($teacher) use ($class) {
+                $subjectsForClass = $class->teacherAssignments
+                    ->where('teacher_id', $teacher->id)
+                    ->pluck('subject')
+                    ->filter();
+                $teacher->class_subjects = $subjectsForClass->isNotEmpty() ? $subjectsForClass : $teacher->subjects;
+
+                return $teacher;
+            });
+    @endphp
     <div class="flex-wrap pt-3 pb-2 mb-4 d-flex justify-content-between flex-md-nowrap align-items-center border-bottom">
         <h1 class="mb-0 h3">
             @if(!empty($isFormationSchool) && $isFormationSchool)
@@ -241,7 +258,7 @@
                 </div>
                 <div class="col-md-3">
                     <p class="mb-1"><strong><i class="fas fa-chalkboard-teacher me-2"></i>Enseignants :</strong></p>
-                    <p class="text-muted">{{ $class->teachers->count() }} professeur(s)</p>
+                    <p class="text-muted">{{ $classTeachers->count() }} professeur(s)</p>
                 </div>
             </div>
         </div>
@@ -783,18 +800,101 @@
         </div>
     </div>
     
-    <!-- Enseignants affectés -->
+    <!-- Matières & professeur(s) de la classe -->
+    <div class="mb-4 shadow-sm card">
+        <div class="text-white card-header" style="background-color: #fd7e14;">
+            <h5 class="mb-0">
+                <i class="fas fa-book"></i> Matières de la classe
+                <span class="badge bg-light text-dark float-end">{{ $classSubjectsData->count() }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                <i class="fas fa-info-circle me-1"></i>
+                Désactivez une matière que cette classe précise ne fait pas (ex. matière hors programme
+                officiel sénégalais pour cette série), sans toucher aux autres classes du même niveau.
+            </p>
+            @if($classSubjectsData->isEmpty())
+                <div class="py-3 text-center text-muted">
+                    Aucune matière configurée pour le niveau de cette classe.
+                </div>
+            @else
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Matière</th>
+                                <th>Professeur(s)</th>
+                                <th>Statut</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($classSubjectsData as $row)
+                                <tr class="{{ ! $row['is_active_for_class'] ? 'table-light text-muted' : '' }}">
+                                    <td><strong>{{ $row['subject']->name }}</strong></td>
+                                    <td>
+                                        @forelse($row['teachers'] as $teacher)
+                                            <span class="badge bg-info mb-1">{{ $teacher->name }}</span>
+                                        @empty
+                                            <span class="text-muted small">Non affecté</span>
+                                        @endforelse
+                                    </td>
+                                    <td>
+                                        @if($row['is_active_for_class'])
+                                            <span class="badge bg-success">Active</span>
+                                        @else
+                                            <span class="badge bg-secondary">Désactivée</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
+                                            <form method="POST" action="{{ route('admin.classes.subjects.assign-teacher', [$class, $row['subject']]) }}" class="d-flex gap-1">
+                                                @csrf
+                                                <select name="teacher_id" class="form-select form-select-sm" style="width: 160px;" required>
+                                                    <option value="">Changer le prof...</option>
+                                                    @foreach($row['eligible_teachers'] as $teacher)
+                                                        <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Affecter">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ route('admin.classes.subjects.toggle', [$class, $row['subject']]) }}">
+                                                @csrf
+                                                @if($row['is_active_for_class'])
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Désactiver pour cette classe">
+                                                        <i class="fas fa-eye-slash"></i>
+                                                    </button>
+                                                @else
+                                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Réactiver pour cette classe">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                @endif
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </div>
 
     <!-- Enseignants affectés -->
+
     <div class="mb-4 shadow-sm card">
         <div class="text-white card-header" style="background-color: #fd7e14;">
             <h5 class="mb-0">
                 <i class="fas fa-chalkboard-teacher"></i> Enseignants affectés
-                <span class="badge bg-light text-dark float-end">{{ $class->teachers->count() }}</span>
+                <span class="badge bg-light text-dark float-end">{{ $classTeachers->count() }}</span>
             </h5>
         </div>
         <div class="card-body">
-            @if($class->teachers->isEmpty())
+            @if($classTeachers->isEmpty())
                 <div class="py-3 text-center text-muted">
                     Aucun enseignant n'est affecté à cette classe.
                 </div>
@@ -810,13 +910,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($class->teachers as $teacher)
+                            @foreach($classTeachers as $teacher)
                                 <tr>
                                     <td>{{ $teacher->name }}</td>
                                     <td><small>{{ $teacher->email }}</small></td>
                                     <td>
-                                        @if($teacher->subjects->isNotEmpty())
-                                            @foreach($teacher->subjects as $subject)
+                                        @if($teacher->class_subjects->isNotEmpty())
+                                            @foreach($teacher->class_subjects as $subject)
                                                 <span class="badge bg-info">{{ $subject->name }}</span>
                                             @endforeach
                                         @else

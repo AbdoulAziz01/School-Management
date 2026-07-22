@@ -17,7 +17,7 @@
                         </a>
                     </li>
                     <li class="breadcrumb-item">
-                        <a href="{{ route('classes.show', $class) }}">{{ $class->name }}</a>
+                        <a href="{{ route('admin.classes.show', $class) }}">{{ $class->name }}</a>
                     </li>
                     <li class="breadcrumb-item active" aria-current="page">Gérer les élèves</li>
                 </ol>
@@ -25,7 +25,7 @@
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3">Gérer les élèves - {{ $class->name }}</h1>
-                <a href="{{ route('classes.show', $class) }}" class="btn btn-outline-secondary">
+                <a href="{{ route('admin.classes.show', $class) }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i> Retour à la classe
                 </a>
             </div>
@@ -92,7 +92,7 @@
                     </div>
                     <div class="card-footer bg-white">
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('classes.show', $class) }}" class="btn btn-outline-secondary">
+                            <a href="{{ route('admin.classes.show', $class) }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-1"></i> Annuler
                             </a>
                             @if(!$availableStudents->isEmpty())

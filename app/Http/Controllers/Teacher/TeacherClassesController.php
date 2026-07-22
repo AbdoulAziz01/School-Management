@@ -8,6 +8,7 @@ use App\Models\TeacherAssignment;
 use App\Models\SchoolClass;
 use App\Models\AcademicYear;
 use App\Support\TeacherSubjectResolver;
+use App\Support\TeacherClassResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,10 +21,9 @@ class TeacherClassesController extends Controller
     {
         $teacher = Auth::user();
         $currentYear = AcademicYear::where('is_current', true)->first();
-        
-        // Récupérer les classes affectées via la table class_teacher
-        $assignedClasses = $teacher->assignedClasses()->with('level')->get();
-        
+
+        $assignedClasses = TeacherClassResolver::forTeacher($teacher, $currentYear);
+
         // Construire la liste des classes avec les informations
         $classes = collect();
         foreach ($assignedClasses as $class) {
@@ -71,9 +71,11 @@ class TeacherClassesController extends Controller
         $teacher = Auth::user();
         $currentYear = AcademicYear::where('is_current', true)->first();
         
-        // Vérifier que l'enseignant a bien accès à cette classe via class_teacher
-        $hasAccess = $teacher->assignedClasses()->where('classes.id', $id)->exists();
-        
+        // Vérifier que l'enseignant a bien accès à cette classe, via
+        // class_teacher (primaire) ou via une affectation active
+        // (TeacherAssignment, collège/lycée).
+        $hasAccess = TeacherClassResolver::hasAccess($teacher, (int) $id, $currentYear);
+
         if (!$hasAccess) {
             return redirect()->route('teacher.classes.index')
                 ->with('error', 'Vous n\'avez pas accès à cette classe.');

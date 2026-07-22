@@ -17,9 +17,11 @@ use App\Models\School;
 class SchoolModules
 {
     public const ACCOUNTING = 'accounting';
+    public const STUDENT_CARDS = 'student_cards';
 
     public const ALL_MODULES = [
         self::ACCOUNTING,
+        self::STUDENT_CARDS,
     ];
 
     /**

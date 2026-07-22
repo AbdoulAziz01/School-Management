@@ -13,12 +13,35 @@
             </h1>
             <p class="text-muted small mb-0">Aperçu et impression des cartes de tous les élèves</p>
         </div>
-        <a href="{{ route('admin.cards.settings') }}"
-           class="btn btn-sm fw-700 d-flex align-items-center gap-2"
-           style="background:#003087;color:#fff;border-radius:10px;padding:9px 18px;">
-            <i class="fas fa-palette"></i> Personnaliser la carte
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            <form method="POST" action="{{ route('admin.cards.toggle-enabled') }}">
+                @csrf
+                @if($cardsEnabled)
+                    <button type="submit" class="btn btn-sm fw-700 d-flex align-items-center gap-2"
+                            style="background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:10px;padding:9px 18px;">
+                        <i class="fas fa-toggle-on"></i> Activée pour les élèves — désactiver
+                    </button>
+                @else
+                    <button type="submit" class="btn btn-sm fw-700 d-flex align-items-center gap-2"
+                            style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;border-radius:10px;padding:9px 18px;">
+                        <i class="fas fa-toggle-off"></i> Désactivée — activer pour les élèves
+                    </button>
+                @endif
+            </form>
+            <a href="{{ route('admin.cards.settings') }}"
+               class="btn btn-sm fw-700 d-flex align-items-center gap-2"
+               style="background:#003087;color:#fff;border-radius:10px;padding:9px 18px;">
+                <i class="fas fa-palette"></i> Personnaliser la carte
+            </a>
+        </div>
     </div>
+
+    @unless($cardsEnabled)
+        <div class="alert alert-warning small mb-4" style="border-radius:12px;">
+            <i class="fas fa-triangle-exclamation me-1"></i>
+            Les élèves ne voient pas encore leur carte scolaire — activez la fonctionnalité ci-dessus pour la leur rendre visible.
+        </div>
+    @endunless
 
     {{-- Filtres --}}
     <div class="card mb-4" style="border:1px solid #fde68a;border-radius:14px;">

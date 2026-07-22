@@ -5,6 +5,8 @@ namespace App\Services\SchoolBot;
 use App\Models\Grade;
 use App\Models\Level;
 use App\Models\School;
+use App\Models\SchoolClass;
+use App\Support\TeacherSubjectResolver;
 use App\Support\FormationLmdSettings;
 use App\Support\FormationModuleGradeCalculator;
 use App\Support\Grading\PrimaryGradingSettings;
@@ -48,7 +50,7 @@ class BulletinComputation
      * @param  Collection<int, Grade>  $grades
      * @return list<array<string, mixed>>
      */
-    public function calculateBulletinData(Collection $grades, ?Level $level, ?School $school = null, ?array $coefficients = null): array
+    public function calculateBulletinData(Collection $grades, ?Level $level, ?School $school = null, ?array $coefficients = null, ?SchoolClass $class = null): array
     {
         if ($school?->usesLmdGrading()) {
             return $this->calculateFormationBulletinData($grades, $school);
@@ -63,6 +65,15 @@ class BulletinComputation
         foreach ($gradesBySubject as $subjectId => $subjectGrades) {
             $subject = $subjectGrades->first()->subject ?? null;
             if (! $subject) {
+                continue;
+            }
+
+            // Matière explicitement désactivée pour CETTE classe (voir
+            // admin/classes/show — "Matières de la classe") : ne doit
+            // apparaître ni côté enseignant (déjà géré par
+            // TeacherSubjectResolver) ni côté élève, même si des notes ont
+            // été saisies avant la désactivation.
+            if ($class && TeacherSubjectResolver::isDisabledForClass((int) $subjectId, $class)) {
                 continue;
             }
 

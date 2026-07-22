@@ -8,6 +8,8 @@ use App\Models\FormationPromotion;
 use App\Models\SchoolClass;
 use App\Models\AcademicYear;
 use App\Models\Level;
+use App\Models\Subject;
+use App\Models\TeacherAssignment;
 use App\Models\User;
 use App\Support\ClassHistoricalContext;
 use App\Support\ClosedAcademicYearGuard;
@@ -62,6 +64,8 @@ class ClassController extends Controller
             'formationPromotion.formationDepartment',
             'students',
             'teachers.subjects',
+            'teacherAssignments' => fn ($q) => $q->active(),
+            'teacherAssignments.teacher.subjects',
         ])
             ->withCount('students')
             ->orderByDesc(SchoolClass::column('academic_year_id'))
@@ -188,6 +192,7 @@ class ClassController extends Controller
             'students' => function($query) {
                 $query->orderBy('name');
             },
+            'teacherAssignments' => fn ($q) => $q->active(),
             'teacherAssignments.teacher',
             'teacherAssignments.subject',
             'teachers.subjects',
@@ -203,7 +208,39 @@ class ClassController extends Controller
             
         // Récupérer les matières disponibles
         $subjects = \App\Models\Subject::orderBy('name')->get();
-        
+
+        // Matières & professeur(s) de CETTE classe précise — pour que
+        // l'admin puisse désactiver une matière non enseignée dans cette
+        // classe (ex. série sans cette matière) ou changer le professeur,
+        // sans affecter les autres classes du même niveau.
+        $classLevelSubjects = $class->level
+            ? $class->level->subjects()->wherePivot('is_active', true)->orderBy('subjects.name')->get()
+            : collect();
+        $disabledSubjectIds = $class->subjects()->wherePivot('is_active', false)->pluck('subjects.id');
+        $classSubjectsData = $classLevelSubjects->map(function ($subject) use ($class, $disabledSubjectIds) {
+            // Le menu "changer le prof" ne doit proposer que les
+            // enseignants qualifiés pour CETTE matière (teacher_subjects),
+            // pas tous les enseignants de l'établissement — à défaut
+            // (matière jamais qualifiée chez personne), on retombe sur la
+            // liste complète pour ne jamais bloquer une première affectation.
+            $eligibleTeachers = $subject->teachers()->where('status', 'approved')->orderBy('name')->get();
+            if ($eligibleTeachers->isEmpty()) {
+                $eligibleTeachers = User::where('role', 'teacher')->where('status', 'approved')->orderBy('name')->get();
+            }
+
+            return [
+                'subject' => $subject,
+                'is_active_for_class' => ! $disabledSubjectIds->contains($subject->id),
+                'teachers' => $class->teacherAssignments
+                    ->where('subject_id', $subject->id)
+                    ->pluck('teacher')
+                    ->filter()
+                    ->unique('id')
+                    ->values(),
+                'eligible_teachers' => $eligibleTeachers,
+            ];
+        });
+
         // Récupérer les étudiants déjà affectés à cette classe
         $academicYear = $class->academicYear;
         $yearClosed = $academicYear?->isClosed() ?? false;
@@ -255,7 +292,80 @@ class ClassController extends Controller
             'isReadOnly',
             'canProcessClassPromotions',
             'archivedHistoryClass',
+            'classSubjectsData',
         ));
+    }
+
+    /**
+     * Active/désactive une matière pour une classe précise (table
+     * class_subject) : la matière reste active au niveau (level_subject)
+     * mais n'apparaît plus dans cette classe — pour les matières que
+     * certaines classes ne font pas (ex. série sans cette matière).
+     */
+    public function toggleSubject(SchoolClass $class, Subject $subject)
+    {
+        $existing = DB::table('class_subject')
+            ->where('class_id', $class->id)
+            ->where('subject_id', $subject->id)
+            ->first();
+
+        $nowActive = $existing ? ! $existing->is_active : false;
+
+        if ($existing) {
+            DB::table('class_subject')
+                ->where('id', $existing->id)
+                ->update(['is_active' => $nowActive, 'updated_at' => now()]);
+        } else {
+            // Pas de ligne = active par défaut (suit le niveau) : on crée
+            // une ligne explicite pour la désactiver dans cette classe.
+            DB::table('class_subject')->insert([
+                'class_id' => $class->id,
+                'subject_id' => $subject->id,
+                'is_active' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return back()->with('success', $nowActive
+            ? "Matière « {$subject->name} » réactivée pour cette classe."
+            : "Matière « {$subject->name} » désactivée pour cette classe — elle n'apparaîtra plus pour la saisie de notes ni sur les bulletins.");
+    }
+
+    /**
+     * Affecte (ou remplace) le professeur d'une matière pour cette classe
+     * précise. Remplace toute affectation existante pour ce couple
+     * classe+matière sur l'année de la classe, plutôt que d'en cumuler
+     * plusieurs — pour un ajout d'un professeur supplémentaire sans
+     * remplacer l'existant, utiliser la page "Affectations" complète.
+     */
+    public function assignSubjectTeacher(Request $request, SchoolClass $class, Subject $subject)
+    {
+        $validated = $request->validate([
+            'teacher_id' => 'required|exists:users,id',
+        ]);
+
+        $teacher = User::where('id', $validated['teacher_id'])
+            ->where('role', 'teacher')
+            ->firstOrFail();
+
+        DB::transaction(function () use ($class, $subject, $teacher) {
+            TeacherAssignment::where('class_id', $class->id)
+                ->where('subject_id', $subject->id)
+                ->where('academic_year_id', $class->academic_year_id)
+                ->delete();
+
+            TeacherAssignment::create([
+                'teacher_id' => $teacher->id,
+                'school_id' => $teacher->school_id,
+                'class_id' => $class->id,
+                'subject_id' => $subject->id,
+                'academic_year_id' => $class->academic_year_id,
+                'is_active' => true,
+            ]);
+        });
+
+        return back()->with('success', "{$teacher->name} enseigne désormais « {$subject->name} » dans cette classe.");
     }
 
     /**

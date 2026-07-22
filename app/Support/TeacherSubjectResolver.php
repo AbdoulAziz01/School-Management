@@ -50,6 +50,9 @@ class TeacherSubjectResolver
     public static function filterActiveForLevel(Collection $subjects, SchoolClass $class): Collection
     {
         $class->loadMissing('level');
+
+        $subjects = $subjects->filter(fn ($s) => ! self::isDisabledForClass($s->id, $class))->values();
+
         if (! $class->level) {
             return $subjects;
         }
@@ -65,6 +68,21 @@ class TeacherSubjectResolver
         return $subjects->filter(fn ($s) => $activeIds->contains($s->id))->values();
     }
 
+    /**
+     * true si l'admin a explicitement désactivé cette matière pour CETTE
+     * classe précise (table class_subject, voir admin/classes/show —
+     * "Matières de la classe"), indépendamment de son activation au niveau.
+     * Une matière peut être active au niveau (level_subject) mais non
+     * enseignée dans une classe donnée (ex. série sans cette matière).
+     */
+    public static function isDisabledForClass(int $subjectId, SchoolClass $class): bool
+    {
+        return $class->subjects()
+            ->wherePivot('subject_id', $subjectId)
+            ->wherePivot('is_active', false)
+            ->exists();
+    }
+
     public static function hasAccess(User $teacher, SchoolClass $class, int $subjectId, ?int $academicYearId = null): bool
     {
         return self::forClass($teacher, $class, $academicYearId)->contains('id', $subjectId);
@@ -77,6 +95,10 @@ class TeacherSubjectResolver
      */
     public static function isSubjectActiveForLevel(int $subjectId, SchoolClass $class): bool
     {
+        if (self::isDisabledForClass($subjectId, $class)) {
+            return false;
+        }
+
         $class->loadMissing('level');
         if (! $class->level) {
             return true;

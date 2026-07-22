@@ -59,7 +59,7 @@
                                         @foreach($yearAssignments as $assignment)
                                             <tr>
                                                 <td>
-                                                    <a href="{{ route('classes.show', $assignment->schoolClass) }}">
+                                                    <a href="{{ route('admin.classes.show', $assignment->schoolClass) }}">
                                                         {{ $assignment->schoolClass->name }}
                                                     </a>
                                                 </td>

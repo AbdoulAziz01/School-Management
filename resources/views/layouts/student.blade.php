@@ -586,10 +586,12 @@
                     <span>Classes Virtuelles</span>
                 </a>
 
-                <a href="{{ route('student.card.show') }}" class="nav-link {{ request()->routeIs('student.card.*') ? 'active' : '' }}">
-                    <i class="fas fa-id-card"></i>
-                    <span>Ma Carte Scolaire</span>
-                </a>
+                @if(\App\Support\SchoolModules::isEnabled($currentSchool ?? null, \App\Support\SchoolModules::STUDENT_CARDS))
+                    <a href="{{ route('student.card.show') }}" class="nav-link {{ request()->routeIs('student.card.*') ? 'active' : '' }}">
+                        <i class="fas fa-id-card"></i>
+                        <span>Ma Carte Scolaire</span>
+                    </a>
+                @endif
 
                 @if(\App\Support\SchoolModules::isEnabled($currentSchool ?? null, \App\Support\SchoolModules::ACCOUNTING))
                     <a href="{{ route('student.payments.index') }}" class="nav-link {{ request()->routeIs('student.payments.*') ? 'active' : '' }}">

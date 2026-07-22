@@ -342,6 +342,7 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         Route::get('/assignments', [TeacherAssignmentController::class, 'teacherAssignments'])->name('assignments');
         Route::get('/assignments/create', [TeacherAssignmentController::class, 'createAssignment'])->name('assignments.create');
         Route::post('/assignments', [TeacherAssignmentController::class, 'storeAssignment'])->name('assignments.store');
+        Route::get('/assignments/subjects/{class}', [TeacherAssignmentController::class, 'getSubjectsForTeacherClass'])->name('assignments.subjects');
     });
 
     Route::delete('/teacher-assignments/{assignment}', [TeacherAssignmentController::class, 'destroyAssignment'])
@@ -368,6 +369,10 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         ->name('admin.classes.process-all-promotions');
     Route::post('/classes/{class}/process-promotions', [\App\Http\Controllers\Admin\ClassController::class, 'processPromotions'])
         ->name('admin.classes.process-promotions');
+    Route::post('/classes/{class}/subjects/{subject}/toggle', [\App\Http\Controllers\Admin\ClassController::class, 'toggleSubject'])
+        ->name('admin.classes.subjects.toggle');
+    Route::post('/classes/{class}/subjects/{subject}/teacher', [\App\Http\Controllers\Admin\ClassController::class, 'assignSubjectTeacher'])
+        ->name('admin.classes.subjects.assign-teacher');
     
     // Gestion des années académiques
     Route::resource('academic-years', 'App\Http\Controllers\Admin\AcademicYearController')->names('admin.academic-years');
@@ -410,6 +415,7 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
         Route::get('/',          [AdminCardController::class, 'index'])->name('index');
         Route::get('/settings',  [AdminCardController::class, 'settings'])->name('settings');
         Route::post('/settings', [AdminCardController::class, 'saveSettings'])->name('settings.save');
+        Route::post('/toggle-enabled', [AdminCardController::class, 'toggleEnabled'])->name('toggle-enabled');
         Route::get('/{student}', [AdminCardController::class, 'show'])->name('show');
     });
 
@@ -502,6 +508,19 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
         // Lecture seule : pas de route cancel pour le directeur (aucune
         // permission paiement.annuler pour ce rôle, voir AccountingRoles).
         Route::get('/payments', [\App\Http\Controllers\Accounting\PaymentCorrectionController::class, 'index'])->name('payments.index');
+
+        // Centre de Commande — navigation en lecture seule dans l'établissement
+        // (Classes → Élève/Enseignant/Matière). Aucune édition pédagogique ici :
+        // uniquement de la consultation, voir SchoolBrowserController.
+        Route::prefix('school')->name('school.')->group(function () {
+            Route::get('/classes', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'classesIndex'])->name('classes.index');
+            Route::get('/classes/{class}', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'classesShow'])->name('classes.show');
+            Route::get('/classes/{class}/subjects/{subject}', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'subjectGrades'])->name('subjects.grades');
+            Route::get('/teachers', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'teachersIndex'])->name('teachers.index');
+            Route::get('/teachers/{teacher}', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'teachersShow'])->name('teachers.show');
+            Route::get('/students', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'studentsIndex'])->name('students.index');
+            Route::get('/students/{student}', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'studentsShow'])->name('students.show');
+        });
 
         // Personnel & élèves — vue d'ensemble pour le directeur, avec création
         // limitée à ses subordonnés directs (comptable/caissier).

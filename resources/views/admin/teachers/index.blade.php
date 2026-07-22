@@ -53,29 +53,46 @@
                             <table class="table table-hover">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Identifiant</th>
-                                        <th>Nom</th>
-                                        <th>Email</th>
-                                        <th>Téléphone</th>
+                                        <th>Enseignant</th>
                                         <th>Classe(s)</th>
                                         <th>Statut</th>
-                                        <th>Date d'inscription</th>
                                         <th class="text-end" style="width: 70px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($teachers as $teacher)
                                         <tr>
-                                            <td><code>{{ $teacher->identifier ?? '-' }}</code></td>
-                                            <td>{{ $teacher->name }}</td>
-                                            <td>{{ $teacher->email }}</td>
-                                            <td>{{ $teacher->phone ?? 'Non renseigné' }}</td>
                                             <td>
-                                                @forelse($teacher->assignedClasses as $class)
-                                                    <span class="badge bg-light text-dark border">{{ $class->name }}</span>
-                                                @empty
+                                                <div>{{ $teacher->name }}</div>
+                                                <div class="small text-muted">
+                                                    <code>{{ $teacher->identifier ?? '-' }}</code> · {{ $teacher->email }}
+                                                </div>
+                                            </td>
+                                            <td style="max-width: 160px;">
+                                                @php
+                                                    // Primaire (titulaire, class_teacher) + collège/lycée
+                                                    // (TeacherAssignment par classe+matière) : un enseignant
+                                                    // peut apparaître dans l'un, l'autre, ou aucun des deux.
+                                                    $teacherClasses = $teacher->assignedClasses
+                                                        ->concat($teacher->teacherAssignments->pluck('schoolClass')->filter())
+                                                        ->unique('id')
+                                                        ->values();
+                                                @endphp
+                                                @if($teacherClasses->isEmpty())
                                                     <span class="text-muted small">Aucune</span>
-                                                @endforelse
+                                                @else
+                                                    <div class="dropdown d-inline-block">
+                                                        <a href="#" class="badge bg-light text-dark border" role="button" id="classesDropdown{{ $teacher->id }}"
+                                                           data-bs-toggle="dropdown" data-bs-strategy="fixed" data-bs-boundary="viewport" aria-expanded="false">
+                                                            {{ $teacherClasses->count() }} classe(s)
+                                                        </a>
+                                                        <ul class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="classesDropdown{{ $teacher->id }}" style="min-width: 160px;">
+                                                            @foreach($teacherClasses as $class)
+                                                                <li class="px-2 py-1">{{ $class->name }}</li>
+                                                            @endforeach
+                                                        </ul>
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td>
                                                 @if($teacher->status == 'approved')
@@ -86,7 +103,6 @@
                                                     <span class="badge bg-danger">Rejeté</span>
                                                 @endif
                                             </td>
-                                            <td>{{ $teacher->created_at->format('d/m/Y') }}</td>
                                             <td class="text-end">
                                                 {{-- Menu compact (au lieu de 4 boutons côte à côte) : la colonne
                                                      Actions ne pousse plus le tableau hors de l'écran. --}}

@@ -90,24 +90,15 @@
                                             <td>
                                                 <span class="badge" style="background-color: #fd7e14;">{{ $subject->teachers->count() }} professeur(s)</span>
                                                 @if($subject->teachers->count() > 0)
-                                                    <a href="#" class="small ms-1" data-bs-toggle="modal" data-bs-target="#teachersModal{{ $subject->id }}">Voir tout</a>
-
-                                                    <div class="modal fade" id="teachersModal{{ $subject->id }}" tabindex="-1" aria-hidden="true">
-                                                        <div class="modal-dialog">
-                                                            <div class="modal-content">
-                                                                <div class="modal-header">
-                                                                    <h5 class="modal-title">Professeurs — {{ $subject->name }}</h5>
-                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                                                                </div>
-                                                                <div class="modal-body">
-                                                                    <ul class="list-unstyled mb-0">
-                                                                        @foreach($subject->teachers as $teacher)
-                                                                            <li class="py-1"><i class="fas fa-user-tie me-2 text-muted"></i>{{ $teacher->name }}</li>
-                                                                        @endforeach
-                                                                    </ul>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div class="dropdown d-inline-block">
+                                                        <a href="#" class="small ms-1" role="button" id="teachersDropdown{{ $subject->id }}"
+                                                           data-bs-toggle="dropdown" data-bs-strategy="fixed" data-bs-boundary="viewport" aria-expanded="false">Voir tout</a>
+                                                        <ul class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="teachersDropdown{{ $subject->id }}" style="min-width: 220px;">
+                                                            <li class="dropdown-header px-2">Professeurs — {{ $subject->name }}</li>
+                                                            @foreach($subject->teachers as $teacher)
+                                                                <li class="px-2 py-1"><i class="fas fa-user-tie me-2 text-muted"></i>{{ $teacher->name }}</li>
+                                                            @endforeach
+                                                        </ul>
                                                     </div>
                                                 @endif
                                             </td>

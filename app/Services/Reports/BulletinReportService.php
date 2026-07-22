@@ -83,7 +83,7 @@ class BulletinReportService
             ->get();
 
         $coefficients ??= $this->bulletinComputation->fetchLevelCoefficients($level);
-        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class?->school, $coefficients);
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class?->school, $coefficients, $class);
         $generalAverage = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
         if ($classStats === null && $class) {
@@ -257,7 +257,7 @@ class BulletinReportService
             ->with('subject')
             ->get();
 
-        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school);
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school, null, $class);
         $generalAverage = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
         return [
@@ -298,7 +298,7 @@ class BulletinReportService
                     ->with('subject')
                     ->get();
 
-                $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school);
+                $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school, null, $class);
                 $moyenneAnnuelle = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
                 $semestre1Data = ['data' => $bulletinData, 'moyenne' => $moyenneAnnuelle];
@@ -377,7 +377,7 @@ class BulletinReportService
                 ->with('subject')
                 ->get();
 
-            $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school);
+            $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $class->school, null, $class);
             $moyenne = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
             $bulletins[] = [
@@ -474,7 +474,7 @@ class BulletinReportService
             ->with('subject')
             ->get();
 
-        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $class->level, $class->school);
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $class->level, $class->school, null, $class);
         $moyenne = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
         return ['moyenne' => $moyenne];
@@ -503,7 +503,7 @@ class BulletinReportService
 
         foreach ($studentIds as $studentId) {
             $studentGrades = $gradesByStudent->get($studentId, collect());
-            $bulletinData = $this->bulletinComputation->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients);
+            $bulletinData = $this->bulletinComputation->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients, $class);
             $averages[$studentId] = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
         }
 

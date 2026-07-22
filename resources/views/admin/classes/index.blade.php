@@ -115,18 +115,26 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if($class->teachers->count() > 0)
+                                                @php
+                                                    // Titulaire primaire (class_teacher) + professeurs par
+                                                    // matière (TeacherAssignment, collège/lycée) : les deux
+                                                    // voies d'affectation possibles pour une classe.
+                                                    $classTeachers = $class->teachers
+                                                        ->concat($class->teacherAssignments->pluck('teacher')->filter())
+                                                        ->unique('id');
+                                                @endphp
+                                                @if($classTeachers->count() > 0)
                                                     <div class="d-flex flex-wrap gap-1">
-                                                        @foreach($class->teachers->take(3) as $teacher)
+                                                        @foreach($classTeachers->take(3) as $teacher)
                                                             <span class="badge bg-info" title="{{ $teacher->name }}{{ $teacher->subjects->isNotEmpty() ? ' - ' . $teacher->subjects->pluck('name')->join(', ') : '' }}">
                                                                 {{ Str::limit($teacher->name, 12) }}
                                                             </span>
                                                         @endforeach
-                                                        @if($class->teachers->count() > 3)
-                                                            <span class="badge bg-secondary">+{{ $class->teachers->count() - 3 }}</span>
+                                                        @if($classTeachers->count() > 3)
+                                                            <span class="badge bg-secondary">+{{ $classTeachers->count() - 3 }}</span>
                                                         @endif
                                                     </div>
-                                                    <small class="text-muted">{{ $class->teachers->count() }} professeur(s)</small>
+                                                    <small class="text-muted">{{ $classTeachers->count() }} professeur(s)</small>
                                                 @else
                                                     <span class="text-muted small">Aucun</span>
                                                 @endif

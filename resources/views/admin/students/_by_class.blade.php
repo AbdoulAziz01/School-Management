@@ -12,7 +12,7 @@
 </div>
 
 <div class="accordion" id="classesAccordion">
-    @foreach($classes->sortBy('name') as $class)
+    @foreach($classes as $class)
         @php
             $classStudents = $studentsByClass->get($class->id, collect());
             $hasStudents = $classStudents->count() > 0;

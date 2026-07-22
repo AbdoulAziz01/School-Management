@@ -101,6 +101,24 @@
 
     <ul class="nav flex-column">
         <li class="nav-item">
+            <a href="{{ route('directeur.school.classes.index') }}" class="nav-link {{ request()->routeIs('directeur.school.classes.*') || request()->routeIs('directeur.school.subjects.*') ? 'active' : '' }}">
+                <i class="fas fa-door-open"></i>
+                <span>Classes</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.school.teachers.index') }}" class="nav-link {{ request()->routeIs('directeur.school.teachers.*') ? 'active' : '' }}">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>Enseignants</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.school.students.index') }}" class="nav-link {{ request()->routeIs('directeur.school.students.*') ? 'active' : '' }}">
+                <i class="fas fa-user-graduate"></i>
+                <span>Élèves</span>
+            </a>
+        </li>
+        <li class="nav-item">
             <a href="{{ route('directeur.personnel.index') }}" class="nav-link {{ request()->routeIs('directeur.personnel.*') && ! request()->routeIs('directeur.personnel.create') ? 'active' : '' }}">
                 <i class="fas fa-address-book"></i>
                 <span>Personnel & Élèves</span>

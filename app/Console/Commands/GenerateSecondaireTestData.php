@@ -46,22 +46,22 @@ class GenerateSecondaireTestData extends Command
     /** @var list<string> */
     private array $firstNamesMale = [
         'Mamadou', 'Ibrahima', 'Ousmane', 'Moussa', 'Cheikh', 'Abdoulaye', 'Modou', 'Alioune',
-        'Assane', 'Babacar', 'Serigne', 'Pape', 'Malick', 'Youssou', 'Lamine', 'Amadou',
-        'Souleymane', 'Ndiaga', 'El Hadji', 'Mor', 'Demba', 'Boubacar', 'Aliou', 'Thierno',
+        'Assane', 'Babacar', 'Serigne', 'Pape', 'Malick', 'Youssou', 'Lamine', 'Amadou', 'Elie',
+        'Souleymane', 'Ndiaga', 'El Hadji', 'Mor', 'Demba', 'Boubacar', 'Aliou', 'Thierno', 'Abdoul Aziz' , 'Pape Samba',
     ];
 
     /** @var list<string> */
     private array $firstNamesFemale = [
         'Fatou', 'Aminata', 'Aïssatou', 'Khadija', 'Awa', 'Bineta', 'Seynabou', 'Ndeye',
-        'Mariama', 'Coumba', 'Adja', 'Astou', 'Rokhaya', 'Sokhna', 'Dieynaba', 'Yacine',
-        'Marième', 'Ramatoulaye', 'Aida', 'Penda', 'Anta', 'Fatimata', 'Absa', 'Khady',
+        'Mariama', 'Coumba', 'Adja', 'Astou', 'Rokhaya', 'Sokhna', 'Dieynaba', 'Yacine', 
+        'Marième', 'Ramatoulaye', 'Aida', 'Penda', 'Anta', 'Fatimata', 'Absa', 'Khady', 'Ngoné',
     ];
 
     /** @var list<string> */
     private array $lastNames = [
         'Diop', 'Ndiaye', 'Fall', 'Gueye', 'Ba', 'Sarr', 'Diagne', 'Sy', 'Cissé', 'Faye',
         'Niang', 'Mbaye', 'Sow', 'Kane', 'Diallo', 'Camara', 'Diouf', 'Thiam', 'Seck', 'Wade',
-        'Sène', 'Ngom', 'Diatta', 'Dieng', 'Sagna', 'Toure', 'Coly', 'Badji', 'Tine', 'Lo',
+        'Sène', 'Ngom', 'Diatta', 'Dieng', 'Sagna', 'Toure', 'Coly', 'Badji', 'Tine', 'Lo', 'Reyara',
     ];
 
     private int $studentSeq = 0;

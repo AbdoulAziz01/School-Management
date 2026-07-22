@@ -5,7 +5,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-0"><i class="fas fa-chart-line me-2"></i>Tableau de bord financier</h1>
+        <h1 class="h3 mb-0"><i class="fas fa-satellite-dish me-2"></i>Centre de Commande</h1>
         <p class="text-muted mb-0">{{ $schoolDisplayName ?? 'Votre établissement' }} — {{ now()->locale('fr')->translatedFormat('d F Y') }}</p>
     </div>
     <a href="{{ route('directeur.ledger.export') }}" class="btn btn-outline-primary btn-sm">
@@ -13,85 +13,246 @@
     </a>
 </div>
 
+{{-- État général de l'établissement --}}
+<div class="section-eyebrow"><i class="fas fa-building-columns"></i>État général de l'établissement</div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <a href="{{ route('directeur.school.students.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-amber"><i class="fas fa-user-graduate"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Élèves</div>
+                <div class="kpi-value">{{ $headcounts['students'] }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a href="{{ route('directeur.school.classes.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-amber"><i class="fas fa-door-open"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Classes</div>
+                <div class="kpi-value">{{ $headcounts['classes'] }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a href="{{ route('directeur.school.teachers.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-amber"><i class="fas fa-chalkboard-teacher"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Enseignants</div>
+                <div class="kpi-value">{{ $headcounts['teachers'] }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a href="{{ route('directeur.personnel.show', 'surveillants') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-slate"><i class="fas fa-user-shield"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Surveillants</div>
+                <div class="kpi-value">{{ $headcounts['surveillants'] }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a href="{{ route('directeur.personnel.show', 'admins') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-slate"><i class="fas fa-user-tie"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Personnel administratif</div>
+                <div class="kpi-value">{{ $headcounts['admins'] }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a href="{{ route('directeur.personnel.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-slate"><i class="fas fa-calculator"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Comptables / Caissiers</div>
+                <div class="kpi-value">{{ $headcounts['comptables'] }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-slate"><i class="fas fa-people-roof"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Parents renseignés</div>
+                <div class="kpi-value">{{ $headcounts['parents'] }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-blue"><i class="fas fa-user-plus"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Nouveaux inscrits (7j)</div>
+                <div class="kpi-value">{{ $academicSnapshot['new_enrollments'] }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Présence du jour --}}
+<div class="section-eyebrow"><i class="fas fa-calendar-day"></i>Présence du jour</div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-green"><i class="fas fa-check-circle"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Élèves présents aujourd'hui</div>
+                <div class="kpi-value text-success">{{ $attendanceToday['students_present'] }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-red"><i class="fas fa-times-circle"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Élèves absents aujourd'hui</div>
+                <div class="kpi-value text-danger">{{ $attendanceToday['students_absent'] }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-orange"><i class="fas fa-user-clock"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Enseignants absents</div>
+                <div class="kpi-value text-warning">{{ $attendanceToday['teachers_absent'] }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-red"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Élèves en difficulté</div>
+                <div class="kpi-value text-danger">{{ $academicSnapshot['students_in_difficulty'] }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Vision académique --}}
+<div class="section-eyebrow"><i class="fas fa-graduation-cap"></i>Vision académique</div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-6">
+        <div class="kpi-tile kpi-tile-static kpi-tile-lg">
+            <div class="kpi-icon kpi-icon-purple"><i class="fas fa-star"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Moyenne générale de l'école</div>
+                <div class="kpi-value">
+                    @if($academicSnapshot['general_average'] !== null)
+                        {{ $academicSnapshot['general_average'] }} <span class="kpi-value-suffix">/ 20</span>
+                    @else
+                        <span class="kpi-value-suffix">Pas encore de notes</span>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-6">
+        <div class="kpi-tile kpi-tile-static kpi-tile-lg">
+            <div class="kpi-icon kpi-icon-purple"><i class="fas fa-medal"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Taux de réussite</div>
+                <div class="kpi-value">
+                    {{ $academicSnapshot['success_rate'] !== null ? $academicSnapshot['success_rate'].'%' : '—' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section-eyebrow section-eyebrow-finance mt-5"><i class="fas fa-coins"></i>Finances</div>
+
 {{-- Indicateurs clés --}}
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.ledger.index') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Solde actuel</div>
-                <div class="h4 mb-0">{{ number_format($summary['solde_actuel'], 0, ',', ' ') }} <span class="fs-6 text-muted">FCFA</span></div>
+        <a href="{{ route('directeur.ledger.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-amber"><i class="fas fa-wallet"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Solde actuel</div>
+                <div class="kpi-value">{{ number_format($summary['solde_actuel'], 0, ',', ' ') }} <span class="kpi-value-suffix">FCFA</span></div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.ledger.index') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Recettes du mois</div>
-                <div class="h4 mb-0 text-success">{{ number_format($summary['recettes_mois'], 0, ',', ' ') }}</div>
+        <a href="{{ route('directeur.ledger.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-green"><i class="fas fa-arrow-trend-up"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Recettes du mois</div>
+                <div class="kpi-value text-success">{{ number_format($summary['recettes_mois'], 0, ',', ' ') }}</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.ledger.index') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Dépenses du mois</div>
-                <div class="h4 mb-0 text-danger">{{ number_format($summary['depenses_mois'], 0, ',', ' ') }}</div>
+        <a href="{{ route('directeur.ledger.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-red"><i class="fas fa-arrow-trend-down"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Dépenses du mois</div>
+                <div class="kpi-value text-danger">{{ number_format($summary['depenses_mois'], 0, ',', ' ') }}</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.salaries.checklist') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Masse salariale mensuelle</div>
-                <div class="h4 mb-0">{{ number_format($summary['masse_salariale'], 0, ',', ' ') }}</div>
+        <a href="{{ route('directeur.salaries.checklist') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-slate"><i class="fas fa-money-check-alt"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Masse salariale mensuelle</div>
+                <div class="kpi-value">{{ number_format($summary['masse_salariale'], 0, ',', ' ') }}</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.ledger.index') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Recettes du jour</div>
-                <div class="h5 mb-0 text-success">{{ number_format($summary['recettes_jour'], 0, ',', ' ') }}</div>
+        <a href="{{ route('directeur.ledger.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-green"><i class="fas fa-coins"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Recettes du jour</div>
+                <div class="kpi-value kpi-value-sm text-success">{{ number_format($summary['recettes_jour'], 0, ',', ' ') }}</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.students.debtors') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Élèves à jour</div>
-                <div class="h5 mb-0">{{ $summary['eleves_payes'] }}</div>
+        <a href="{{ route('directeur.students.debtors') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-green"><i class="fas fa-circle-check"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Élèves à jour</div>
+                <div class="kpi-value kpi-value-sm">{{ $summary['eleves_payes'] }}</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.students.debtors') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Élèves débiteurs</div>
-                <div class="h5 mb-0 text-warning">{{ $summary['eleves_debiteurs'] }}</div>
+        <a href="{{ route('directeur.students.debtors') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-orange"><i class="fas fa-user-clock"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Élèves débiteurs</div>
+                <div class="kpi-value kpi-value-sm text-warning">{{ $summary['eleves_debiteurs'] }}</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.payments.index') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Factures en attente</div>
-                <div class="h5 mb-0">{{ $summary['paiements_en_attente'] }}</div>
+        <a href="{{ route('directeur.payments.index') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-slate"><i class="fas fa-file-invoice"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Factures en attente</div>
+                <div class="kpi-value kpi-value-sm">{{ $summary['paiements_en_attente'] }}</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.students.debtors') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Taux de paiement des élèves</div>
-                <div class="h5 mb-0">{{ $paymentRate }}%</div>
+        <a href="{{ route('directeur.students.debtors') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-blue"><i class="fas fa-percent"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Taux de paiement des élèves</div>
+                <div class="kpi-value kpi-value-sm">{{ $paymentRate }}%</div>
             </div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
-        <a href="{{ route('directeur.salaries.checklist') }}" class="card h-100 stat-card-link">
-            <div class="card-body">
-                <div class="small text-muted mb-1">Salaires en attente ({{ now()->locale('fr')->translatedFormat('F') }})</div>
-                <div class="h5 mb-0 text-warning">{{ $pendingPayroll['count'] }} <span class="fs-6 text-muted">({{ number_format($pendingPayroll['amount'], 0, ',', ' ') }} FCFA)</span></div>
+        <a href="{{ route('directeur.salaries.checklist') }}" class="kpi-tile">
+            <div class="kpi-icon kpi-icon-orange"><i class="fas fa-hourglass-half"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Salaires en attente ({{ now()->locale('fr')->translatedFormat('F') }})</div>
+                <div class="kpi-value kpi-value-sm text-warning">{{ $pendingPayroll['count'] }} <span class="kpi-value-suffix">({{ number_format($pendingPayroll['amount'], 0, ',', ' ') }} FCFA)</span></div>
             </div>
         </a>
     </div>
@@ -99,17 +260,70 @@
 
 @push('styles')
 <style>
-    .stat-card-link {
-        display: block;
+    .section-eyebrow {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #b45309;
+        margin-bottom: 0.85rem;
+    }
+    .section-eyebrow i { margin-right: 0.4rem; opacity: 0.8; }
+    .section-eyebrow-finance { color: #78716c; }
+
+    .kpi-tile {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        height: 100%;
+        padding: 1.1rem 1.15rem;
+        background: #fff;
+        border: 1px solid #fde68a;
+        border-radius: 16px;
+        box-shadow: 0 2px 10px rgba(245, 158, 11, 0.06);
         text-decoration: none !important;
         color: inherit !important;
-        cursor: pointer;
-        transition: transform .15s ease, box-shadow .15s ease;
+        transition: transform .18s ease, box-shadow .18s ease;
     }
-    .stat-card-link:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+    a.kpi-tile:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 24px rgba(245, 158, 11, 0.16);
+        border-color: #fbbf24;
     }
+    .kpi-tile-static { box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+    .kpi-tile-lg .kpi-icon { width: 52px; height: 52px; font-size: 1.15rem; }
+
+    .kpi-icon {
+        flex: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+    .kpi-icon-amber { background: #fef3c7; color: #b45309; }
+    .kpi-icon-slate { background: #f1f5f9; color: #475569; }
+    .kpi-icon-green { background: #dcfce7; color: #16a34a; }
+    .kpi-icon-red { background: #fee2e2; color: #dc2626; }
+    .kpi-icon-orange { background: #ffedd5; color: #ea580c; }
+    .kpi-icon-blue { background: #dbeafe; color: #2563eb; }
+    .kpi-icon-purple { background: #ede9fe; color: #7c3aed; }
+
+    .kpi-body { min-width: 0; flex: 1; }
+    .kpi-label {
+        font-size: 0.78rem;
+        color: #78716c;
+        font-weight: 500;
+        margin-bottom: 0.15rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .kpi-value { font-size: 1.5rem; font-weight: 700; color: #1c1917; line-height: 1.15; }
+    .kpi-value-sm { font-size: 1.15rem; }
+    .kpi-value-suffix { font-size: 0.85rem; font-weight: 500; color: #a8a29e; }
 </style>
 @endpush
 

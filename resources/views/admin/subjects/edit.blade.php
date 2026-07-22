@@ -81,15 +81,32 @@
                         @if($levels->count() > 0 && (empty($isFormationSchool) || empty($usesFormationLmd)))
                         <div class="mb-3">
                             <label class="form-label">Niveaux associés</label>
-                            <div class="row">
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Le coefficient peut différer d'un niveau à l'autre pour une même matière
+                                (ex. Anglais coef. 1 en 6ème, coef. 2 en Terminale) — réglez-le niveau par niveau.
+                            </p>
+                            <div class="row g-2">
                                 @php
                                     $selectedLevels = old('levels', $subject->levels->pluck('id')->toArray());
+                                    $oldCoefficients = old('coefficients', []);
                                 @endphp
                                 @foreach($levels as $level)
+                                    @php
+                                        $levelPivotCoef = $subject->levels->firstWhere('id', $level->id)?->pivot->coefficient;
+                                        $coefValue = $oldCoefficients[$level->id] ?? $levelPivotCoef ?? $subject->coefficient;
+                                    @endphp
                                     <div class="col-md-4 col-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="level_{{ $level->id }}" name="levels[]" value="{{ $level->id }}" {{ in_array($level->id, $selectedLevels) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="level_{{ $level->id }}">{{ $level->name }}</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="checkbox" id="level_{{ $level->id }}" name="levels[]" value="{{ $level->id }}" {{ in_array($level->id, $selectedLevels) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="level_{{ $level->id }}">{{ $level->name }}</label>
+                                            </div>
+                                            <input type="number" step="0.5" min="0.5" max="10"
+                                                   name="coefficients[{{ $level->id }}]"
+                                                   value="{{ $coefValue }}"
+                                                   class="form-control form-control-sm ms-auto" style="width: 70px;"
+                                                   title="Coefficient pour {{ $level->name }}">
                                         </div>
                                     </div>
                                 @endforeach

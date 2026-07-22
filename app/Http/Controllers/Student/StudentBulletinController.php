@@ -73,7 +73,7 @@ class StudentBulletinController extends Controller
         $absenceCount = $this->countAbsences($user, $this->semesterDateRange($academicYear, $semester));
 
         // Grouper les notes par matière et calculer les moyennes
-        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school);
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school, null, $class);
 
         // Calculer la moyenne générale pondérée
         $generalAverage = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
@@ -185,7 +185,7 @@ class StudentBulletinController extends Controller
         $averages = [];
         foreach ($studentIds as $studentId) {
             $studentGrades = $gradesByStudent->get($studentId, collect());
-            $bulletinData  = $this->bulletinComputation->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients);
+            $bulletinData  = $this->bulletinComputation->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients, $class);
             $averages[$studentId] = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
         }
 
@@ -286,15 +286,15 @@ class StudentBulletinController extends Controller
                 ->with('subject')
                 ->get();
 
-            $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school);
+            $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school, null, $class);
             $moyenneAnnuelle = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
             $semestre1Data = ['data' => $bulletinData, 'moyenne' => $moyenneAnnuelle];
             $semestre2Data = ['data' => [], 'moyenne' => 0];
         } else {
             // Calculer les données pour les deux semestres
-            $semestre1Data = $this->getSemesterData($user, 1, $academicYear, $level);
-            $semestre2Data = $this->getSemesterData($user, 2, $academicYear, $level);
+            $semestre1Data = $this->getSemesterData($user, 1, $academicYear, $level, $class);
+            $semestre2Data = $this->getSemesterData($user, 2, $academicYear, $level, $class);
 
             // Calculer la moyenne annuelle
             $moyenneAnnuelle = 0;
@@ -428,7 +428,7 @@ class StudentBulletinController extends Controller
     /**
      * Obtenir les données d'un semestre
      */
-    private function getSemesterData($user, $semester, $academicYear, $level)
+    private function getSemesterData($user, $semester, $academicYear, $level, $class = null)
     {
         $grades = Grade::where('user_id', $user->id)
             ->where('semester', $semester)
@@ -436,7 +436,7 @@ class StudentBulletinController extends Controller
             ->with('subject')
             ->get();
 
-        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school);
+        $bulletinData = $this->bulletinComputation->calculateBulletinData($grades, $level, $user->school, null, $class);
         $moyenne = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
 
         return [

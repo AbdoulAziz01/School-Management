@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
 use App\Models\School;
 use App\Services\AccountingDashboardService;
+use App\Services\SchoolOverviewService;
 use Illuminate\Http\Request;
 
 class DirecteurDashboardController extends Controller
 {
     public function __construct(
-        private AccountingDashboardService $dashboard
+        private AccountingDashboardService $dashboard,
+        private SchoolOverviewService $overview
     ) {}
 
     public function index(Request $request)
@@ -19,6 +21,13 @@ class DirecteurDashboardController extends Controller
         $school = School::find($request->user()->school_id);
 
         return view('accounting.directeur.dashboard', [
+            // Centre de commande — vision d'ensemble de l'établissement,
+            // pas uniquement financière (voir SchoolOverviewService).
+            'headcounts' => $this->overview->headcounts($school),
+            'attendanceToday' => $this->overview->attendanceToday($school),
+            'academicSnapshot' => $this->overview->academicSnapshot($school),
+
+            // Finances — widgets existants, inchangés (AccountingDashboardService).
             'summary' => $this->dashboard->summary($school),
             'evolution' => $this->dashboard->evolution($school),
             'recentOperations' => $this->dashboard->recentOperations($school),

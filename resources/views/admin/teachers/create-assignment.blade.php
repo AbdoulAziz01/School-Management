@@ -91,25 +91,25 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="subject_id" class="form-label">Matière *</label>
-                                <select class="form-select @error('subject_id') is-invalid @enderror" 
-                                        id="subject_id" 
-                                        name="subject_id" 
-                                        required>
-                                    <option value="" selected disabled>Sélectionner une matière</option>
-                                    @foreach($subjects as $subject)
-                                        <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
-                                            {{ $subject->name }}
-                                        </option>
-                                    @endforeach
+                                <select class="form-select d-none @error('subject_id') is-invalid @enderror"
+                                        id="subject_id"
+                                        name="subject_id"
+                                        required
+                                        disabled>
+                                    <option value="" selected disabled>Sélectionner d'abord une classe</option>
                                 </select>
+                                <input type="text" class="form-control" id="subject_display" value="Sélectionner d'abord une classe" disabled>
                                 @error('subject_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
+                                <div class="form-text" id="subject_help">
+                                    Matières de {{ $teacher->name }} (fiche enseignant), limitées à celles actives sur le niveau de la classe choisie.
+                                </div>
                             </div>
                         </div>
 
                         <div class="d-flex justify-content-end mt-4">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" disabled>
                                 <i class="fas fa-save me-1"></i> Enregistrer l'affectation
                             </button>
                         </div>
@@ -123,23 +123,42 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const teacherId = {{ $teacher->id }};
+        const oldClassId = '{{ old('class_id') }}';
+        const oldSubjectId = '{{ old('subject_id') }}';
+
         const academicYearSelect = document.getElementById('academic_year_id');
         const classSelect = document.getElementById('class_id');
-        
+        const subjectSelect = document.getElementById('subject_id');
+        const subjectDisplay = document.getElementById('subject_display');
+        const subjectHelp = document.getElementById('subject_help');
+        const submitBtn = document.querySelector('#assignmentForm button[type="submit"]');
+
+        function resetSubjects(message) {
+            subjectSelect.innerHTML = `<option value="" selected disabled>${message}</option>`;
+            subjectSelect.disabled = true;
+            subjectSelect.classList.add('d-none');
+            subjectDisplay.classList.remove('d-none');
+            subjectDisplay.value = message;
+            submitBtn.disabled = true;
+        }
+
         // Charger les classes lorsque l'année scolaire change
         academicYearSelect.addEventListener('change', function() {
             const yearId = this.value;
-            
+
             if (!yearId) {
                 classSelect.innerHTML = '<option value="" selected disabled>Sélectionner d\'abord une année</option>';
                 classSelect.disabled = true;
+                resetSubjects("Sélectionner d'abord une classe");
                 return;
             }
-            
+
             // Afficher un indicateur de chargement
             classSelect.innerHTML = '<option value="" selected>Chargement des classes...</option>';
             classSelect.disabled = false;
-            
+            resetSubjects("Sélectionner d'abord une classe");
+
             // Récupérer les classes via AJAX
             fetch(`/admin/teachers/assignments/classes/${yearId}`)
                 .then(response => response.json())
@@ -148,20 +167,69 @@
                         classSelect.innerHTML = '<option value="" selected disabled>Aucune classe disponible pour cette année</option>';
                         return;
                     }
-                    
+
                     let options = '<option value="" selected disabled>Sélectionner une classe</option>';
                     classes.forEach(cls => {
-                        options += `<option value="${cls.id}">${cls.name}</option>`;
+                        const selected = String(cls.id) === oldClassId ? 'selected' : '';
+                        options += `<option value="${cls.id}" ${selected}>${cls.name}</option>`;
                     });
-                    
+
                     classSelect.innerHTML = options;
+
+                    if (oldClassId && classSelect.value === oldClassId) {
+                        classSelect.dispatchEvent(new Event('change'));
+                    }
                 })
                 .catch(error => {
                     console.error('Erreur lors du chargement des classes :', error);
                     classSelect.innerHTML = '<option value="" selected disabled>Erreur de chargement</option>';
                 });
         });
-        
+
+        // Charger les matières de l'enseignant pour la classe choisie
+        classSelect.addEventListener('change', function() {
+            const classId = this.value;
+
+            if (!classId) {
+                resetSubjects("Sélectionner d'abord une classe");
+                return;
+            }
+
+            resetSubjects('Chargement des matières...');
+
+            fetch(`/admin/teachers/${teacherId}/assignments/subjects/${classId}`)
+                .then(response => response.json())
+                .then(subjects => {
+                    if (subjects.length === 0) {
+                        resetSubjects('Aucune matière trouvée pour cet enseignant sur ce niveau — vérifiez ses matières dans sa fiche');
+                        return;
+                    }
+
+                    let options = '';
+                    subjects.forEach(s => {
+                        const selected = String(s.id) === oldSubjectId ? 'selected' : '';
+                        options += `<option value="${s.id}" ${selected}>${s.name}</option>`;
+                    });
+                    subjectSelect.innerHTML = options;
+                    subjectSelect.disabled = false;
+                    submitBtn.disabled = false;
+
+                    if (subjects.length === 1) {
+                        // Une seule matière possible : verrouillée, affichée en lecture seule.
+                        subjectSelect.classList.add('d-none');
+                        subjectDisplay.classList.remove('d-none');
+                        subjectDisplay.value = subjects[0].name;
+                    } else {
+                        subjectSelect.classList.remove('d-none');
+                        subjectDisplay.classList.add('d-none');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des matières :', error);
+                    resetSubjects('Erreur de chargement des matières');
+                });
+        });
+
         // Initialiser le sélecteur de classe si une année est déjà sélectionnée
         if (academicYearSelect.value) {
             academicYearSelect.dispatchEvent(new Event('change'));

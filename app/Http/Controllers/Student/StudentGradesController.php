@@ -9,6 +9,7 @@ use App\Services\SchoolBot\BulletinComputation;
 use App\Support\DashboardAcademicYearContext;
 use App\Support\Grading\GradeSequence;
 use App\Support\StudentClassContext;
+use App\Support\TeacherSubjectResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,13 +37,23 @@ class StudentGradesController extends Controller
 
         $teachersBySubject = $this->getTeachersBySubject($user, $selectedYear);
 
+        $studentClass = StudentClassContext::resolveForYear($user, $selectedYear);
+        $isPrimaireStudent = $studentClass?->level?->isPrimaireCycle() ?? false;
+
         $realGrades = $user->grades()
             ->with('subject')
             ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
             ->get();
 
-        $studentClass = StudentClassContext::resolveForYear($user, $selectedYear);
-        $isPrimaireStudent = $studentClass?->level?->isPrimaireCycle() ?? false;
+        // Une matière désactivée par l'admin pour cette classe précise
+        // (voir admin/classes/show — "Matières de la classe") ne doit plus
+        // apparaître côté élève, même si des notes y ont été saisies avant
+        // la désactivation (voir aussi TeacherSubjectResolver côté prof).
+        if ($studentClass) {
+            $realGrades = $realGrades->reject(
+                fn ($grade) => TeacherSubjectResolver::isDisabledForClass($grade->subject_id, $studentClass)
+            )->values();
+        }
 
         // Afficher uniquement les vraies notes (pas de données simulées)
         if ($realGrades->isEmpty()) {
@@ -201,6 +212,17 @@ class StudentGradesController extends Controller
         $user->loadMissing('schoolClass');
         $academicYear = $selectedYear ?? $user->schoolClass?->academicYear;
         $studentClass = $user->schoolClass;
+
+        if ($studentClass) {
+            $grades = $grades->reject(
+                fn ($grade) => TeacherSubjectResolver::isDisabledForClass($grade->subject_id, $studentClass)
+            )->values();
+        }
+
+        if ($grades->isEmpty()) {
+            return [];
+        }
+
         [$periodStart, $periodEnd] = $this->getAcademicYearMonthRange($academicYear);
 
         $evolution = [];

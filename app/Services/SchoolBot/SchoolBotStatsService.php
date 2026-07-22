@@ -226,7 +226,7 @@ class SchoolBotStatsService
         $averages = [];
         foreach ($studentIds as $studentId) {
             $studentGrades = $gradesByStudent->get($studentId, collect());
-            $bulletinData = $this->bulletinComputation->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients);
+            $bulletinData = $this->bulletinComputation->calculateBulletinData($studentGrades, $class->level, $class->school, $coefficients, $class);
             $averages[(int) $studentId] = $this->bulletinComputation->calculateWeightedAverage($bulletinData);
         }
 

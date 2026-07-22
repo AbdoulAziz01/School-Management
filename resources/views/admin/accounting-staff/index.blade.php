@@ -17,7 +17,7 @@
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <form action="{{ route('admin.accounting-staff.index') }}" method="GET" class="d-flex gap-2">
                             <input type="text" name="search" class="form-control form-control-sm" placeholder="Rechercher..." value="{{ request('search') }}" style="min-width: 200px;">
-                            <select name="role" class="form-select form-select-sm" style="min-width: 140px;">
+                            <select name="role" class="form-select form-select-sm" style="min-width: 140px;" onchange="this.form.submit()">
                                 <option value="">Tous les rôles</option>
                                 @foreach($roleLabels as $value => $label)
                                     <option value="{{ $value }}" {{ request('role') === $value ? 'selected' : '' }}>{{ $label }}</option>

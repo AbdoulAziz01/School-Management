@@ -99,10 +99,18 @@
                     <h5 class="mb-0">
                         <i class="fas fa-chalkboard me-2"></i>Classes affectées
                     </h5>
-                    <span class="badge" style="background-color: #fd7e14;">{{ $teacher->assignedClasses->count() }} classe(s)</span>
+                    @php
+                        // Primaire (titulaire, class_teacher) + collège/lycée
+                        // (TeacherAssignment par classe+matière) : les deux
+                        // voies d'affectation possibles pour un enseignant.
+                        $teacherClasses = $teacher->assignedClasses
+                            ->concat($teacher->teacherAssignments->pluck('schoolClass')->filter())
+                            ->unique('id');
+                    @endphp
+                    <span class="badge" style="background-color: #fd7e14;">{{ $teacherClasses->count() }} classe(s)</span>
                 </div>
                 <div class="card-body">
-                    @if($teacher->assignedClasses->isEmpty())
+                    @if($teacherClasses->isEmpty())
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-school fa-3x mb-3"></i>
                             <p class="mb-0">Aucune classe affectée pour le moment.</p>
@@ -123,7 +131,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($teacher->assignedClasses as $class)
+                                    @foreach($teacherClasses as $class)
                                         <tr>
                                             <td><strong>{{ $class->name }}</strong></td>
                                             <td>

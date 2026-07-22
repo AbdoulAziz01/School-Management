@@ -22,7 +22,7 @@ class ScheduleController extends Controller
         $classes = SchoolClass::with(['academicYear', 'level'])
             ->withCount('schedules')
             ->orderBy('academic_year_id', 'desc')
-            ->orderBy('name')
+            ->orderedByLevel()
             ->paginate(15);
 
         return view('admin.schedules.index', compact('classes'));

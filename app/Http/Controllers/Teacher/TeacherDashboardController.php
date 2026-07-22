@@ -30,10 +30,7 @@ class TeacherDashboardController extends Controller
         $gradesLocked = ClosedAcademicYearGuard::areGradesLocked($selectedYear);
         $gradesLockedMessage = ClosedAcademicYearGuard::gradesLockedMessage($selectedYear);
 
-        $assignedClasses = $teacher->assignedClasses()
-            ->with('level')
-            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
-            ->get();
+        $assignedClasses = \App\Support\TeacherClassResolver::forTeacher($teacher, $selectedYear);
         $classIds = $assignedClasses->pluck('id')->toArray();
 
         $classesCount = $assignedClasses->count();

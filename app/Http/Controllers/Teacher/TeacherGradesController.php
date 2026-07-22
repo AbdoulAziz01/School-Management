@@ -17,6 +17,7 @@ use App\Models\AcademicYear;
 use App\Support\ClosedAcademicYearGuard;
 use App\Support\DashboardAcademicYearContext;
 use App\Support\TeacherSubjectResolver;
+use App\Support\TeacherClassResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -70,11 +71,8 @@ class TeacherGradesController extends Controller
         $gradesLocked = $yearCtx['gradesLocked'];
         $gradesLockedMessage = $yearCtx['gradesLockedMessage'];
         
-        $classes = $teacher->assignedClasses()
-            ->with('level')
-            ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
-            ->get();
-        
+        $classes = TeacherClassResolver::forTeacher($teacher, $selectedYear);
+
         $assignments = TeacherAssignment::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
             ->when($selectedYear, fn ($q) => $q->where('academic_year_id', $selectedYear->id))
@@ -165,10 +163,9 @@ class TeacherGradesController extends Controller
         $teacher = Auth::user();
         $currentYear = $context['currentYear'];
 
-        $classes  = $teacher->assignedClasses()
-            ->with(['level', 'academicYear'])
-            ->whereHas('academicYear', fn ($q) => $q->where('is_current', true)->where('is_closed', false))
-            ->get();
+        $classes  = TeacherClassResolver::forTeacher($teacher, $currentYear)
+            ->filter(fn ($class) => $class->academicYear && $class->academicYear->is_current && ! $class->academicYear->is_closed)
+            ->values();
 
         // Matières réellement disponibles (affectations + qualification
         // générale), filtrées par matière active pour le niveau de chaque
@@ -418,10 +415,7 @@ class TeacherGradesController extends Controller
 
     private function hasClassAccess(User $teacher, int $classId, ?AcademicYear $year): bool
     {
-        return $teacher->assignedClasses()
-            ->where('classes.id', $classId)
-            ->when($year, fn ($q) => $q->where('academic_year_id', $year->id))
-            ->exists();
+        return TeacherClassResolver::hasAccess($teacher, $classId, $year);
     }
 
     private function teachesClassSubject(User $teacher, int $classId, int $subjectId, ?AcademicYear $year): bool

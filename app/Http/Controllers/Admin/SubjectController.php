@@ -202,6 +202,8 @@ class SubjectController extends Controller
             'is_active' => ['boolean'],
             'levels' => ['nullable', 'array'],
             'levels.*' => ['exists:levels,id'],
+            'coefficients' => ['nullable', 'array'],
+            'coefficients.*' => ['nullable', 'numeric', 'min:0.5', 'max:10'],
         ];
 
         if ($school?->usesLmdGrading()) {
@@ -231,9 +233,22 @@ class SubjectController extends Controller
                     : null,
                 'updated_by' => auth()->id(),
             ]);
-            
-            // Synchroniser les niveaux
-            $subject->levels()->sync($validated['levels'] ?? []);
+
+            // Synchroniser les niveaux — chaque niveau peut avoir son propre
+            // coefficient pour cette matière (ex. Anglais coef. 1 en 6ème,
+            // coef. 2 en Terminale), au lieu d'un unique coefficient global.
+            // sync() avec un tableau [id => [attributs pivot]] met aussi à
+            // jour le coefficient des niveaux déjà associés, sans toucher
+            // aux autres colonnes du pivot (max_grade, is_active...).
+            $levelIds = $validated['levels'] ?? [];
+            $coefficients = $validated['coefficients'] ?? [];
+            $syncData = [];
+            foreach ($levelIds as $levelId) {
+                $syncData[$levelId] = [
+                    'coefficient' => $coefficients[$levelId] ?? $validated['coefficient'],
+                ];
+            }
+            $subject->levels()->sync($syncData);
 
             return redirect()
                 ->route('admin.subjects.index')
