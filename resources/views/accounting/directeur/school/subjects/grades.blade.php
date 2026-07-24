@@ -7,19 +7,19 @@
     <i class="fas fa-arrow-left me-2"></i>{{ $class->name }}
 </a>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h1 class="h3 mb-0"><i class="fas fa-book me-2"></i>{{ $subject->name }} — {{ $class->name }}</h1>
-    <span class="badge bg-secondary fs-6">Barème /{{ $maxGrade }}</span>
+    <span class="count-chip">Barème /{{ $maxGrade }}</span>
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        @if($rows->isEmpty())
-            <p class="text-muted p-3 mb-0">Aucun élève dans cette classe.</p>
-        @else
+@if($rows->isEmpty())
+    <div class="empty-state"><i class="fas fa-book"></i><p class="mb-0">Aucun élève dans cette classe.</p></div>
+@else
+    <div class="card data-table-card">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0 data-table">
+                    <thead>
                         <tr>
                             <th>Élève</th>
                             <th>Nombre de notes</th>
@@ -29,11 +29,16 @@
                     <tbody>
                         @foreach($rows as $row)
                             <tr>
-                                <td><a href="{{ route('directeur.school.students.show', $row['student']) }}">{{ $row['student']->name }}</a></td>
-                                <td>{{ $row['grades']->count() }}</td>
+                                <td>
+                                    <a href="{{ route('directeur.school.students.show', $row['student']) }}" class="person-cell">
+                                        <span class="person-avatar">{{ strtoupper(substr($row['student']->name, 0, 1)) }}</span>
+                                        <span class="person-name">{{ $row['student']->name }}</span>
+                                    </a>
+                                </td>
+                                <td class="text-muted">{{ $row['grades']->count() }}</td>
                                 <td>
                                     @if($row['average'] !== null)
-                                        {{ $row['average'] }}/{{ $maxGrade }}
+                                        <strong>{{ $row['average'] }}/{{ $maxGrade }}</strong>
                                     @else
                                         <span class="text-muted">—</span>
                                     @endif
@@ -43,7 +48,11 @@
                     </tbody>
                 </table>
             </div>
-        @endif
+        </div>
     </div>
-</div>
+@endif
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

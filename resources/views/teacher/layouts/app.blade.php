@@ -8,12 +8,13 @@
     <title>@yield('title', 'Tableau de bord - Enseignant')</title>
 
     {{-- PWA --}}
+    <link rel="icon" type="image/png" href="{{ $platformLogoIcon }}">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#f59e0b">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="EduManager">
+    <meta name="apple-mobile-web-app-title" content="{{ $platformName }}">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">

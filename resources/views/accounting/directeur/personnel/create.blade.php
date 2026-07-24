@@ -3,18 +3,18 @@
 @section('title', 'Ajouter un compte')
 
 @section('content')
+<a href="{{ route('directeur.personnel.index') }}" class="d-inline-flex align-items-center text-decoration-none mb-2 small text-muted">
+    <i class="fas fa-arrow-left me-2"></i>Retour à Personnel &amp; Élèves
+</a>
 <div class="mb-4">
-    <a href="{{ route('directeur.personnel.index') }}" class="text-decoration-none small">
-        <i class="fas fa-arrow-left me-1"></i> Retour à Personnel & Élèves
-    </a>
-    <h1 class="h3 mt-2 mb-0"><i class="fas fa-user-plus me-2"></i>Ajouter un compte</h1>
+    <h1 class="h3 mb-0"><i class="fas fa-user-plus me-2"></i>Ajouter un compte</h1>
     <p class="text-muted mb-0">Comptable ou caissier — rattaché à votre établissement.</p>
 </div>
 
 <div class="row justify-content-center">
     <div class="col-lg-7">
-        <div class="card">
-            <div class="card-body">
+        <div class="panel-card">
+            <div class="p-4">
                 <form method="POST" action="{{ route('directeur.personnel.store') }}">
                     @csrf
 
@@ -53,14 +53,18 @@
                     </p>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i> Créer le compte
+                        <button type="submit" class="btn-pill-primary">
+                            <i class="fas fa-save"></i>Créer le compte
                         </button>
-                        <a href="{{ route('directeur.personnel.index') }}" class="btn btn-outline-secondary">Annuler</a>
+                        <a href="{{ route('directeur.personnel.index') }}" class="btn-pill-outline">Annuler</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

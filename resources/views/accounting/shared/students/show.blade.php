@@ -10,14 +10,12 @@
 
 <div class="row g-4">
     <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Factures</h5>
-            </div>
-            <div class="card-body p-0">
+        <div class="panel-card">
+            <div class="panel-card-header"><i class="fas fa-file-invoice me-2 text-warning"></i>Factures</div>
+            <div class="p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0 data-table">
+                        <thead>
                             <tr>
                                 <th>Motif</th>
                                 <th>Échéance</th>
@@ -36,13 +34,13 @@
                                     <td>
                                         @php
                                             $badgeClass = match($invoice->status) {
-                                                'paid' => 'bg-success',
-                                                'partial' => 'bg-warning text-dark',
-                                                'cancelled' => 'bg-secondary',
-                                                default => 'bg-danger',
+                                                'paid' => 'status-badge-success',
+                                                'partial' => 'status-badge-warning',
+                                                'cancelled' => 'status-badge-neutral',
+                                                default => 'status-badge-danger',
                                             };
                                         @endphp
-                                        <span class="badge {{ $badgeClass }}">{{ $invoice->statusLabel() }}</span>
+                                        <span class="status-badge {{ $badgeClass }}">{{ $invoice->statusLabel() }}</span>
                                     </td>
                                 </tr>
                             @empty
@@ -56,13 +54,11 @@
     </div>
 
     <div class="col-lg-5">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Historique des paiements</h5>
-            </div>
-            <div class="card-body p-0">
+        <div class="panel-card">
+            <div class="panel-card-header"><i class="fas fa-receipt me-2 text-warning"></i>Historique des paiements</div>
+            <div class="p-0">
                 @if($paymentHistory->isEmpty())
-                    <p class="text-muted p-3 mb-0">Aucun paiement enregistré.</p>
+                    <div class="empty-state py-4"><i class="fas fa-receipt"></i><p class="mb-0">Aucun paiement enregistré.</p></div>
                 @else
                     <ul class="list-group list-group-flush">
                         @foreach($paymentHistory as $payment)
@@ -82,4 +78,8 @@
         </div>
     </div>
 </div>
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

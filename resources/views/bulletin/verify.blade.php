@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vérification du bulletin — EduManager</title>
+    <title>Vérification du bulletin — {{ config('platform.name', 'AzelieEdu') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -19,7 +19,7 @@
     <div class="card shadow-lg border-0">
         <div class="header-bar text-center">
             <h4 class="mb-1"><i class="fas fa-shield-alt me-2"></i>Vérification d'authenticité</h4>
-            <p class="mb-0 opacity-75" style="font-size:.85rem">EduManager — Système de Gestion Scolaire</p>
+            <p class="mb-0 opacity-75" style="font-size:.85rem">{{ config('platform.name', 'AzelieEdu') }} — Système de Gestion Scolaire</p>
         </div>
 
         <div class="card-body p-4">
@@ -30,7 +30,7 @@
                     <i class="fas fa-check-circle me-2"></i>Document authentique et vérifié
                 </span>
                 <p class="text-muted mt-2 mb-0" style="font-size:.8rem">
-                    Ce bulletin a été émis par EduManager et son contenu est garanti intègre.
+                    Ce bulletin a été émis par {{ config('platform.name', 'AzelieEdu') }} et son contenu est garanti intègre.
                 </p>
             </div>
 
@@ -87,7 +87,7 @@
             <div class="alert alert-warning border-0" style="background:#fffbeb; border-left: 4px solid #f59e0b !important;">
                 <small>
                     <i class="fas fa-info-circle me-1"></i>
-                    Ce lien est cryptographiquement signé par EduManager. Toute modification de l'URL invalide la vérification.
+                    Ce lien est cryptographiquement signé par {{ config('platform.name', 'AzelieEdu') }}. Toute modification de l'URL invalide la vérification.
                     Vérifié le {{ now()->format('d/m/Y à H:i') }}.
                 </small>
             </div>

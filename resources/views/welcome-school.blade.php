@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduManager — Système de Gestion Scolaire</title>
+    <title>{{ $platformName }} — Système de Gestion Scolaire</title>
+    <link rel="icon" type="image/png" href="{{ $platformLogoIcon }}">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#f59e0b">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="EduManager">
+    <meta name="apple-mobile-web-app-title" content="{{ $platformName }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -284,13 +285,10 @@
 
     <nav class="navbar-custom" style="max-width:1200px;margin:0 auto;padding:22px 24px;">
         <a href="/" class="brand">
-            <div class="brand-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 3L22 8.5V15.5L12 21L2 15.5V8.5L12 3Z" stroke="white" stroke-width="2.2" stroke-linejoin="round"/>
-                    <path d="M12 3V21M2 8.5L12 14L22 8.5" stroke="white" stroke-width="2.2" stroke-linejoin="round"/>
-                </svg>
+            <div class="brand-icon" style="background: #fff; padding: 4px;">
+                <img src="{{ $platformLogoIcon }}" alt="{{ $platformName }}" style="width: 100%; height: 100%; object-fit: contain;">
             </div>
-            <span class="brand-name">EduManager</span>
+            <span class="brand-name">{{ $platformName }}</span>
         </a>
         <div style="display:flex;align-items:center;gap:18px;">
             <span class="nav-subtitle d-none d-sm-block">Système de Gestion Scolaire</span>
@@ -315,7 +313,7 @@
 
             <h1 class="hero-title">
                 Bienvenue sur le système de gestion scolaire<br>
-                <span class="accent">EduManager</span>
+                <span class="accent">{{ $platformName }}</span>
             </h1>
 
             <p class="hero-subtitle">
@@ -354,7 +352,7 @@
 
             {{-- Toast iOS --}}
             <div class="pwa-ios-toast" id="pwaIosToast">
-                <strong>📲 Installer EduManager</strong><br>
+                <strong>📲 Installer {{ $platformName }}</strong><br>
                 Appuyez sur <strong>Partager</strong>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin:0 3px;"><path d="M8 12H16M12 8V16" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#fbbf24" stroke-width="2"/></svg>
                 puis <strong>« Sur l'écran d'accueil »</strong>
@@ -515,7 +513,7 @@
             </div>
         </div>
 
-        <p class="footer-text">© 2025–2026 EduManager — Système de Gestion Scolaire — Tous droits réservés</p>
+        <p class="footer-text">© 2025–2026 {{ $platformName }} — Système de Gestion Scolaire — Tous droits réservés</p>
 
     </div>
 

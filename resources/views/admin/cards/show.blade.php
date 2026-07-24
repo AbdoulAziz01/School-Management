@@ -188,7 +188,7 @@ $initials = Str::upper(mb_substr($student->first_name ?? $student->name, 0, 1))
                         <span class="r-footer-sep"></span>
                         <span class="r-footer-year">{{ $acadYear }}</span>
                         <span class="r-footer-issued">Délivrée le : {{ $issuedDate }}</span>
-                        <span class="r-footer-brand">{{ $cardSettings['footer_brand'] ?? 'EduManager' }}</span>
+                        <span class="r-footer-brand">{{ $cardSettings['footer_brand'] ?? 'AzelieEdu' }}</span>
                     </div>
                 </div>
             </div>
@@ -205,7 +205,7 @@ $initials = Str::upper(mb_substr($student->first_name ?? $student->name, 0, 1))
                     <div class="verso-label">Scanner pour vérifier l'authenticité</div>
                     <div class="verso-divider"></div>
                     <div class="verso-sub">
-                        {{ Str::upper(Str::limit($school->name ?? 'EduManager', 38)) }}<br>
+                        {{ Str::upper(Str::limit($school->name ?? 'AzelieEdu', 38)) }}<br>
                         Carte étudiante officielle · {{ $acadYear }}
                     </div>
                 </div>

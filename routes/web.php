@@ -261,7 +261,7 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('admin.dashboard');
 
-    // Profil / informations de l'établissement (nom affiché dans l'ERP, distinct d'EduManager)
+    // Profil / informations de l'établissement (nom affiché dans l'ERP, distinct d'AzelieEdu)
     Route::get('/school-settings', [\App\Http\Controllers\Admin\SchoolSettingsController::class, 'edit'])
         ->name('admin.school.settings.edit');
     Route::put('/school-settings', [\App\Http\Controllers\Admin\SchoolSettingsController::class, 'update'])

@@ -82,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
             ], false));
 
             $identifier = $notifiable->identifier ?? '—';
-            $appName = config('app.name', 'EduManager');
+            $appName = config('app.name', 'AzelieEdu');
 
             return (new MailMessage)
                 ->subject("{$appName} — Choisissez votre mot de passe")
@@ -117,7 +117,9 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('accounting.caisse.sidebar', CaisseSidebarComposer::class);
 
-        View::share('platformName', config('platform.name', 'EduManager'));
+        View::share('platformName', config('platform.name', 'AzelieEdu'));
+        View::share('platformLogoIcon', asset(config('platform.logo_icon')));
+        View::share('platformLogoHorizontal', asset(config('platform.logo_horizontal')));
 
         View::composer('platform.*', PlatformBrandingComposer::class);
     }

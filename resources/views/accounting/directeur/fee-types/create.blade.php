@@ -5,11 +5,9 @@
 @section('content')
 <div class="row justify-content-center">
     <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Ajouter un type de frais</h5>
-            </div>
-            <div class="card-body">
+        <div class="panel-card">
+            <div class="panel-card-header"><i class="fas fa-plus me-2 text-warning"></i>Ajouter un type de frais</div>
+            <div class="p-4">
                 <form method="POST" action="{{ route('directeur.fee-types.store') }}">
                     @csrf
 
@@ -38,14 +36,18 @@
                         help="Montant appliqué à toutes les classes. Laissez vide pour le configurer plus tard, ou pour définir un montant différent par niveau depuis la liste des types de frais." />
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i> Créer
+                        <button type="submit" class="btn-pill-primary">
+                            <i class="fas fa-save"></i>Créer
                         </button>
-                        <a href="{{ route('directeur.fee-types.index') }}" class="btn btn-outline-secondary">Annuler</a>
+                        <a href="{{ route('directeur.fee-types.index') }}" class="btn-pill-outline">Annuler</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

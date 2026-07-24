@@ -7,68 +7,64 @@
     <i class="fas fa-arrow-left me-2"></i>Enseignants
 </a>
 
-<div class="card mb-4">
-    <div class="card-body d-flex flex-wrap align-items-center gap-3">
-        <span class="rounded-circle bg-warning bg-opacity-25 text-warning d-flex align-items-center justify-content-center fw-bold fs-3" style="width:80px;height:80px;">
-            {{ strtoupper(substr($teacher->name, 0, 1)) }}
-        </span>
-        <div class="flex-grow-1">
-            <h1 class="h4 mb-1">{{ $teacher->name }}</h1>
-            <div class="d-flex flex-wrap gap-3 small text-muted">
-                <span><i class="fas fa-id-card me-1"></i>{{ $teacher->identifier ?? '—' }}</span>
-                <span><i class="fas fa-envelope me-1"></i>{{ $teacher->email }}</span>
-                @if($teacher->phone)
-                    <span><i class="fas fa-phone me-1"></i>{{ $teacher->phone }}</span>
-                @endif
-                <span>
-                    <i class="fas fa-circle-check me-1"></i>
-                    {{ $teacher->status === 'approved' ? 'Approuvé' : ($teacher->status === 'pending' ? 'En attente' : 'Rejeté') }}
-                </span>
-            </div>
+<div class="class-hero mb-4">
+    <span class="class-hero-avatar">{{ strtoupper(substr($teacher->name, 0, 1)) }}</span>
+    <div class="flex-grow-1">
+        <h1 class="h4 mb-1">{{ $teacher->name }}</h1>
+        <div class="d-flex flex-wrap gap-3 small text-muted">
+            <span><i class="fas fa-id-card me-1"></i>{{ $teacher->identifier ?? '—' }}</span>
+            <span><i class="fas fa-envelope me-1"></i>{{ $teacher->email }}</span>
+            @if($teacher->phone)
+                <span><i class="fas fa-phone me-1"></i>{{ $teacher->phone }}</span>
+            @endif
+            <span>
+                <i class="fas fa-circle-check me-1"></i>
+                {{ $teacher->status === 'approved' ? 'Approuvé' : ($teacher->status === 'pending' ? 'En attente' : 'Rejeté') }}
+            </span>
         </div>
     </div>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1">Classes</div>
-            <div class="h5 mb-0">{{ $classes->count() }}</div>
-        </div></div>
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-amber"><i class="fas fa-door-open"></i></div>
+            <div class="kpi-body"><div class="kpi-label">Classes</div><div class="kpi-value kpi-value-sm">{{ $classes->count() }}</div></div>
+        </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1">Élèves suivis</div>
-            <div class="h5 mb-0">{{ $studentsCount }}</div>
-        </div></div>
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-blue"><i class="fas fa-user-graduate"></i></div>
+            <div class="kpi-body"><div class="kpi-label">Élèves suivis</div><div class="kpi-value kpi-value-sm">{{ $studentsCount }}</div></div>
+        </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1">Matières</div>
-            <div class="h5 mb-0">{{ $teacher->subjects->count() }}</div>
-        </div></div>
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-purple"><i class="fas fa-book"></i></div>
+            <div class="kpi-body"><div class="kpi-label">Matières</div><div class="kpi-value kpi-value-sm">{{ $teacher->subjects->count() }}</div></div>
+        </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1">Créneaux / semaine</div>
-            <div class="h5 mb-0">{{ $schedule->count() }}</div>
-        </div></div>
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-slate"><i class="fas fa-calendar-week"></i></div>
+            <div class="kpi-body"><div class="kpi-label">Créneaux / semaine</div><div class="kpi-value kpi-value-sm">{{ $schedule->count() }}</div></div>
+        </div>
     </div>
 </div>
 
 <div class="row g-4 mb-4">
     {{-- Classes & performances --}}
     <div class="col-lg-6">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="mb-0">Classes &amp; résultats</h5></div>
-            <div class="card-body p-0">
+        <div class="panel-card h-100">
+            <div class="panel-card-header"><i class="fas fa-door-open me-2 text-warning"></i>Classes &amp; résultats</div>
+            <div class="p-0">
                 @if($classPerformance->isEmpty())
-                    <p class="text-muted p-3 mb-0">Aucune classe affectée.</p>
+                    <div class="empty-state py-4"><i class="fas fa-door-open"></i><p class="mb-0">Aucune classe affectée.</p></div>
                 @else
                     <ul class="list-group list-group-flush">
                         @foreach($classPerformance as $row)
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <a href="{{ route('directeur.school.classes.show', $row['class']) }}">{{ $row['class']->name }}</a>
+                                <a href="{{ route('directeur.school.classes.show', $row['class']) }}" class="fw-semibold text-decoration-none">{{ $row['class']->name }}</a>
                                 <span class="small text-muted">
                                     @if($row['summary']['average'] !== null)
                                         {{ $row['summary']['average'] }}/{{ $row['summary']['max_grade'] }} · réussite {{ $row['summary']['success_rate'] }}%
@@ -86,11 +82,11 @@
 
     {{-- Emploi du temps --}}
     <div class="col-lg-6">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="mb-0">Emploi du temps</h5></div>
-            <div class="card-body p-0">
+        <div class="panel-card h-100">
+            <div class="panel-card-header"><i class="fas fa-calendar-week me-2 text-warning"></i>Emploi du temps</div>
+            <div class="p-0">
                 @if($schedule->isEmpty())
-                    <p class="text-muted p-3 mb-0">Aucun créneau planifié.</p>
+                    <div class="empty-state py-4"><i class="fas fa-calendar-week"></i><p class="mb-0">Aucun créneau planifié.</p></div>
                 @else
                     <ul class="list-group list-group-flush">
                         @foreach($schedule as $slot)
@@ -100,7 +96,7 @@
                                     <div class="small text-muted">{{ $slot->subject->name ?? '—' }} · {{ $slot->schoolClass->name ?? '—' }}</div>
                                 </div>
                                 @if($slot->room)
-                                    <span class="badge bg-light text-dark border">{{ $slot->room }}</span>
+                                    <span class="class-chip">{{ $slot->room }}</span>
                                 @endif
                             </li>
                         @endforeach
@@ -112,15 +108,15 @@
 </div>
 
 {{-- Historique des affectations --}}
-<div class="card">
-    <div class="card-header"><h5 class="mb-0">Historique des affectations</h5></div>
-    <div class="card-body p-0">
+<div class="panel-card">
+    <div class="panel-card-header"><i class="fas fa-clock-rotate-left me-2 text-warning"></i>Historique des affectations</div>
+    <div class="p-0">
         @if($assignments->isEmpty())
-            <p class="text-muted p-3 mb-0">Aucune affectation enregistrée.</p>
+            <div class="empty-state py-4"><i class="fas fa-clock-rotate-left"></i><p class="mb-0">Aucune affectation enregistrée.</p></div>
         @else
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0 data-table">
+                    <thead>
                         <tr>
                             <th>Année scolaire</th>
                             <th>Classe</th>
@@ -136,9 +132,9 @@
                                 <td>{{ $assignment->subject->name ?? '—' }}</td>
                                 <td>
                                     @if($assignment->is_active)
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="status-badge status-badge-success">Active</span>
                                     @else
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="status-badge status-badge-neutral">Inactive</span>
                                     @endif
                                 </td>
                             </tr>
@@ -149,4 +145,8 @@
         @endif
     </div>
 </div>
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

@@ -15,42 +15,36 @@
         <p class="text-muted mb-0">{{ $debtors->count() }} élève(s) avec au moins une facture en attente</p>
     </div>
     @if($debtors->isNotEmpty())
-        <div class="text-end">
-            <div class="text-muted small">Montant total dû</div>
-            <div class="h4 mb-0 text-danger fw-bold">{{ number_format($debtors->sum('total_due'), 0, ',', ' ') }} FCFA</div>
+        <div class="kpi-tile kpi-tile-static" style="min-width: 220px;">
+            <div class="kpi-icon kpi-icon-red"><i class="fas fa-sack-dollar"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Montant total dû</div>
+                <div class="kpi-value kpi-value-sm text-danger">{{ number_format($debtors->sum('total_due'), 0, ',', ' ') }} <span class="kpi-value-suffix">FCFA</span></div>
+            </div>
         </div>
     @endif
 </div>
 
 @if($debtors->isEmpty())
-    <div class="card">
-        <div class="card-body">
-            <div class="alert alert-success mb-0">
-                <i class="fas fa-check-circle me-1"></i> Aucun élève débiteur actuellement.
-            </div>
-        </div>
-    </div>
+    <div class="empty-state"><i class="fas fa-circle-check"></i><p class="mb-0">Aucun élève débiteur actuellement.</p></div>
 @else
     @php $groups = $debtors->groupBy(fn ($row) => $row['student']->schoolClass?->name ?? 'Sans classe'); @endphp
 
     @foreach($groups as $className => $rows)
         @php $collapseId = 'debtors-class-'.\Illuminate\Support\Str::slug($className); @endphp
-        <div class="card mb-3">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2" style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}" aria-expanded="true">
-                <h5 class="mb-0 fs-6">
-                    <i class="fas fa-chevron-down me-2 small text-muted"></i>
-                    <i class="fas fa-users me-2"></i>{{ $className }}
-                </h5>
-                <div>
-                    <span class="badge bg-secondary">{{ $rows->count() }} élève(s)</span>
-                    <span class="badge bg-danger">{{ number_format($rows->sum('total_due'), 0, ',', ' ') }} FCFA dû</span>
+        <div class="panel-card mb-3">
+            <div class="panel-card-header" style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}" aria-expanded="true">
+                <span><i class="fas fa-chevron-down me-2 small text-muted"></i><i class="fas fa-users me-2 text-warning"></i>{{ $className }}</span>
+                <div class="d-flex gap-2">
+                    <span class="class-chip">{{ $rows->count() }} élève(s)</span>
+                    <span class="status-badge status-badge-danger">{{ number_format($rows->sum('total_due'), 0, ',', ' ') }} FCFA dû</span>
                 </div>
             </div>
             <div class="collapse show" id="{{ $collapseId }}">
-                <div class="card-body p-0">
+                <div class="p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
+                        <table class="table table-hover align-middle mb-0 data-table">
+                            <thead>
                                 <tr>
                                     <th>Élève</th>
                                     <th>Matricule</th>
@@ -61,12 +55,17 @@
                             <tbody>
                                 @foreach($rows as $row)
                                     <tr>
-                                        <td>{{ $row['student']->name }}</td>
+                                        <td>
+                                            <div class="person-cell">
+                                                <span class="person-avatar">{{ strtoupper(substr($row['student']->name, 0, 1)) }}</span>
+                                                <span class="person-name">{{ $row['student']->name }}</span>
+                                            </div>
+                                        </td>
                                         <td><code>{{ $row['student']->identifier ?? '—' }}</code></td>
                                         <td class="text-end text-danger fw-semibold">{{ number_format($row['total_due'], 0, ',', ' ') }} FCFA</td>
-                                        <td>
-                                            <a href="{{ route($portalPrefix.'.students.show', $row['student']) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i> Voir
+                                        <td class="text-end">
+                                            <a href="{{ route($portalPrefix.'.students.show', $row['student']) }}" class="btn-view" title="Voir">
+                                                <i class="fas fa-eye"></i>
                                             </a>
                                         </td>
                                     </tr>
@@ -81,6 +80,7 @@
 @endif
 
 @push('styles')
+@include('accounting.directeur.partials.design-system')
 <style>
 [data-bs-toggle="collapse"] .fa-chevron-down { transition: transform .2s ease; }
 [data-bs-toggle="collapse"][aria-expanded="false"] .fa-chevron-down { transform: rotate(-90deg); }

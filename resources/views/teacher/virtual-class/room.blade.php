@@ -511,7 +511,7 @@ body              { overflow: hidden; }
             <div class="panel-footer">
                 <div class="pf-brand">
                     <i class="fas fa-shield-alt" style="color:#f59e0b;"></i>
-                    <strong>EduManager Pro</strong>
+                    <strong>{{ $platformName }} Pro</strong>
                     <span style="opacity:.5;">·</span>
                     Salle sécurisée
                 </div>

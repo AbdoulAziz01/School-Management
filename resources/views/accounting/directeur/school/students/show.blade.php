@@ -11,43 +11,52 @@
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-4">
-        <div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1">Moyenne générale</div>
-            <div class="h5 mb-0">
-                @if($generalAverage !== null)
-                    {{ round($generalAverage['normalized'], 2) }}/{{ $referenceMaxGrade }}
-                @else
-                    <span class="text-muted fs-6">Pas encore de notes</span>
-                @endif
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-purple"><i class="fas fa-star"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Moyenne générale</div>
+                <div class="kpi-value kpi-value-sm">
+                    @if($generalAverage !== null)
+                        {{ round($generalAverage['normalized'], 2) }}<span class="kpi-value-suffix">/{{ $referenceMaxGrade }}</span>
+                    @else
+                        <span class="kpi-value-suffix">Pas encore de notes</span>
+                    @endif
+                </div>
             </div>
-        </div></div>
+        </div>
     </div>
     <div class="col-6 col-lg-4">
-        <div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1">Présences enregistrées</div>
-            <div class="h5 mb-0 text-success">{{ $attendanceStats['present'] }} <span class="fs-6 text-muted">présent(s)</span></div>
-        </div></div>
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-green"><i class="fas fa-check-circle"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Présences enregistrées</div>
+                <div class="kpi-value kpi-value-sm text-success">{{ $attendanceStats['present'] }} <span class="kpi-value-suffix">présent(s)</span></div>
+            </div>
+        </div>
     </div>
     <div class="col-6 col-lg-4">
-        <div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1">Absences / Retards</div>
-            <div class="h5 mb-0"><span class="text-danger">{{ $attendanceStats['absent'] }}</span> / <span class="text-warning">{{ $attendanceStats['late'] }}</span></div>
-        </div></div>
+        <div class="kpi-tile kpi-tile-static">
+            <div class="kpi-icon kpi-icon-red"><i class="fas fa-user-clock"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Absences / Retards</div>
+                <div class="kpi-value kpi-value-sm"><span class="text-danger">{{ $attendanceStats['absent'] }}</span> / <span class="text-warning">{{ $attendanceStats['late'] }}</span></div>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row g-4 mb-4">
     {{-- Notes par matière --}}
     <div class="col-lg-7">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="mb-0">Notes par matière</h5></div>
-            <div class="card-body p-0">
+        <div class="panel-card h-100">
+            <div class="panel-card-header"><i class="fas fa-book me-2 text-warning"></i>Notes par matière</div>
+            <div class="p-0">
                 @if($bySubject->isEmpty())
-                    <p class="text-muted p-3 mb-0">Aucune note enregistrée cette année.</p>
+                    <div class="empty-state py-4"><i class="fas fa-book"></i><p class="mb-0">Aucune note enregistrée cette année.</p></div>
                 @else
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
+                        <table class="table table-hover align-middle mb-0 data-table">
+                            <thead>
                                 <tr>
                                     <th>Matière</th>
                                     <th>Moyenne</th>
@@ -59,7 +68,7 @@
                                     <tr>
                                         <td>
                                             @if($student->schoolClass)
-                                                <a href="{{ route('directeur.school.subjects.grades', [$student->schoolClass, $row['subject']]) }}">
+                                                <a href="{{ route('directeur.school.subjects.grades', [$student->schoolClass, $row['subject']]) }}" class="fw-semibold text-decoration-none">
                                                     {{ $row['subject']->name }}
                                                 </a>
                                             @else
@@ -67,7 +76,7 @@
                                             @endif
                                         </td>
                                         <td>{{ $row['average'] !== null ? $row['average'].'/'.$row['max_grade'] : '—' }}</td>
-                                        <td>{{ $row['count'] }}</td>
+                                        <td class="text-muted">{{ $row['count'] }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -80,11 +89,11 @@
 
     {{-- Présences récentes --}}
     <div class="col-lg-5">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="mb-0">Présences récentes</h5></div>
-            <div class="card-body p-0">
+        <div class="panel-card h-100">
+            <div class="panel-card-header"><i class="fas fa-calendar-check me-2 text-warning"></i>Présences récentes</div>
+            <div class="p-0">
                 @if($attendance->isEmpty())
-                    <p class="text-muted p-3 mb-0">Aucun enregistrement de présence.</p>
+                    <div class="empty-state py-4"><i class="fas fa-calendar-check"></i><p class="mb-0">Aucun enregistrement de présence.</p></div>
                 @else
                     <ul class="list-group list-group-flush">
                         @foreach($attendance->take(15) as $row)
@@ -92,13 +101,13 @@
                                 <span class="small">{{ $row->date->format('d/m/Y') }}</span>
                                 @php
                                     $badge = match($row->status) {
-                                        'present' => 'bg-success',
-                                        'absent' => 'bg-danger',
-                                        'late' => 'bg-warning text-dark',
-                                        default => 'bg-secondary',
+                                        'present' => 'status-badge-success',
+                                        'absent' => 'status-badge-danger',
+                                        'late' => 'status-badge-warning',
+                                        default => 'status-badge-neutral',
                                     };
                                 @endphp
-                                <span class="badge {{ $badge }}">{{ ucfirst($row->status) }}</span>
+                                <span class="status-badge {{ $badge }}">{{ ucfirst($row->status) }}</span>
                             </li>
                         @endforeach
                     </ul>
@@ -111,12 +120,12 @@
 <div class="row g-4">
     {{-- Factures --}}
     <div class="col-lg-7">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="mb-0">Factures</h5></div>
-            <div class="card-body p-0">
+        <div class="panel-card h-100">
+            <div class="panel-card-header"><i class="fas fa-file-invoice me-2 text-warning"></i>Factures</div>
+            <div class="p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0 data-table">
+                        <thead>
                             <tr>
                                 <th>Motif</th>
                                 <th>Échéance</th>
@@ -135,13 +144,13 @@
                                     <td>
                                         @php
                                             $badgeClass = match($invoice->status) {
-                                                'paid' => 'bg-success',
-                                                'partial' => 'bg-warning text-dark',
-                                                'cancelled' => 'bg-secondary',
-                                                default => 'bg-danger',
+                                                'paid' => 'status-badge-success',
+                                                'partial' => 'status-badge-warning',
+                                                'cancelled' => 'status-badge-neutral',
+                                                default => 'status-badge-danger',
                                             };
                                         @endphp
-                                        <span class="badge {{ $badgeClass }}">{{ $invoice->statusLabel() }}</span>
+                                        <span class="status-badge {{ $badgeClass }}">{{ $invoice->statusLabel() }}</span>
                                     </td>
                                 </tr>
                             @empty
@@ -156,11 +165,11 @@
 
     {{-- Paiements --}}
     <div class="col-lg-5">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="mb-0">Historique des paiements</h5></div>
-            <div class="card-body p-0">
+        <div class="panel-card h-100">
+            <div class="panel-card-header"><i class="fas fa-receipt me-2 text-warning"></i>Historique des paiements</div>
+            <div class="p-0">
                 @if($payments->isEmpty())
-                    <p class="text-muted p-3 mb-0">Aucun paiement enregistré.</p>
+                    <div class="empty-state py-4"><i class="fas fa-receipt"></i><p class="mb-0">Aucun paiement enregistré.</p></div>
                 @else
                     <ul class="list-group list-group-flush">
                         @foreach($payments->take(10) as $payment)
@@ -175,4 +184,8 @@
         </div>
     </div>
 </div>
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

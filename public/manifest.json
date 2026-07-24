@@ -1,6 +1,6 @@
 {
-    "name": "EduManager",
-    "short_name": "EduManager",
+    "name": "AzelieEdu",
+    "short_name": "AzelieEdu",
     "description": "Application de gestion scolaire",
     "start_url": "/admin",
     "scope": "/",

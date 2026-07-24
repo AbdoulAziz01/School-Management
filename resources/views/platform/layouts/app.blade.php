@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @include('partials.form-draft-meta')
     <title>@yield('title', $platformName . ' — Plateforme')</title>
+    <link rel="icon" type="image/png" href="{{ $platformLogoIcon }}">
 
     {{-- Bootstrap CDN — conservé pour les autres vues de la plateforme --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -435,8 +436,8 @@
 
     {{-- Brand --}}
     <div class="plf-brand">
-        <div class="plf-brand-icon">
-            <i class="fas fa-shield-halved"></i>
+        <div class="plf-brand-icon" style="background: #fff; padding: 5px;">
+            <img src="{{ $platformLogoIcon }}" alt="{{ $platformName }}" style="width: 100%; height: 100%; object-fit: contain;">
         </div>
         <div class="overflow-hidden">
             <p class="plf-brand-name">{{ $platformName }}</p>

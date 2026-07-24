@@ -1,15 +1,16 @@
 /**
- * EduManager — Service Worker v5
+ * AzelieEdu — Service Worker v6
  * Stratégie principale : Cache-First pour les assets pédagogiques et statiques.
  * Stratégie secondaire : Network-First pour les pages HTML (données fraîches).
  * Fallback offline pour les navigations impossibles.
  *
+ * v6 : purge du cache /login précédent (refonte visuelle de la page de connexion)
  * v5 : fix ignoreVary + double-cache sur redirect + pré-cache login
  */
 
 'use strict';
 
-const SW_VERSION     = 'v5';
+const SW_VERSION     = 'v6';
 const STATIC_CACHE   = `edumanager-static-${SW_VERSION}`;
 const DYNAMIC_CACHE  = `edumanager-dynamic-${SW_VERSION}`;
 const OFFLINE_URL    = '/offline.html';

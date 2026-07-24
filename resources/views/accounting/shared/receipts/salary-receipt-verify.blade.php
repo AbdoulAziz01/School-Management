@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vérification du reçu — {{ config('platform.name', 'EduManager') }}</title>
+    <title>Vérification du reçu — {{ config('platform.name', 'AzelieEdu') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -18,7 +18,7 @@
     <div class="card shadow-lg border-0">
         <div class="header-bar text-center">
             <h4 class="mb-1"><i class="fas fa-shield-alt me-2"></i>Vérification d'authenticité</h4>
-            <p class="mb-0 opacity-75" style="font-size:.85rem">{{ config('platform.name', 'EduManager') }} — Système de Gestion Scolaire</p>
+            <p class="mb-0 opacity-75" style="font-size:.85rem">{{ config('platform.name', 'AzelieEdu') }} — Système de Gestion Scolaire</p>
         </div>
         <div class="card-body p-4">
             <div class="text-center mb-4">

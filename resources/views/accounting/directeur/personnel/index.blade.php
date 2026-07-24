@@ -8,22 +8,18 @@
 @endif
 
 <div class="mb-4">
-    <h1 class="h3 mb-0"><i class="fas fa-users me-2"></i>Personnel & Élèves</h1>
+    <h1 class="h3 mb-0"><i class="fas fa-users me-2"></i>Personnel &amp; Élèves</h1>
     <p class="text-muted mb-0">Vue d'ensemble de qui travaille et étudie dans votre établissement</p>
 </div>
 
 <div class="row g-3">
     @foreach($counts as $key => $group)
         <div class="col-6 col-lg-4">
-            <a href="{{ route('directeur.personnel.show', $key) }}" class="text-decoration-none">
-                <div class="card h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="fs-2 text-warning"><i class="fas {{ $group['icon'] }}"></i></div>
-                        <div>
-                            <div class="h3 mb-0">{{ $group['count'] }}</div>
-                            <div class="small text-muted">{{ $group['label'] }}</div>
-                        </div>
-                    </div>
+            <a href="{{ route('directeur.personnel.show', $key) }}" class="kpi-tile">
+                <div class="kpi-icon kpi-icon-amber"><i class="fas {{ $group['icon'] }}"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">{{ $group['label'] }}</div>
+                    <div class="kpi-value">{{ $group['count'] }}</div>
                 </div>
             </a>
         </div>
@@ -35,4 +31,8 @@
     Vous pouvez créer directement vos comptes comptable et caissier. Les autres rôles (admin,
     surveillant, enseignant, élève) restent gérés depuis le panneau d'administration de l'établissement.
 </p>
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

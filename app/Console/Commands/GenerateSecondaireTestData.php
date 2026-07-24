@@ -53,10 +53,10 @@ class GenerateSecondaireTestData extends Command
     /** @var list<string> */
     private array $firstNamesFemale = [
         'Fatou', 'Aminata', 'Aïssatou', 'Khadija', 'Awa', 'Bineta', 'Seynabou', 'Ndeye',
-        'Mariama', 'Coumba', 'Adja', 'Astou', 'Rokhaya', 'Sokhna', 'Dieynaba', 'Yacine', 
+        'Mariama', 'Coumba', 'Adja', 'Astou', 'Rokhaya', 'Sokhna', 'Dieynaba', 'Yacine',
         'Marième', 'Ramatoulaye', 'Aida', 'Penda', 'Anta', 'Fatimata', 'Absa', 'Khady', 'Ngoné',
     ];
-
+    
     /** @var list<string> */
     private array $lastNames = [
         'Diop', 'Ndiaye', 'Fall', 'Gueye', 'Ba', 'Sarr', 'Diagne', 'Sy', 'Cissé', 'Faye',

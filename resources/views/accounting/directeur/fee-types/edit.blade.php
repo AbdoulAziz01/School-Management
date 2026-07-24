@@ -5,11 +5,9 @@
 @section('content')
 <div class="row justify-content-center">
     <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Modifier le type de frais</h5>
-            </div>
-            <div class="card-body">
+        <div class="panel-card">
+            <div class="panel-card-header"><i class="fas fa-edit me-2 text-warning"></i>Modifier le type de frais</div>
+            <div class="p-4">
                 <form method="POST" action="{{ route('directeur.fee-types.update', $feeType) }}">
                     @csrf
                     @method('PUT')
@@ -32,18 +30,22 @@
                         </label>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i> Enregistrer
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn-pill-primary">
+                            <i class="fas fa-save"></i>Enregistrer
                         </button>
-                        <a href="{{ route('directeur.fee-types.amounts', $feeType) }}" class="btn btn-outline-primary">
-                            <i class="fas fa-coins me-1"></i> Voir les montants
+                        <a href="{{ route('directeur.fee-types.amounts', $feeType) }}" class="btn-pill-outline">
+                            <i class="fas fa-coins"></i>Voir les montants
                         </a>
-                        <a href="{{ route('directeur.fee-types.index') }}" class="btn btn-outline-secondary">Annuler</a>
+                        <a href="{{ route('directeur.fee-types.index') }}" class="btn-pill-outline">Annuler</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

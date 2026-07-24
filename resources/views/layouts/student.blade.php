@@ -6,7 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @include('partials.form-draft-meta')
     <title>@yield('title', 'Tableau de bord') - Espace Élève</title>
-    
+    <link rel="icon" type="image/png" href="{{ $platformLogoIcon }}">
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
@@ -541,11 +542,11 @@
         <!-- Sidebar -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="logo-icon-box {{ !empty($schoolLogoDataUri) ? 'has-school-logo' : '' }}">
+                <div class="logo-icon-box has-school-logo">
                     @if(!empty($schoolLogoDataUri))
                         <img src="{{ $schoolLogoDataUri }}" alt="Logo" class="school-logo-img">
                     @else
-                        <i class="fas fa-graduation-cap"></i>
+                        <img src="{{ $platformLogoIcon }}" alt="{{ $platformName }}" class="school-logo-img">
                     @endif
                 </div>
                 <div class="logo-text">

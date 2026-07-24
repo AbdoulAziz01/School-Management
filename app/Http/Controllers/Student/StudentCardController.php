@@ -47,7 +47,7 @@ final class StudentCardController extends Controller
             'header_subtitle'  => 'Institut Supérieur · Carte Officielle',
             'show_nationality' => true,
             'show_dob'         => true,
-            'footer_brand'     => 'EduManager',
+            'footer_brand'     => 'AzelieEdu',
         ], (array) ($school?->card_settings ?? []));
 
         return view('student.carte_scolaire', [

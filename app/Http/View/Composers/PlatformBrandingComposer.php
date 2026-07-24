@@ -9,7 +9,7 @@ class PlatformBrandingComposer
 {
     public function compose(View $view): void
     {
-        $platformName = config('platform.name', 'EduManager');
+        $platformName = config('platform.name', 'AzelieEdu');
         $user = Auth::user();
 
         $view->with([

@@ -95,7 +95,7 @@
         </div>
     </div>
 
-    <p class="school-name">{{ $student->school?->name ?? 'EduManager' }}</p>
+    <p class="school-name">{{ $student->school?->name ?? 'AzelieEdu' }}</p>
 
     @if(auth()->id() !== $student->id)
         <a href="{{ route('admin.dashboard') }}" class="btn" style="margin-top:14px;">

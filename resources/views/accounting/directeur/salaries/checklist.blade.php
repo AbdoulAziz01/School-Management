@@ -32,21 +32,20 @@
     </form>
 </div>
 
-<div class="mb-3 d-flex flex-wrap gap-2">
-    <a href="{{ route('directeur.salaries.checklist', ['period' => $period->format('Y-m')]) }}" class="btn btn-sm {{ ! $roleGroup ? 'btn-primary' : 'btn-outline-secondary' }}">Tous</a>
+<div class="filter-pills mb-4">
+    <a href="{{ route('directeur.salaries.checklist', ['period' => $period->format('Y-m')]) }}" class="filter-pill {{ ! $roleGroup ? 'is-active' : '' }}">Tous</a>
     @foreach($roleGroupLabels as $key => $label)
-        <a href="{{ route('directeur.salaries.checklist', ['period' => $period->format('Y-m'), 'role_group' => $key]) }}" class="btn btn-sm {{ $roleGroup === $key ? 'btn-primary' : 'btn-outline-secondary' }}">{{ $label }}</a>
+        <a href="{{ route('directeur.salaries.checklist', ['period' => $period->format('Y-m'), 'role_group' => $key]) }}" class="filter-pill {{ $roleGroup === $key ? 'is-active' : '' }}">{{ $label }}</a>
     @endforeach
 </div>
 
 @if($payments->isEmpty())
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <p class="text-muted mb-0">
-                Aucun salaire généré pour {{ $period->locale('fr')->translatedFormat('F Y') }}
-                (le comptable doit d'abord lancer la génération du mois).
-            </p>
-        </div>
+    <div class="empty-state">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <p class="mb-0">
+            Aucun salaire généré pour {{ $period->locale('fr')->translatedFormat('F Y') }}
+            (le comptable doit d'abord lancer la génération du mois).
+        </p>
     </div>
 @else
     @php
@@ -55,41 +54,49 @@
         $totalPaid = $payments->sum('amount_paid');
     @endphp
 
-    <div class="row g-3 mb-3">
+    <div class="row g-3 mb-4">
         <div class="col-md-4">
-            <div class="card"><div class="card-body">
-                <div class="text-muted small">Payés</div>
-                <div class="h4 mb-0">{{ $paidCount }} / {{ $payments->count() }}</div>
-            </div></div>
+            <div class="kpi-tile kpi-tile-static">
+                <div class="kpi-icon kpi-icon-green"><i class="fas fa-circle-check"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Payés</div>
+                    <div class="kpi-value">{{ $paidCount }} <span class="kpi-value-suffix">/ {{ $payments->count() }}</span></div>
+                </div>
+            </div>
         </div>
         <div class="col-md-4">
-            <div class="card"><div class="card-body">
-                <div class="text-muted small">Montant dû (total)</div>
-                <div class="h4 mb-0">{{ number_format($totalDue, 0, ',', ' ') }} FCFA</div>
-            </div></div>
+            <div class="kpi-tile kpi-tile-static">
+                <div class="kpi-icon kpi-icon-amber"><i class="fas fa-scale-balanced"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Montant dû (total)</div>
+                    <div class="kpi-value">{{ number_format($totalDue, 0, ',', ' ') }} <span class="kpi-value-suffix">FCFA</span></div>
+                </div>
+            </div>
         </div>
         <div class="col-md-4">
-            <div class="card"><div class="card-body">
-                <div class="text-muted small">Déjà versé</div>
-                <div class="h4 mb-0 text-success">{{ number_format($totalPaid, 0, ',', ' ') }} FCFA</div>
-            </div></div>
+            <div class="kpi-tile kpi-tile-static">
+                <div class="kpi-icon kpi-icon-green"><i class="fas fa-sack-dollar"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Déjà versé</div>
+                    <div class="kpi-value text-success">{{ number_format($totalPaid, 0, ',', ' ') }} <span class="kpi-value-suffix">FCFA</span></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card data-table-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0 data-table">
+                    <thead>
                         <tr>
-                            <th></th>
                             <th>Employé</th>
                             <th>Rôle</th>
                             <th class="text-end">Montant dû</th>
                             <th class="text-end">Payé</th>
                             <th>Statut</th>
                             <th>Payé par</th>
-                            <th style="min-width:140px;">Actions</th>
+                            <th style="min-width:160px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,39 +104,37 @@
                             @php
                                 $roleLabels = ['admin' => 'Admin', 'surveillant' => 'Surveillant', 'teacher' => 'Enseignant', 'professeur' => 'Enseignant', 'comptable' => 'Comptable', 'caissier' => 'Caissier'];
                                 $badgeClass = match($payment->status) {
-                                    'paid' => 'bg-success',
-                                    'partial' => 'bg-warning text-dark',
-                                    'cancelled' => 'bg-danger',
-                                    default => 'bg-secondary',
+                                    'paid' => 'status-badge status-badge-success',
+                                    'partial' => 'status-badge status-badge-warning',
+                                    'cancelled' => 'status-badge status-badge-danger',
+                                    default => 'status-badge status-badge-neutral',
                                 };
                             @endphp
                             <tr>
                                 <td>
-                                    @if($payment->status === 'paid')
-                                        <i class="fas fa-check-circle text-success"></i>
-                                    @elseif($payment->status === 'cancelled')
-                                        <i class="fas fa-times-circle text-danger"></i>
-                                    @else
-                                        <i class="far fa-circle text-muted"></i>
-                                    @endif
+                                    <div class="person-cell">
+                                        <span class="person-avatar">{{ strtoupper(substr($payment->user->name, 0, 1)) }}</span>
+                                        <span class="person-name">{{ $payment->user->name }}</span>
+                                    </div>
                                 </td>
-                                <td>{{ $payment->user->name }}</td>
-                                <td>{{ $roleLabels[$payment->user->role] ?? $payment->user->role }}</td>
+                                <td class="text-muted">{{ $roleLabels[$payment->user->role] ?? $payment->user->role }}</td>
                                 <td class="text-end">{{ number_format($payment->amount_due, 0, ',', ' ') }} FCFA</td>
                                 <td class="text-end">{{ number_format($payment->amount_paid, 0, ',', ' ') }} FCFA</td>
-                                <td><span class="badge {{ $badgeClass }}">{{ $payment->statusLabel() }}</span></td>
+                                <td><span class="{{ $badgeClass }}">{{ $payment->statusLabel() }}</span></td>
                                 <td class="small text-muted">{{ $payment->paidBy?->name ?? '—' }}</td>
                                 <td>
-                                    @if(!in_array($payment->status, ['paid', 'cancelled']))
-                                        <a href="#pay-drawer-{{ $payment->id }}" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-hand-holding-usd"></i> Payer
-                                        </a>
-                                    @endif
-                                    @if(in_array($payment->status, ['paid', 'partial']))
-                                        <a href="{{ route('directeur.salary-receipts.show', $payment) }}" class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-receipt"></i> Reçu
-                                        </a>
-                                    @endif
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        @if(!in_array($payment->status, ['paid', 'cancelled']))
+                                            <a href="#pay-drawer-{{ $payment->id }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-hand-holding-usd"></i> Payer
+                                            </a>
+                                        @endif
+                                        @if(in_array($payment->status, ['paid', 'partial']))
+                                            <a href="{{ route('directeur.salary-receipts.show', $payment) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-receipt"></i> Reçu
+                                            </a>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -181,6 +186,7 @@
 @endif
 
 @push('styles')
+@include('accounting.directeur.partials.design-system')
 <style>
 .drawer-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.5);

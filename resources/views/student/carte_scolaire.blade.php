@@ -400,7 +400,7 @@ use Illuminate\Support\Facades\Storage;
     {{-- En-tête (masqué à l'impression) --}}
     <div class="card-page-header">
         <h1 class="card-page-title"><i class="fas fa-id-card me-2"></i>Ma Carte Scolaire</h1>
-        <p class="card-page-sub">{{ $school->name ?? 'EduManager' }} · Année {{ $acadYear }}</p>
+        <p class="card-page-sub">{{ $school->name ?? 'AzelieEdu' }} · Année {{ $acadYear }}</p>
         <div class="card-page-actions">
             <button class="btn-card-print" onclick="window.print()">
                 <i class="fas fa-print"></i>&nbsp; Imprimer Recto / Verso
@@ -511,7 +511,7 @@ use Illuminate\Support\Facades\Storage;
                         <span class="r-footer-sep"></span>
                         <span class="r-footer-year">{{ $acadYear }}</span>
                         <span class="r-footer-issued">Délivrée le : {{ $issuedDate }}</span>
-                        <span class="r-footer-brand">{{ $cardSettings['footer_brand'] ?? 'EduManager' }}</span>
+                        <span class="r-footer-brand">{{ $cardSettings['footer_brand'] ?? 'AzelieEdu' }}</span>
                     </div>
 
                 </div>
@@ -536,7 +536,7 @@ use Illuminate\Support\Facades\Storage;
                     <div class="verso-divider"></div>
 
                     <div class="verso-sub">
-                        {{ Str::upper(Str::limit($school->name ?? 'EduManager', 38)) }}<br>
+                        {{ Str::upper(Str::limit($school->name ?? 'AzelieEdu', 38)) }}<br>
                         Carte étudiante officielle · {{ $acadYear }}
                     </div>
 

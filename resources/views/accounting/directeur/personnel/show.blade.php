@@ -4,11 +4,13 @@
 
 @section('content')
 <div class="mb-4">
-    <a href="{{ route('directeur.personnel.index') }}" class="text-decoration-none small">
-        <i class="fas fa-arrow-left me-1"></i> Retour à Personnel & Élèves
+    <a href="{{ route('directeur.personnel.index') }}" class="d-inline-flex align-items-center text-decoration-none mb-2 small text-muted">
+        <i class="fas fa-arrow-left me-2"></i>Retour à Personnel &amp; Élèves
     </a>
-    <h1 class="h3 mt-2 mb-0"><i class="fas {{ $meta['icon'] }} me-2"></i>{{ $meta['label'] }}</h1>
-    <p class="text-muted mb-0">{{ $people->total() }} {{ mb_strtolower($meta['label']) }}</p>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h1 class="h3 mb-0"><i class="fas {{ $meta['icon'] }} me-2"></i>{{ $meta['label'] }}</h1>
+        <span class="count-chip">{{ $people->total() }} {{ mb_strtolower($meta['label']) }}</span>
+    </div>
 </div>
 
 @if(session('success'))
@@ -31,29 +33,29 @@
     </div>
 @endif
 
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="GET" action="{{ route('directeur.personnel.show', $group) }}" class="d-flex gap-2">
-            <input type="text" name="search" class="form-control form-control-sm" placeholder="Nom ou matricule..." value="{{ request('search') }}" style="max-width: 260px;">
-            <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-search"></i></button>
-            @if(request('search'))
-                <a href="{{ route('directeur.personnel.show', $group) }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times"></i></a>
-            @endif
-        </form>
+<form method="GET" action="{{ route('directeur.personnel.show', $group) }}" class="search-bar mb-4">
+    <div class="search-field" style="flex: 0 1 280px;">
+        <label for="personnel-search" class="visually-hidden">Rechercher un nom ou matricule</label>
+        <i class="fas fa-search"></i>
+        <input type="text" id="personnel-search" name="search" placeholder="Nom ou matricule..." value="{{ request('search') }}">
     </div>
-</div>
+    <button type="submit" class="btn-pill-primary"><i class="fas fa-search"></i>Rechercher</button>
+    @if(request('search'))
+        <a href="{{ route('directeur.personnel.show', $group) }}" class="btn-pill-outline"><i class="fas fa-times"></i>Effacer</a>
+    @endif
+</form>
 
-<div class="card">
-    <div class="card-body">
-        @if($people->isEmpty())
-            <div class="alert alert-info mb-0">Aucun résultat.</div>
-        @else
+@if($people->isEmpty())
+    <div class="empty-state"><i class="fas fa-users"></i><p class="mb-0">Aucun résultat.</p></div>
+@else
+    <div class="card data-table-card">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0 data-table">
+                    <thead>
                         <tr>
-                            <th>Matricule</th>
                             <th>Nom</th>
+                            <th>Matricule</th>
                             <th>Email</th>
                             <th>Statut</th>
                         </tr>
@@ -61,27 +63,36 @@
                     <tbody>
                         @foreach($people as $person)
                             <tr>
+                                <td>
+                                    <div class="person-cell">
+                                        <span class="person-avatar">{{ strtoupper(substr($person->name, 0, 1)) }}</span>
+                                        <span class="person-name">{{ $person->name }}</span>
+                                    </div>
+                                </td>
                                 <td><code>{{ $person->identifier ?? '—' }}</code></td>
-                                <td>{{ $person->name }}</td>
-                                <td>{{ $person->email ?? '—' }}</td>
+                                <td class="text-muted">{{ $person->email ?? '—' }}</td>
                                 <td>
                                     @if($person->status === 'approved')
-                                        <span class="badge bg-success">Approuvé</span>
+                                        <span class="status-badge status-badge-success">Approuvé</span>
                                     @elseif($person->status === 'pending')
-                                        <span class="badge bg-warning text-dark">En attente</span>
+                                        <span class="status-badge status-badge-warning">En attente</span>
                                     @else
-                                        <span class="badge bg-danger">Rejeté</span>
+                                        <span class="status-badge status-badge-danger">Rejeté</span>
                                     @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-                <div class="mt-3 d-flex justify-content-center">
-                    {{ $people->links() }}
-                </div>
             </div>
-        @endif
+            <div class="p-3 d-flex justify-content-center">
+                {{ $people->links() }}
+            </div>
+        </div>
     </div>
-</div>
+@endif
+
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @endsection

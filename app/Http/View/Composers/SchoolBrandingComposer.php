@@ -11,7 +11,7 @@ class SchoolBrandingComposer
     public function compose(View $view): void
     {
         $school = null;
-        $schoolName = config('platform.name', 'EduManager');
+        $schoolName = config('platform.name', 'AzelieEdu');
         $schoolLogoDataUri = null;
 
         if (Auth::check()) {

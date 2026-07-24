@@ -3,6 +3,9 @@
 @section('title', 'Frais scolaires')
 
 @section('content')
+@push('styles')
+@include('accounting.directeur.partials.design-system')
+@endpush
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
@@ -28,11 +31,11 @@
         </p>
     </div>
     <div class="d-flex gap-2">
-        <a href="{{ route('directeur.fee-types.types') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-cog me-1"></i> Gérer les types de frais
+        <a href="{{ route('directeur.fee-types.types') }}" class="btn-pill-outline">
+            <i class="fas fa-cog"></i>Gérer les types de frais
         </a>
-        <a href="{{ route('directeur.fee-types.create') }}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus me-1"></i> Nouveau type de frais
+        <a href="{{ route('directeur.fee-types.create') }}" class="btn-pill-primary">
+            <i class="fas fa-plus"></i>Nouveau type de frais
         </a>
     </div>
 </div>
@@ -52,23 +55,20 @@
 @else
 
 {{-- Barre d'outils : recherche + filtre cycle (JS simple, purement cosmétique) --}}
-<div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem .75rem;background:#ffffff;border:1px solid #fde68a;border-radius:.5rem;">
+<div class="search-bar mb-3">
+    <div class="search-field" style="flex: 0 1 280px;">
         <label for="fee-grid-search" class="visually-hidden">Rechercher une classe</label>
-        <i class="fas fa-search" style="color:#d97706;font-size:.85rem;"></i>
-        <input id="fee-grid-search" type="text" placeholder="Rechercher une classe..." autocomplete="off"
-               style="background:transparent;border:none;outline:none;min-width:220px;color:#44403c;">
+        <i class="fas fa-search"></i>
+        <input id="fee-grid-search" type="text" placeholder="Rechercher une classe..." autocomplete="off">
     </div>
-    <div>
-        <label for="fee-grid-cycle" class="visually-hidden">Filtrer par cycle</label>
-        <select id="fee-grid-cycle" style="padding:.5rem .75rem;background:#ffffff;border:1px solid #fde68a;border-radius:.5rem;color:#44403c;">
-            <option value="">Tous les cycles</option>
-            @foreach($levels->pluck('cycle')->unique()->filter() as $cycle)
-                <option value="{{ $cycle }}">{{ $levels->firstWhere('cycle', $cycle)->cycleLabel() }}</option>
-            @endforeach
-        </select>
-    </div>
-    <span class="ms-auto small text-muted"><span id="fee-grid-count">{{ $levels->count() }}</span> classe(s)</span>
+    <label for="fee-grid-cycle" class="visually-hidden">Filtrer par cycle</label>
+    <select id="fee-grid-cycle" class="search-select">
+        <option value="">Tous les cycles</option>
+        @foreach($levels->pluck('cycle')->unique()->filter() as $cycle)
+            <option value="{{ $cycle }}">{{ $levels->firstWhere('cycle', $cycle)->cycleLabel() }}</option>
+        @endforeach
+    </select>
+    <span class="ms-auto count-chip"><span id="fee-grid-count">{{ $levels->count() }}</span>&nbsp;classe(s)</span>
 </div>
 
 {{-- Tableau croisé — couleurs écrites en style inline pour être certain qu'elles s'appliquent --}}

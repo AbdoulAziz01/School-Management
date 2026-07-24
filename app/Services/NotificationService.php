@@ -165,7 +165,7 @@ final class NotificationService
     {
         $childName   = trim("{$student->first_name} {$student->last_name}") ?: $student->name;
         $parentName  = $student->parent_name ?? 'Parent/Tuteur';
-        $schoolName  = $student->school?->name ?? 'EduManager';
+        $schoolName  = $student->school?->name ?? 'AzelieEdu';
         $date        = $ctx['date'] ?? now()->translatedFormat('d/m/Y');
 
         return match ($event) {

@@ -259,71 +259,11 @@
 </div>
 
 @push('styles')
+@include('accounting.directeur.partials.design-system')
 <style>
-    .section-eyebrow {
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #b45309;
-        margin-bottom: 0.85rem;
-    }
-    .section-eyebrow i { margin-right: 0.4rem; opacity: 0.8; }
+    /* Extras propres à cette page (non repris dans le système partagé) */
     .section-eyebrow-finance { color: #78716c; }
-
-    .kpi-tile {
-        display: flex;
-        align-items: center;
-        gap: 0.85rem;
-        height: 100%;
-        padding: 1.1rem 1.15rem;
-        background: #fff;
-        border: 1px solid #fde68a;
-        border-radius: 16px;
-        box-shadow: 0 2px 10px rgba(245, 158, 11, 0.06);
-        text-decoration: none !important;
-        color: inherit !important;
-        transition: transform .18s ease, box-shadow .18s ease;
-    }
-    a.kpi-tile:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 24px rgba(245, 158, 11, 0.16);
-        border-color: #fbbf24;
-    }
-    .kpi-tile-static { box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
     .kpi-tile-lg .kpi-icon { width: 52px; height: 52px; font-size: 1.15rem; }
-
-    .kpi-icon {
-        flex: none;
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-    }
-    .kpi-icon-amber { background: #fef3c7; color: #b45309; }
-    .kpi-icon-slate { background: #f1f5f9; color: #475569; }
-    .kpi-icon-green { background: #dcfce7; color: #16a34a; }
-    .kpi-icon-red { background: #fee2e2; color: #dc2626; }
-    .kpi-icon-orange { background: #ffedd5; color: #ea580c; }
-    .kpi-icon-blue { background: #dbeafe; color: #2563eb; }
-    .kpi-icon-purple { background: #ede9fe; color: #7c3aed; }
-
-    .kpi-body { min-width: 0; flex: 1; }
-    .kpi-label {
-        font-size: 0.78rem;
-        color: #78716c;
-        font-weight: 500;
-        margin-bottom: 0.15rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .kpi-value { font-size: 1.5rem; font-weight: 700; color: #1c1917; line-height: 1.15; }
-    .kpi-value-sm { font-size: 1.15rem; }
-    .kpi-value-suffix { font-size: 0.85rem; font-weight: 500; color: #a8a29e; }
 </style>
 @endpush
 

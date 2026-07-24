@@ -23,7 +23,7 @@ final class AdminCardController extends Controller
         'header_subtitle' => 'Institut Supérieur · Carte Officielle',
         'show_nationality' => true,
         'show_dob'        => true,
-        'footer_brand'    => 'EduManager',
+        'footer_brand'    => 'AzelieEdu',
     ];
 
     // ── Liste de tous les élèves ──────────────────────────────────────────────
