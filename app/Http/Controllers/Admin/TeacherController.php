@@ -54,10 +54,26 @@ class TeacherController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        
-        $teachers = $query->orderBy('name')->paginate(15);
 
-        return view('admin.teachers.index', compact('teachers'));
+        // Filtre par classe(s) — un enseignant est retenu s'il est titulaire
+        // (primaire, assignedClasses) ou affecté matière+classe (collège/lycée,
+        // teacherAssignments) sur au moins une des classes cochées.
+        $selectedClassIds = array_map('intval', (array) $request->input('class_ids', []));
+        if (! empty($selectedClassIds)) {
+            $query->where(function ($q) use ($selectedClassIds) {
+                $q->whereHas('assignedClasses', fn ($aq) => $aq->whereIn('classes.id', $selectedClassIds))
+                    ->orWhereHas('teacherAssignments', fn ($aq) => $aq->active()->whereIn('class_id', $selectedClassIds));
+            });
+        }
+
+        $teachers = $query->orderBy('name')->paginate(15)->withQueryString();
+
+        $filterClasses = SchoolClass::with('level')
+            ->whereHas('academicYear', fn ($q) => $q->where('is_current', true))
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.teachers.index', compact('teachers', 'filterClasses', 'selectedClassIds'));
     }
 
     /**

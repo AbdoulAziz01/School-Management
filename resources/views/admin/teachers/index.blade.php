@@ -18,17 +18,52 @@
                         </a>
                     </div>
                     <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <form action="{{ route('admin.teachers.index') }}" method="GET" class="d-flex gap-2">
+                        <form action="{{ route('admin.teachers.index') }}" method="GET" class="d-flex gap-2 align-items-start">
                             <input type="text" name="search" class="form-control form-control-sm" placeholder="Rechercher..." value="{{ request('search') }}" style="min-width: 200px;">
                             <select name="status" class="form-select form-select-sm" style="min-width: 120px;">
                                 <option value="">Tous les statuts</option>
                                 <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approuvé</option>
                                 <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>En attente</option>
                             </select>
+
+                            {{-- Checklist de classes : filtre les enseignants affectés à une ou plusieurs classes cochées --}}
+                            <div class="dropdown">
+                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"
+                                        data-bs-auto-close="outside" aria-expanded="false" style="min-width: 140px;">
+                                    <i class="fas fa-chalkboard me-1"></i>
+                                    Classe{{ count($selectedClassIds ?? []) > 1 ? 's' : '' }}
+                                    @if(!empty($selectedClassIds))
+                                        <span class="badge bg-primary ms-1">{{ count($selectedClassIds) }}</span>
+                                    @endif
+                                </button>
+                                <div class="dropdown-menu p-2" style="max-height: 320px; overflow-y: auto; min-width: 240px;">
+                                    @if($filterClasses->isEmpty())
+                                        <div class="text-muted small px-2">Aucune classe pour l'année courante.</div>
+                                    @else
+                                        @foreach($filterClasses as $class)
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="class_ids[]" value="{{ $class->id }}"
+                                                       id="filter_class_{{ $class->id }}"
+                                                       {{ in_array($class->id, $selectedClassIds ?? []) ? 'checked' : '' }}>
+                                                <label class="form-check-label small" for="filter_class_{{ $class->id }}">
+                                                    {{ $class->name }}
+                                                    <span class="text-muted">{{ $class->level->name ?? '' }}</span>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                        <hr class="my-2">
+                                        <button type="submit" class="btn btn-sm btn-primary w-100">
+                                            <i class="fas fa-filter me-1"></i> Appliquer
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+
                             <button type="submit" class="btn btn-sm btn-primary">
                                 <i class="fas fa-search"></i>
                             </button>
-                            @if(request('search') || request('status'))
+                            @if(request('search') || request('status') || !empty($selectedClassIds))
                                 <a href="{{ route('admin.teachers.index') }}" class="btn btn-sm btn-outline-secondary">
                                     <i class="fas fa-times"></i>
                                 </a>

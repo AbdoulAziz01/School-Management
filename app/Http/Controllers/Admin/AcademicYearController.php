@@ -293,21 +293,25 @@ class AcademicYearController extends Controller
         return back()->with('success', 'L\'année scolaire « '.$academicYear->name.' » n\'est plus marquée comme terminée.');
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * end_date est obligatoire : le module Comptabilité (StudentInvoiceService)
+     * s'en sert pour générer toutes les mensualités de l'année scolaire à
+     * l'avance. Une année sans end_date passe silencieusement en 0 facture
+     * de mensualité générée (aucun avertissement ailleurs dans l'appli) —
+     * on préfère bloquer la saisie ici plutôt que de laisser ce piège.
+     *
+     * @return array<string, mixed>
+     */
     private function validateAcademicYear(Request $request): array
     {
-        $validated = $request->validate([
+        return $request->validate([
             'name' => 'required|string|max:255',
             'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after:start_date',
+            'end_date' => 'required|date|after:start_date',
             'is_current' => 'sometimes|boolean',
+        ], [
+            'end_date.required' => 'La date de fin est obligatoire : elle sert à générer les mensualités de toute l\'année.',
         ]);
-
-        if (empty($validated['end_date'])) {
-            $validated['end_date'] = null;
-        }
-
-        return $validated;
     }
 
     private function runYearTransition(?AcademicYear $previousYear, AcademicYear $newYear): string

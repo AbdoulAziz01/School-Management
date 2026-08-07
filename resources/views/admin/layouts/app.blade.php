@@ -239,7 +239,61 @@
             border-left: 4px solid #fbbf24;
             color: #92400e;
         }
-        
+
+        /* Notifications flash — toast discret en bas à droite, disparaît seul */
+        .toast-notifications-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+            max-width: min(360px, calc(100vw - 40px));
+        }
+        .toast-notification {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+            font-size: 14px;
+            line-height: 1.4;
+            border-left: 4px solid #f59e0b;
+            animation: toast-notification-in 0.25s ease-out;
+        }
+        .toast-notification.toast-notification-success { border-left-color: #16a34a; }
+        .toast-notification.toast-notification-error { border-left-color: #dc2626; }
+        .toast-notification.toast-notification-warning { border-left-color: #d97706; }
+        .toast-notification.toast-notification-info { border-left-color: #fbbf24; }
+        .toast-notification i { margin-top: 2px; }
+        .toast-notification span { flex: 1; }
+        .toast-notification .toast-notification-close {
+            background: none;
+            border: none;
+            font-size: 16px;
+            line-height: 1;
+            color: #92400e;
+            opacity: 0.6;
+            cursor: pointer;
+            padding: 0;
+        }
+        .toast-notification .toast-notification-close:hover { opacity: 1; }
+        .toast-notification.toast-notification-hide {
+            animation: toast-notification-out 0.2s ease-in forwards;
+        }
+        @keyframes toast-notification-in {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toast-notification-out {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(12px); }
+        }
+
         /* Button Styles - Palette Unifiée */
         .btn-primary {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
@@ -634,31 +688,36 @@
             @include($navbarView ?? 'admin.components.navbar')
 
             <div class="admin-page-body">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            @if(session('info'))
-                <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    <i class="fas fa-info-circle me-2"></i> {{ session('info') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            @if(session('warning'))
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-triangle me-2"></i> {{ session('warning') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            @if(session('success') || session('info') || session('error') || session('warning'))
+                <div class="toast-notifications-container">
+                    @if(session('success'))
+                        <div class="toast-notification toast-notification-success" role="alert">
+                            <i class="fas fa-check-circle"></i>
+                            <span>{{ session('success') }}</span>
+                            <button type="button" class="toast-notification-close" aria-label="Fermer">&times;</button>
+                        </div>
+                    @endif
+                    @if(session('info'))
+                        <div class="toast-notification toast-notification-info" role="alert">
+                            <i class="fas fa-info-circle"></i>
+                            <span>{{ session('info') }}</span>
+                            <button type="button" class="toast-notification-close" aria-label="Fermer">&times;</button>
+                        </div>
+                    @endif
+                    @if(session('error'))
+                        <div class="toast-notification toast-notification-error" role="alert">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>{{ session('error') }}</span>
+                            <button type="button" class="toast-notification-close" aria-label="Fermer">&times;</button>
+                        </div>
+                    @endif
+                    @if(session('warning'))
+                        <div class="toast-notification toast-notification-warning" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>{{ session('warning') }}</span>
+                            <button type="button" class="toast-notification-close" aria-label="Fermer">&times;</button>
+                        </div>
+                    @endif
                 </div>
             @endif
 
@@ -754,6 +813,18 @@
             setTimeout(function () {
                 bootstrap.Alert.getOrCreateInstance(alertEl).close();
             }, 5000);
+        });
+
+        // Notifications flash (succès/erreur/etc.) : toast en bas à droite,
+        // disparaît seul après 10s ou au clic sur la croix.
+        document.querySelectorAll('.toast-notification').forEach(function (toastEl) {
+            var dismiss = function () {
+                toastEl.classList.add('toast-notification-hide');
+                setTimeout(function () { toastEl.remove(); }, 200);
+            };
+            var closeBtn = toastEl.querySelector('.toast-notification-close');
+            if (closeBtn) closeBtn.addEventListener('click', dismiss);
+            setTimeout(dismiss, 10000);
         });
     </script>
     

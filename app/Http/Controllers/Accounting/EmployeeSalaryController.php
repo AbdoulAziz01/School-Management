@@ -20,6 +20,9 @@ class EmployeeSalaryController extends Controller
         ...User::ROLE_TEACHER_ALIASES,
         User::ROLE_SURVEILLANT,
         User::ROLE_ADMIN,
+        User::ROLE_COMPTABLE,
+        User::ROLE_CAISSIER,
+        User::ROLE_DIRECTEUR,
     ];
 
     /** @var array<string, list<string>> filtre du menu "Gestion des salaires" par catégorie de personnel */
@@ -27,6 +30,8 @@ class EmployeeSalaryController extends Controller
         'teachers' => ['teacher', 'professeur'],
         'surveillants' => ['surveillant'],
         'admin' => ['admin'],
+        'accounting' => [User::ROLE_COMPTABLE, User::ROLE_CAISSIER],
+        'direction' => [User::ROLE_DIRECTEUR],
     ];
 
     public function __construct(

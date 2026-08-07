@@ -456,11 +456,20 @@ Route::prefix('admin')->middleware(['auth', 'school.admin', 'school.active'])->g
 Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.role:directeur'])
     ->prefix('directeur')->name('directeur.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Accounting\DirecteurDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/refresh', [\App\Http\Controllers\Accounting\DirecteurDashboardController::class, 'refresh'])->name('dashboard.refresh');
         Route::get('/ledger/export', [\App\Http\Controllers\Accounting\DirecteurDashboardController::class, 'exportLedger'])->name('ledger.export');
         Route::prefix('profile')->name('profile.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'edit'])->name('edit');
             Route::put('/', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'update'])->name('update');
             Route::post('/password', [\App\Http\Controllers\Accounting\AccountingProfileController::class, 'updatePassword'])->name('update-password');
+        });
+
+        // Dates (début/fin) de l'année scolaire courante — déterminent les
+        // mensualités générées par StudentInvoiceService. Ne couvre pas la
+        // création/clôture d'années scolaires, réservée à l'Admin.
+        Route::prefix('academic-year')->name('academic-year.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Accounting\AcademicYearSettingsController::class, 'edit'])->name('edit');
+            Route::put('/', [\App\Http\Controllers\Accounting\AcademicYearSettingsController::class, 'update'])->name('update');
         });
 
         // Paramétrage financier (Phase 6.2) — tableau croisé Niveau × Type de
@@ -520,6 +529,8 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::get('/teachers/{teacher}', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'teachersShow'])->name('teachers.show');
             Route::get('/students', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'studentsIndex'])->name('students.index');
             Route::get('/students/{student}', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'studentsShow'])->name('students.show');
+            Route::get('/attendance', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'attendanceToday'])->name('attendance.today');
+            Route::get('/students-in-difficulty', [\App\Http\Controllers\Accounting\SchoolBrowserController::class, 'studentsInDifficulty'])->name('students.difficulty');
         });
 
         // Personnel & élèves — vue d'ensemble pour le directeur, avec création
@@ -528,6 +539,7 @@ Route::middleware(['auth', 'school.active', 'module:accounting', 'accounting.rol
             Route::get('/', [\App\Http\Controllers\Accounting\PersonnelController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Accounting\PersonnelController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Accounting\PersonnelController::class, 'store'])->name('store');
+            Route::post('/staff/{staff}/regenerate-credentials', [\App\Http\Controllers\Accounting\PersonnelController::class, 'regenerateCredentials'])->name('regenerate-credentials');
             Route::get('/{group}', [\App\Http\Controllers\Accounting\PersonnelController::class, 'show'])->name('show');
         });
 

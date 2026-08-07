@@ -61,7 +61,12 @@
                                     </div>
                                 </td>
                                 <td>{{ number_format($payment->amount, 0, ',', ' ') }} FCFA</td>
-                                <td class="text-muted">{{ $payment->methodLabel() }}</td>
+                                <td class="text-muted">
+                                    {{ $payment->methodLabel() }}
+                                    @if($payment->payment_reference)
+                                        <div style="font-size:.75rem">{{ $payment->referenceLabel() }} : {{ $payment->payment_reference }}@if($payment->payment_bank) — {{ $payment->payment_bank }}@endif</div>
+                                    @endif
+                                </td>
                                 <td class="text-muted">{{ $payment->recordedBy->name }}</td>
                                 <td class="text-muted">{{ $payment->paid_at->format('d/m/Y H:i') }}</td>
                                 <td>

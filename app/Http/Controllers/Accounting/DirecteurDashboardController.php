@@ -38,6 +38,26 @@ class DirecteurDashboardController extends Controller
         ]);
     }
 
+    /**
+     * Rafraîchissement périodique (AJAX) des tuiles Présence du jour /
+     * Vision académique / Finances, sans recharger toute la page — les
+     * graphiques et listes (evolution/recentOperations/expenseBreakdown/
+     * topDebtors) restent, eux, chargés au prochain rechargement complet.
+     */
+    public function refresh(Request $request)
+    {
+        $school = School::find($request->user()->school_id);
+
+        return response()->json([
+            'attendance_today' => $this->overview->attendanceToday($school),
+            'academic_snapshot' => $this->overview->academicSnapshot($school),
+            'summary' => $this->dashboard->summary($school),
+            'payment_rate' => $this->dashboard->paymentRate($school),
+            'pending_payroll' => $this->dashboard->pendingPayroll($school),
+            'refreshed_at' => now()->format('H:i:s'),
+        ]);
+    }
+
     public function exportLedger(Request $request)
     {
         $school = School::find($request->user()->school_id);

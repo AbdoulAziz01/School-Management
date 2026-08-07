@@ -37,7 +37,12 @@
                                 <td><code>{{ $payment->receipt_number }}</code></td>
                                 <td>{{ $payment->student->name }}</td>
                                 <td>{{ number_format($payment->amount, 0, ',', ' ') }} FCFA</td>
-                                <td>{{ $payment->methodLabel() }}</td>
+                                <td>
+                                    {{ $payment->methodLabel() }}
+                                    @if($payment->payment_reference)
+                                        <div class="text-muted" style="font-size:.75rem">{{ $payment->referenceLabel() }} : {{ $payment->payment_reference }}@if($payment->payment_bank) — {{ $payment->payment_bank }}@endif</div>
+                                    @endif
+                                </td>
                                 <td>{{ $payment->paid_at->format('d/m/Y H:i') }}</td>
                                 <td>
                                     @if($payment->isCancelled())

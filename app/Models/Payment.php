@@ -38,12 +38,28 @@ class Payment extends Model
         self::METHOD_CHEQUE => 'Chèque',
     ];
 
+    /** Modes de paiement exigeant une référence (numéro de chèque, réf. virement, ID transaction mobile money). */
+    public const METHODS_REQUIRING_REFERENCE = [
+        self::METHOD_CHEQUE,
+        self::METHOD_VIREMENT,
+        self::METHOD_WAVE,
+        self::METHOD_ORANGE_MONEY,
+    ];
+
+    /** Modes de paiement exigeant le nom de la banque. */
+    public const METHODS_REQUIRING_BANK = [
+        self::METHOD_CHEQUE,
+        self::METHOD_VIREMENT,
+    ];
+
     protected $fillable = [
         'school_id',
         'receipt_number',
         'student_id',
         'amount',
         'payment_method',
+        'payment_reference',
+        'payment_bank',
         'paid_at',
         'cash_session_id',
         'recorded_by',
@@ -97,6 +113,27 @@ class Payment extends Model
     public function methodLabel(): string
     {
         return self::METHOD_LABELS[$this->payment_method] ?? $this->payment_method;
+    }
+
+    /** Libellé du champ "référence" adapté au mode de paiement (numéro de chèque, réf. virement, ID transaction). */
+    public function referenceLabel(): string
+    {
+        return match ($this->payment_method) {
+            self::METHOD_CHEQUE => 'Numéro de chèque',
+            self::METHOD_VIREMENT => 'Référence de virement',
+            self::METHOD_WAVE, self::METHOD_ORANGE_MONEY => 'ID de transaction',
+            default => 'Référence',
+        };
+    }
+
+    public function requiresReference(): bool
+    {
+        return in_array($this->payment_method, self::METHODS_REQUIRING_REFERENCE, true);
+    }
+
+    public function requiresBank(): bool
+    {
+        return in_array($this->payment_method, self::METHODS_REQUIRING_BANK, true);
     }
 
     public function isCancelled(): bool

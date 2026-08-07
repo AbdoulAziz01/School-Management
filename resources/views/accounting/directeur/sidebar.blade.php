@@ -34,6 +34,12 @@
                 <span>Frais scolaires</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.academic-year.edit') }}" class="nav-link {{ request()->routeIs('directeur.academic-year.*') ? 'active' : '' }}">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Année scolaire</span>
+            </a>
+        </li>
     </ul>
 
     <div class="menu-separator"></div>
@@ -58,6 +64,18 @@
             <a href="{{ route('directeur.salaries.index', ['role_group' => 'admin']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.index') && request('role_group') === 'admin' ? 'active' : '' }}">
                 <i class="fas fa-user-tie"></i>
                 <span>Personnel administratif</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'accounting']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.index') && request('role_group') === 'accounting' ? 'active' : '' }}">
+                <i class="fas fa-cash-register"></i>
+                <span>Comptables & Caissiers</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('directeur.salaries.index', ['role_group' => 'direction']) }}" class="nav-link {{ request()->routeIs('directeur.salaries.index') && request('role_group') === 'direction' ? 'active' : '' }}">
+                <i class="fas fa-crown"></i>
+                <span>Direction</span>
             </a>
         </li>
         <li class="nav-item">

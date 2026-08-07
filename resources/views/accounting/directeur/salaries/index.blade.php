@@ -3,14 +3,25 @@
 @section('title', 'Salaires du personnel')
 
 @php
-    $roleLabels = ['teacher' => 'Enseignant', 'professeur' => 'Enseignant', 'surveillant' => 'Surveillant', 'admin' => 'Administrateur'];
-    $roleGroupLabels = ['teachers' => 'Enseignants', 'surveillants' => 'Surveillants', 'admin' => 'Administration'];
+    $roleLabels = ['teacher' => 'Enseignant', 'professeur' => 'Enseignant', 'surveillant' => 'Surveillant', 'admin' => 'Administrateur', 'comptable' => 'Comptable', 'caissier' => 'Caissier', 'directeur' => 'Directeur'];
+    $roleGroupLabels = ['teachers' => 'Enseignants', 'surveillants' => 'Surveillants', 'admin' => 'Administration', 'accounting' => 'Comptables & Caissiers', 'direction' => 'Direction'];
 @endphp
 
 @section('content')
 <div class="mb-4">
     <h1 class="h3 mb-0"><i class="fas fa-money-check-alt me-2"></i>Salaires du personnel @if($roleGroup && isset($roleGroupLabels[$roleGroup])) — {{ $roleGroupLabels[$roleGroup] }} @endif</h1>
-    <p class="text-muted mb-0">Enseignants, surveillants et administratifs</p>
+    <p class="text-muted mb-0">Direction, enseignants, surveillants, administratifs, comptables et caissiers</p>
+</div>
+
+{{-- Filtre rapide par catégorie de personnel (miroir des liens de la barre latérale) --}}
+<div class="filter-pills mb-3">
+    <a href="{{ route('directeur.salaries.index', array_filter(['search' => request('search')])) }}" class="filter-pill {{ ! $roleGroup ? 'is-active' : '' }}">Tous</a>
+    @foreach($roleGroupLabels as $group => $label)
+        <a href="{{ route('directeur.salaries.index', array_filter(['role_group' => $group, 'search' => request('search')])) }}"
+           class="filter-pill {{ $roleGroup === $group ? 'is-active' : '' }}">
+            {{ $label }}
+        </a>
+    @endforeach
 </div>
 
 <form method="GET" action="{{ route('directeur.salaries.index') }}" class="search-bar mb-4">

@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>AzelieEdu — Présentation commerciale</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #1c2536;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  :root{
+    --navy: #0b1f3a;
+    --navy-2: #142c52;
+    --gold: #c9a227;
+    --gold-light: #e6c869;
+    --teal: #0e9488;
+    --gray: #5b6478;
+    --line: #e2e6ee;
+    --bg-soft: #f6f7fb;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 16mm 16mm 14mm 16mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ---------- Cover ---------- */
+  .cover {
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-2) 55%, #0e2547 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20mm 18mm;
+  }
+  .cover .brandrow { display:flex; align-items:center; gap:14px; }
+  .cover .brandrow img { height: 42px; }
+  .cover .eyebrow {
+    letter-spacing: 3px; font-size: 11px; text-transform: uppercase;
+    color: var(--gold-light); font-weight: 600; margin-bottom: 14px;
+  }
+  .cover h1 {
+    font-size: 40px; line-height: 1.15; margin: 0 0 14px 0; font-weight: 800;
+    max-width: 140mm;
+  }
+  .cover .subtitle { font-size: 16px; color: #cfd8ec; max-width: 120mm; line-height: 1.5; }
+  .cover .slogan {
+    margin-top: 26px; font-size: 15px; color: var(--gold-light); font-weight: 600;
+    border-left: 3px solid var(--gold); padding-left: 12px;
+  }
+  .cover .meta {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-top: 1px solid rgba(255,255,255,0.18); padding-top: 14px; font-size: 11px; color: #a9b6d4;
+  }
+  .cover .meta div span { display:block; color:#fff; font-size:12px; font-weight:600; margin-top:2px;}
+
+  /* ---------- Generic content page ---------- */
+  .kicker {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold); font-weight: 700; margin-bottom: 6px;
+  }
+  h2.title { font-size: 26px; color: var(--navy); margin: 0 0 4px 0; font-weight: 800; }
+  .lede { font-size: 13.5px; color: var(--gray); max-width: 155mm; margin: 6px 0 18px 0; line-height: 1.55; }
+  .rule { height: 3px; width: 46px; background: var(--gold); margin: 10px 0 18px 0; border-radius: 2px; }
+
+  h3.sub { font-size: 15px; color: var(--navy); margin: 18px 0 8px 0; font-weight: 700; }
+  p { font-size: 12.5px; line-height: 1.65; color: #333c4c; margin: 0 0 10px 0; }
+  ul.clean { margin: 0 0 10px 0; padding-left: 0; list-style:none; }
+  ul.clean li {
+    font-size: 12.5px; line-height: 1.55; color: #333c4c; margin-bottom: 7px;
+    padding-left: 18px; position: relative;
+  }
+  ul.clean li::before {
+    content: ""; position: absolute; left: 0; top: 6px; width: 7px; height: 7px;
+    background: var(--gold); border-radius: 50%;
+  }
+
+  .footer-bar {
+    position: absolute; bottom: 8mm; left: 16mm; right: 16mm;
+    display: flex; justify-content: space-between; font-size: 9px; color: #9aa3b5;
+    border-top: 1px solid var(--line); padding-top: 6px;
+  }
+
+  /* cards */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .card {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card h4 { margin: 0 0 6px 0; font-size: 13.5px; color: var(--navy); font-weight: 700; }
+  .card p { font-size: 11.5px; margin: 0; color: #4a5164; }
+  .card .benefit {
+    margin-top: 8px; font-size: 10.5px; color: var(--teal); font-weight: 700;
+  }
+
+  .role-card {
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: #fff;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .role-dot {
+    width: 26px; height: 26px; border-radius: 8px; background: var(--navy); flex: 0 0 26px;
+    display:flex; align-items:center; justify-content:center; color: var(--gold-light); font-size: 12px; font-weight:800;
+  }
+  .role-card h4 { margin: 0 0 3px 0; font-size: 12.5px; color: var(--navy); }
+  .role-card p { margin: 0; font-size: 10.8px; color: #566; }
+
+  /* screenshot placeholder */
+  .shot {
+    border: 2px dashed #b9c2d6; border-radius: 10px; background: #f1f3f8;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #7c869c; text-align: center; margin: 10px 0 6px 0;
+  }
+  .shot .lbl { font-size: 11px; letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; color: #8b93a8; }
+  .shot .sub-lbl { font-size: 10px; color: #a3aabd; margin-top: 4px; }
+  .shot-lg { height: 92mm; }
+  .shot-md { height: 60mm; }
+  .shot-row { display: flex; gap: 12px; }
+  .shot-row .shot { flex: 1; }
+  .caption { font-size: 10.5px; color: var(--gray); font-style: italic; margin: 4px 0 14px 0; text-align: center; }
+
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+  table.cmp th { background: var(--navy); color: #fff; text-align: left; padding: 9px 12px; font-size: 11.5px; }
+  table.cmp td { padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  table.cmp tr:nth-child(even) td { background: #f8f9fc; }
+  table.cmp td.old { color: #8a7a1d; }
+  table.cmp td.new { color: var(--teal); font-weight: 600; }
+
+  .tag {
+    display: inline-block; font-size: 9.5px; font-weight: 700; padding: 3px 9px;
+    border-radius: 20px; background: rgba(14,148,136,0.12); color: var(--teal); letter-spacing: .5px;
+  }
+  .tag.future { background: rgba(201,162,39,0.15); color: #8a6d10; }
+
+  .num-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: var(--gold-light);
+    font-size: 11px; font-weight: 800; margin-right: 8px;
+  }
+  .why-row { display:flex; align-items:flex-start; gap: 10px; margin-bottom: 12px; }
+  .why-row .txt h4 { margin: 0 0 3px 0; font-size: 13px; color: var(--navy); }
+  .why-row .txt p { margin: 0; font-size: 11.5px; color: #4a5164; }
+
+  .pagefoot-num { position:absolute; bottom: 8mm; right: 16mm; font-size: 9px; color:#9aa3b5; }
+
+  /* closing page */
+  .closing {
+    background: linear-gradient(160deg, var(--navy) 0%, #0e2547 100%);
+    color: #fff; display:flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
+  }
+  .closing h2 { font-size: 30px; color: #fff; margin-bottom: 10px; }
+  .closing p.big { font-size: 14px; color: #cfd8ec; max-width: 120mm; margin: 0 auto 26px auto; line-height:1.6; }
+  .closing .cta-box {
+    border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 18px 26px;
+    background: rgba(255,255,255,0.05); max-width: 130mm;
+  }
+  .closing .cta-box h4 { color: var(--gold-light); margin: 0 0 10px 0; font-size: 14px; }
+  .closing .cta-box ul { text-align: left; padding-left: 18px; margin: 0; font-size: 12px; color: #dfe6f4; line-height: 1.8; }
+
+  .section-head { display:flex; align-items:baseline; justify-content: space-between; }
+  .badge-idx { font-size: 34px; font-weight: 800; color: var(--line); }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 — COUVERTURE -->
+<section class="page cover">
+  <div>
+    <div class="brandrow">
+      <img src="images/azeliedu-logo-icon.png" alt="logo" />
+    </div>
+    <div class="eyebrow" style="margin-top:56px;">Présentation institutionnelle &amp; commerciale</div>
+    <h1>PLATEFORME DE GESTION<br>D'ÉTABLISSEMENTS SCOLAIRES</h1>
+    <p class="subtitle">Une solution numérique pour piloter, organiser et moderniser votre établissement — de l'inscription des élèves à la gestion financière, en passant par le suivi pédagogique et l'apprentissage numérique.</p>
+    <div class="slogan">Un seul environnement. Toute la vie de votre établissement.</div>
+  </div>
+  <div class="meta">
+    <div>Document&nbsp;<span>Présentation commerciale</span></div>
+    <div>Version&nbsp;<span>1.0</span></div>
+    <div>Date&nbsp;<span>Août 2026</span></div>
+    <div>Destinataire&nbsp;<span>Direction d'établissement</span></div>
+  </div>
+</section>
+
+<!-- PAGE 2 -->
+<section class="page">
+  <div class="kicker">Constat</div>
+  <h2 class="title">L'établissement scolaire à l'ère du numérique</h2>
+  <div class="rule"></div>
+  <p class="lede">Diriger un établissement scolaire aujourd'hui, c'est gérer simultanément des inscriptions, des classes, des notes, des présences, des finances et une communication constante avec les familles — souvent avec des outils dispersés qui ne se parlent pas entre eux.</p>
+
+  <h3 class="sub">Les difficultés les plus courantes</h3>
+  <div class="grid2">
+    <ul class="clean">
+      <li>Informations dispersées entre cahiers, tableurs et documents papier</li>
+      <li>Gestion administrative chronophage et répétitive</li>
+      <li>Suivi des élèves difficile à consolider sur l'année</li>
+    </ul>
+    <ul class="clean">
+      <li>Gestion financière complexe, peu de traçabilité</li>
+      <li>Communication fragmentée avec les familles</li>
+      <li>Manque de visibilité globale pour la direction</li>
+    </ul>
+  </div>
+
+  <h3 class="sub">Une réponse simple</h3>
+  <div class="card" style="margin-top:6px;">
+    <h4>Une seule plateforme pour centraliser les principales activités de l'établissement</h4>
+    <p>Élèves, enseignants, classes, notes, présences, finances, communication et ressources pédagogiques réunis dans un même environnement numérique, accessible selon le rôle de chaque utilisateur.</p>
+  </div>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>2 / 24</span></div>
+</section>
+
+<!-- PAGE 3 — NOTRE SOLUTION -->
+<section class="page">
+  <div class="kicker">Notre solution</div>
+  <h2 class="title">Un écosystème numérique pour votre établissement</h2>
+  <div class="rule"></div>
+  <p class="lede">AzelieEdu n'est pas un simple logiciel de gestion administrative : c'est un environnement numérique complet qui réunit l'ensemble des acteurs de votre établissement autour des mêmes données, à jour en permanence.</p>
+
+  <div class="grid3">
+    <div class="card"><h4>Pilotage &amp; administration</h4><p>Direction, gestion des élèves, des enseignants, des classes et des années scolaires.</p></div>
+    <div class="card"><h4>Vie scolaire</h4><p>Présences, retards, surveillance et suivi disciplinaire du quotidien.</p></div>
+    <div class="card"><h4>Pédagogie</h4><p>Notes, évaluations, bulletins officiels et emplois du temps.</p></div>
+    <div class="card"><h4>Finances</h4><p>Comptabilité, caisse, frais de scolarité, salaires et reçus.</p></div>
+    <div class="card"><h4>Apprentissage numérique</h4><p>Cours en ligne, devoirs, quiz et classes virtuelles.</p></div>
+    <div class="card"><h4>Communication</h4><p>Notifications automatiques vers les familles et le personnel.</p></div>
+  </div>
+
+  <h3 class="sub">Des espaces adaptés à chaque utilisateur</h3>
+  <p>Chaque acteur de l'établissement — direction, enseignant, élève, personnel financier — dispose de son propre espace, avec uniquement les informations et les actions qui le concernent.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>3 / 24</span></div>
+</section>
+
+<!-- PAGE 4 — CHAQUE ACTEUR -->
+<section class="page">
+  <div class="kicker">Organisation</div>
+  <h2 class="title">Une plateforme pensée pour chaque acteur</h2>
+  <div class="rule"></div>
+
+  <div class="grid2">
+    <div class="role-card"><div class="role-dot">D</div><div><h4>Direction &amp; administration</h4><p>Piloter l'établissement, gérer les élèves, enseignants, classes et disposer d'une vision globale de l'activité.</p></div></div>
+    <div class="role-card"><div class="role-dot">S</div><div><h4>Surveillance &amp; vie scolaire</h4><p>Suivre les présences, absences, retards et la vie scolaire au quotidien.</p></div></div>
+    <div class="role-card"><div class="role-dot">E</div><div><h4>Enseignants</h4><p>Gérer les classes, saisir les notes, faire l'appel et publier des ressources pédagogiques.</p></div></div>
+    <div class="role-card"><div class="role-dot">É</div><div><h4>Élèves</h4><p>Accéder à leur espace scolaire, leurs notes, bulletins, cours et leur carte scolaire numérique.</p></div></div>
+    <div class="role-card"><div class="role-dot">C</div><div><h4>Comptabilité</h4><p>Suivre les finances, les paiements, les dépenses et les salaires de l'établissement.</p></div></div>
+    <div class="role-card"><div class="role-dot">$</div><div><h4>Caisse</h4><p>Gérer les encaissements quotidiens et assurer la traçabilité des transactions.</p></div></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h4>Une console de direction générale, pour les groupes scolaires</h4>
+    <p>Pour les promoteurs gérant plusieurs établissements, une console dédiée permet de superviser l'ensemble du réseau d'écoles depuis un même accès.</p>
+  </div>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>4 / 24</span></div>
+</section>
+
+<!-- PAGE 5 — DASHBOARD DIRECTION -->
+<section class="page">
+  <div class="kicker">Pilotage</div>
+  <h2 class="title">Le tableau de bord de direction</h2>
+  <div class="rule"></div>
+  <p class="lede">Dès la connexion, la direction accède à une vision synthétique de son établissement : effectifs, personnel, classes et activité récente, réunis sur un même écran.</p>
+
+  <div class="shot shot-lg">
+    <div class="lbl">Espace réservé — Capture du tableau de bord de direction</div>
+    <div class="sub-lbl">Format écran large recommandé</div>
+  </div>
+  <p class="caption">Figure 1 — Tableau de bord de direction offrant une vue synthétique des principaux indicateurs de l'établissement.</p>
+
+  <ul class="clean">
+    <li>Effectifs élèves, enseignants et classes en un coup d'œil</li>
+    <li>Raccourcis directs vers les principaux modules de gestion</li>
+    <li>Synthèses académiques de l'établissement</li>
+  </ul>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>5 / 24</span></div>
+</section>
+
+<!-- PAGE 6 — GESTION DES ELEVES -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Gestion des élèves</h2>
+  <div class="rule"></div>
+  <p class="lede">Chaque élève dispose d'un dossier centralisé, de son inscription jusqu'à son parcours complet dans l'établissement.</p>
+
+  <div class="why-row"><span class="num-badge">1</span><div class="txt"><h4>Inscription et fiche élève complète</h4><p>Informations personnelles, classe, photo, documents et historique regroupés au même endroit. Bénéfice : un dossier élève fiable et toujours accessible, sans recherche dans des classeurs papier.</p></div></div>
+  <div class="why-row"><span class="num-badge">2</span><div class="txt"><h4>Import en masse depuis un fichier Excel</h4><p>Un assistant guidé permet d'intégrer une population entière d'élèves en quelques étapes. Bénéfice : un gain de temps considérable lors des rentrées scolaires.</p></div></div>
+  <div class="why-row"><span class="num-badge">3</span><div class="txt"><h4>Carte scolaire numérique avec QR code</h4><p>Chaque élève dispose d'une carte scolaire vérifiable publiquement. Bénéfice : une preuve d'identité fiable et infalsifiable.</p></div></div>
+  <div class="why-row"><span class="num-badge">4</span><div class="txt"><h4>Suivi de classe et de parcours</h4><p>Affectation aux classes, historique de notes et de présences consultables à tout moment. Bénéfice : une continuité de suivi d'une année à l'autre.</p></div></div>
+
+  <div class="shot-row" style="margin-top:10px;">
+    <div class="shot shot-md"><div class="lbl">Capture — Liste des élèves</div></div>
+    <div class="shot shot-md"><div class="lbl">Capture — Profil d'un élève</div></div>
+  </div>
+  <p class="caption">Figure 2 — Liste des élèves et fiche individuelle détaillée.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>6 / 24</span></div>
+</section>
+
+<!-- PAGE 7 — ENSEIGNANTS -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Gestion des enseignants et du personnel</h2>
+  <div class="rule"></div>
+  <p class="lede">La plateforme organise l'ensemble du corps enseignant : profils, affectations aux classes et matières, et suivi de leur activité pédagogique.</p>
+
+  <ul class="clean">
+    <li>Fiches enseignants complètes, avec import en masse possible</li>
+    <li>Affectation aux classes et aux matières enseignées</li>
+    <li>Génération automatique des accès et identifiants de connexion</li>
+    <li>Consultation de l'emploi du temps par enseignant</li>
+  </ul>
+
+  <div class="card">
+    <h4>Fonctionnalité → Utilité → Bénéfice</h4>
+    <p><strong>Affectation classes/matières</strong> → chaque enseignant voit uniquement ses propres classes → <span class="benefit">une organisation claire, sans confusion entre enseignants.</span></p>
+  </div>
+
+  <div class="shot shot-md" style="margin-top:14px;"><div class="lbl">Capture — Fiche enseignant</div></div>
+  <p class="caption">Figure 3 — Profil enseignant avec ses classes, matières et emploi du temps.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>7 / 24</span></div>
+</section>
+
+<!-- PAGE 8 — CLASSES & VIE SCOLAIRE -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Gestion des classes et de la vie scolaire</h2>
+  <div class="rule"></div>
+  <p class="lede">Organisez vos niveaux, classes et emplois du temps, et gardez une vue d'ensemble sur la vie scolaire quotidienne.</p>
+
+  <div class="grid2">
+    <ul class="clean">
+      <li>Création et organisation des classes par niveau et année scolaire</li>
+      <li>Attribution des matières enseignées par classe</li>
+      <li>Emplois du temps consultables par tous les acteurs concernés</li>
+    </ul>
+    <ul class="clean">
+      <li>Suivi de la vie scolaire au quotidien</li>
+      <li>Statistiques d'évolution par classe</li>
+      <li>Passage automatisé des élèves d'une classe à l'autre en fin d'année</li>
+    </ul>
+  </div>
+
+  <div class="shot shot-md"><div class="lbl">Capture — Vue d'une classe</div></div>
+  <p class="caption">Figure 4 — Vue d'ensemble d'une classe : effectif, matières et statistiques.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>8 / 24</span></div>
+</section>
+
+<!-- PAGE 9 — NOTES ET SUIVI ACADEMIQUE -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Notes, évaluations et suivi académique</h2>
+  <div class="rule"></div>
+  <p class="lede">La saisie des notes et la production des bulletins sont entièrement digitalisées, avec un même moteur de calcul garantissant la cohérence des résultats.</p>
+
+  <ul class="clean">
+    <li>Saisie des notes par matière et par période, adaptée à chaque niveau</li>
+    <li>Calcul automatique des moyennes et de la moyenne générale</li>
+    <li>Génération automatique des bulletins semestriels et annuels</li>
+    <li>Bulletin vérifiable par QR code, pour garantir son authenticité</li>
+    <li>Export des résultats pour archivage ou analyse</li>
+  </ul>
+
+  <div class="shot-row">
+    <div class="shot shot-md"><div class="lbl">Capture — Module Notes</div></div>
+    <div class="shot shot-md"><div class="lbl">Capture — Bulletin / Résultats</div></div>
+  </div>
+  <p class="caption">Figure 5 — Saisie des notes par l'enseignant et bulletin officiel généré automatiquement.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>9 / 24</span></div>
+</section>
+
+<!-- PAGE 10 — ABSENCES & SURVEILLANCE -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Absences, présences et surveillance</h2>
+  <div class="rule"></div>
+  <p class="lede">Le suivi de la présence des élèves devient instantané, fiable et directement relié à la communication avec les familles.</p>
+
+  <div class="why-row"><span class="num-badge">1</span><div class="txt"><h4>Appel numérique par classe</h4><p>L'enseignant enregistre présents, absents, retards et excusés en quelques instants. Bénéfice : fin des feuilles d'appel papier.</p></div></div>
+  <div class="why-row"><span class="num-badge">2</span><div class="txt"><h4>Historique consultable à tout moment</h4><p>Par classe ou par élève, avec statistiques de présence. Bénéfice : une vision claire de l'assiduité sur l'année.</p></div></div>
+  <div class="why-row"><span class="num-badge">3</span><div class="txt"><h4>Notification automatique de la famille</h4><p>En cas d'absence, une notification peut être envoyée automatiquement au parent. Bénéfice : une réactivité immédiate, sans démarche manuelle.</p></div></div>
+
+  <div class="shot shot-md"><div class="lbl">Capture — Appel / Présences</div></div>
+  <p class="caption">Figure 6 — Saisie de l'appel et statistiques de présence par classe.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>10 / 24</span></div>
+</section>
+
+<!-- PAGE 11 — COMPTABILITE -->
+<section class="page">
+  <div class="kicker">Module phare</div>
+  <h2 class="title">Comptabilité et finances</h2>
+  <div class="rule"></div>
+  <p class="lede">La plateforme centralise l'ensemble des opérations financières de l'établissement, avec un vrai souci de traçabilité et de fiabilité.</p>
+
+  <div class="grid2">
+    <ul class="clean">
+      <li>Configuration des frais de scolarité par type et par niveau</li>
+      <li>Facturation automatique des élèves</li>
+      <li>Suivi des paiements et des factures en attente</li>
+      <li>Identification rapide des élèves en situation d'impayé</li>
+    </ul>
+    <ul class="clean">
+      <li>Gestion des dépenses de l'établissement</li>
+      <li>Gestion des salaires du personnel</li>
+      <li>Journal financier centralisé, base unique de vérité comptable</li>
+      <li>Rapports et exports financiers</li>
+    </ul>
+  </div>
+
+  <div class="card"><h4>Une séparation claire des responsabilités</h4><p>Direction financière, comptabilité et caisse disposent chacune de leur espace, pour une organisation financière saine et vérifiable. <span class="benefit">Bénéfice : une meilleure maîtrise financière et moins de risque d'erreur.</span></p></div>
+
+  <div class="shot-row" style="margin-top:12px;">
+    <div class="shot shot-md"><div class="lbl">Capture — Tableau de bord comptabilité</div></div>
+    <div class="shot shot-md"><div class="lbl">Capture — Opérations financières</div></div>
+  </div>
+  <p class="caption">Figure 7 — Vision consolidée des finances de l'établissement.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>11 / 24</span></div>
+</section>
+
+<!-- PAGE 12 — CAISSE -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Espace caisse</h2>
+  <div class="rule"></div>
+  <p class="lede">Permettre au personnel chargé de la caisse de gérer simplement les opérations quotidiennes et d'assurer une meilleure traçabilité des transactions.</p>
+
+  <ul class="clean">
+    <li>Ouverture et clôture des sessions de caisse</li>
+    <li>Recherche rapide d'un élève et de sa situation financière</li>
+    <li>Encaissement des paiements, ventilé automatiquement sur les frais dus</li>
+    <li>Émission d'un reçu numéroté et imprimable pour chaque paiement</li>
+    <li>Historique des sessions et des opérations du jour</li>
+  </ul>
+
+  <div class="shot shot-md"><div class="lbl">Capture — Espace caisse</div></div>
+  <p class="caption">Figure 8 — Guichet caisse : encaissement et émission de reçu.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>12 / 24</span></div>
+</section>
+
+<!-- PAGE 13 — E-LEARNING -->
+<section class="page">
+  <div class="kicker">Module différenciant</div>
+  <h2 class="title">Espace E-learning</h2>
+  <div class="rule"></div>
+  <p class="lede">L'établissement ne se limite plus à gérer l'école : il peut également proposer un environnement numérique d'apprentissage à ses élèves.</p>
+
+  <div class="grid2">
+    <ul class="clean">
+      <li>Mise à disposition de cours et supports pédagogiques par matière et par classe</li>
+      <li>Création de devoirs avec échéance, dépôt de copie et notation</li>
+      <li>Quiz en ligne avec correction automatique et nombre de tentatives limité</li>
+    </ul>
+    <ul class="clean">
+      <li>Organisation de classes virtuelles pour la continuité pédagogique</li>
+      <li>Accès élève centralisé à l'ensemble des contenus de ses matières</li>
+      <li>Suivi, par l'établissement, de l'activité pédagogique en ligne</li>
+    </ul>
+  </div>
+
+  <div class="shot-row">
+    <div class="shot shot-md"><div class="lbl">Capture — Espace E-learning</div></div>
+    <div class="shot shot-md"><div class="lbl">Capture — Cours / Contenu</div></div>
+  </div>
+  <p class="caption">Figure 9 — Cours, devoirs et quiz mis à disposition des élèves en ligne.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>13 / 24</span></div>
+</section>
+
+<!-- PAGE 14 — DOCUMENTS ET RAPPORTS -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Documents et rapports</h2>
+  <div class="rule"></div>
+  <p class="lede">Centralisez la production de vos documents officiels et gagnez un temps précieux sur les tâches administratives répétitives.</p>
+
+  <ul class="clean">
+    <li>Bulletins de notes semestriels et annuels, générés automatiquement</li>
+    <li>Cartes scolaires numériques avec QR code de vérification</li>
+    <li>Reçus de paiement et de salaire imprimables au format ticket</li>
+    <li>Exports Excel et CSV des données élèves et financières</li>
+    <li>Vérification publique de l'authenticité des documents délivrés</li>
+  </ul>
+
+  <div class="card"><h4>Une garantie d'authenticité</h4><p>Chaque bulletin et chaque reçu peut être vérifié via un QR code qui recalcule les données directement depuis la plateforme. <span class="benefit">Bénéfice : plus de confiance dans les documents remis aux familles et aux tiers.</span></p></div>
+
+  <div class="shot-row" style="margin-top:12px;">
+    <div class="shot shot-md"><div class="lbl">Capture — Bulletin officiel</div></div>
+    <div class="shot shot-md"><div class="lbl">Capture — Carte scolaire</div></div>
+  </div>
+  <p class="caption">Figure 10 — Documents officiels générés automatiquement par la plateforme.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>14 / 24</span></div>
+</section>
+
+<!-- PAGE 15 — COMMUNICATION -->
+<section class="page">
+  <div class="kicker">Module</div>
+  <h2 class="title">Communication avec les familles</h2>
+  <div class="rule"></div>
+  <p class="lede">La plateforme facilite la communication entre l'établissement et les familles, avec des notifications automatiques et multilingues.</p>
+
+  <ul class="clean">
+    <li>Notification automatique des parents en cas d'absence de leur enfant</li>
+    <li>Messages disponibles en français, ainsi qu'en langues locales (wolof, pular)</li>
+    <li>Notifications internes pour l'administration et les équipes</li>
+    <li>Emails automatiques (identifiants de connexion, alertes internes)</li>
+  </ul>
+
+  <div class="card"><h4>Une réactivité immédiate</h4><p>Les familles sont informées sans démarche manuelle du personnel. <span class="benefit">Bénéfice : un lien renforcé entre l'école et les familles, sans charge supplémentaire pour les équipes.</span></p></div>
+
+  <div class="shot shot-md" style="margin-top:14px;"><div class="lbl">Capture — Notification envoyée à un parent</div></div>
+  <p class="caption">Figure 11 — Exemple de notification automatique envoyée à une famille.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>15 / 24</span></div>
+</section>
+
+<!-- PAGE 16 — ESPACE ELEVE -->
+<section class="page">
+  <div class="kicker">Expérience utilisateur</div>
+  <h2 class="title">L'espace élève</h2>
+  <div class="rule"></div>
+  <p class="lede">Chaque élève dispose de son propre espace numérique pour suivre sa scolarité au quotidien.</p>
+
+  <div class="grid2">
+    <ul class="clean">
+      <li>Consultation des notes et des bulletins</li>
+      <li>Suivi de ses présences et absences</li>
+      <li>Accès à son emploi du temps</li>
+    </ul>
+    <ul class="clean">
+      <li>Accès aux cours, devoirs et quiz en ligne</li>
+      <li>Participation aux classes virtuelles</li>
+      <li>Carte scolaire numérique consultable et imprimable</li>
+    </ul>
+  </div>
+
+  <div class="shot shot-md"><div class="lbl">Capture — Tableau de bord élève</div></div>
+  <p class="caption">Figure 12 — Vue d'ensemble de l'espace élève : notes, présences et ressources pédagogiques.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>16 / 24</span></div>
+</section>
+
+<!-- PAGE 17 — GROUPES SCOLAIRES / MULTI-ETABLISSEMENT -->
+<section class="page">
+  <div class="kicker">Pour les réseaux d'écoles</div>
+  <h2 class="title">Une solution pensée aussi pour les groupes scolaires</h2>
+  <div class="rule"></div>
+  <p class="lede">Pour les promoteurs et directions générales gérant plusieurs établissements, la plateforme propose une console de supervision dédiée.</p>
+
+  <ul class="clean">
+    <li>Vue d'ensemble de tous les établissements du réseau depuis un même accès</li>
+    <li>Création et activation de nouveaux établissements</li>
+    <li>Inspection des données de chaque établissement, en lecture</li>
+    <li>Activation ou désactivation de modules selon les besoins de chaque école</li>
+  </ul>
+
+  <div class="card"><h4>Une supervision centralisée</h4><p>La direction générale conserve une visibilité globale, tandis que chaque établissement conserve son autonomie de gestion quotidienne. <span class="benefit">Bénéfice : une croissance maîtrisée pour les groupes scolaires.</span></p></div>
+
+  <div class="shot shot-md" style="margin-top:14px;"><div class="lbl">Capture — Console multi-établissements</div></div>
+  <p class="caption">Figure 13 — Supervision de plusieurs établissements depuis une même console.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>17 / 24</span></div>
+</section>
+
+<!-- PAGE 18 — CE QUI NOUS DIFFERENCIE -->
+<section class="page">
+  <div class="kicker">Positionnement</div>
+  <h2 class="title">Ce qui nous différencie</h2>
+  <div class="rule"></div>
+
+  <div class="why-row"><span class="num-badge">1</span><div class="txt"><h4>Une gestion centralisée</h4><p>Les différents services de l'établissement sont regroupés dans un même environnement, avec une seule source d'information.</p></div></div>
+  <div class="why-row"><span class="num-badge">2</span><div class="txt"><h4>Une dimension E-learning intégrée</h4><p>La plateforme ne se limite pas à l'administration scolaire : elle inclut un véritable espace d'apprentissage numérique.</p></div></div>
+  <div class="why-row"><span class="num-badge">3</span><div class="txt"><h4>Une gestion financière intégrée et fiable</h4><p>Direction, comptabilité et caisse sont réunies dans le même système, avec traçabilité de chaque opération.</p></div></div>
+  <div class="why-row"><span class="num-badge">4</span><div class="txt"><h4>Des espaces adaptés à chaque acteur</h4><p>Chaque utilisateur dispose d'un environnement correspondant précisément à son rôle.</p></div></div>
+  <div class="why-row"><span class="num-badge">5</span><div class="txt"><h4>Des documents vérifiables</h4><p>Bulletins et reçus peuvent être authentifiés par QR code, pour lutter contre la fraude documentaire.</p></div></div>
+  <div class="why-row"><span class="num-badge">6</span><div class="txt"><h4>Une vision globale pour la direction</h4><p>Des indicateurs clairs permettant de suivre l'activité de l'établissement au quotidien.</p></div></div>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>18 / 24</span></div>
+</section>
+
+<!-- PAGE 19 — AVANT / APRES -->
+<section class="page">
+  <div class="kicker">Transformation</div>
+  <h2 class="title">Avant / Après</h2>
+  <div class="rule"></div>
+  <p class="lede">La digitalisation change concrètement le quotidien de l'établissement.</p>
+
+  <table class="cmp">
+    <tr><th>Gestion traditionnelle</th><th>Avec la plateforme</th></tr>
+    <tr><td class="old">Informations dispersées</td><td class="new">Informations centralisées</td></tr>
+    <tr><td class="old">Documents papier</td><td class="new">Documents numériques et vérifiables</td></tr>
+    <tr><td class="old">Suivi manuel des élèves</td><td class="new">Suivi centralisé et continu</td></tr>
+    <tr><td class="old">Communication fragmentée</td><td class="new">Communication automatisée avec les familles</td></tr>
+    <tr><td class="old">Gestion financière dispersée</td><td class="new">Vision financière centralisée et traçable</td></tr>
+    <tr><td class="old">Ressources pédagogiques dispersées</td><td class="new">Cours et supports centralisés en ligne</td></tr>
+    <tr><td class="old">Gestion séparée des services</td><td class="new">Écosystème intégré</td></tr>
+  </table>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>19 / 24</span></div>
+</section>
+
+<!-- PAGE 20 — BENEFICES -->
+<section class="page">
+  <div class="kicker">Impact</div>
+  <h2 class="title">Les bénéfices pour l'établissement</h2>
+  <div class="rule"></div>
+
+  <div class="grid2">
+    <ul class="clean">
+      <li>Gain de temps sur les tâches administratives répétitives</li>
+      <li>Meilleure organisation entre les différents services</li>
+      <li>Centralisation des informations de l'établissement</li>
+      <li>Meilleure visibilité pour la direction</li>
+    </ul>
+    <ul class="clean">
+      <li>Suivi amélioré des élèves et de leur parcours</li>
+      <li>Modernisation de l'image de l'établissement</li>
+      <li>Meilleure expérience pour les enseignants, élèves et familles</li>
+      <li>Digitalisation progressive des processus internes</li>
+    </ul>
+  </div>
+
+  <div class="card" style="margin-top:8px;">
+    <h4>Une transformation progressive, pas un big-bang</h4>
+    <p>L'établissement peut activer les modules dont il a besoin, à son propre rythme, et faire évoluer son usage de la plateforme au fil du temps.</p>
+  </div>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>20 / 24</span></div>
+</section>
+
+<!-- PAGE 21 — EVOLUTION -->
+<section class="page">
+  <div class="kicker">Vision</div>
+  <h2 class="title">Une solution qui évolue avec l'établissement</h2>
+  <div class="rule"></div>
+
+  <h3 class="sub">Disponible aujourd'hui <span class="tag">Fonctionnalités actives</span></h3>
+  <ul class="clean">
+    <li>Gestion des élèves, enseignants, classes et années scolaires</li>
+    <li>Notes, bulletins et suivi de présence</li>
+    <li>Comptabilité, caisse et gestion financière</li>
+    <li>E-learning : cours, devoirs, quiz et classes virtuelles</li>
+    <li>Communication automatisée avec les familles</li>
+    <li>Console multi-établissements pour les groupes scolaires</li>
+  </ul>
+
+  <h3 class="sub">Évolution de la plateforme <span class="tag future">Envisagé</span></h3>
+  <ul class="clean">
+    <li>Application mobile dédiée</li>
+    <li>Paiements numériques en ligne</li>
+    <li>Fonctionnalités d'analyse avancée et de statistiques prédictives</li>
+    <li>Automatisations et intégrations supplémentaires</li>
+  </ul>
+  <p style="font-size:10.5px; color:var(--gray); font-style:italic;">Les évolutions ci-dessus sont des orientations envisagées et ne constituent pas des fonctionnalités actuellement disponibles.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>21 / 24</span></div>
+</section>
+
+<!-- PAGE 22 — POURQUOI ADOPTER -->
+<section class="page">
+  <div class="kicker">Décision</div>
+  <h2 class="title">Pourquoi adopter la plateforme ?</h2>
+  <div class="rule"></div>
+
+  <div class="why-row"><span class="num-badge">1</span><div class="txt"><h4>Pour centraliser</h4><p>Toutes les informations importantes de l'établissement au même endroit.</p></div></div>
+  <div class="why-row"><span class="num-badge">2</span><div class="txt"><h4>Pour gagner du temps</h4><p>Réduire les opérations manuelles et répétitives du quotidien.</p></div></div>
+  <div class="why-row"><span class="num-badge">3</span><div class="txt"><h4>Pour mieux piloter</h4><p>Disposer d'une meilleure visibilité sur l'ensemble de l'établissement.</p></div></div>
+  <div class="why-row"><span class="num-badge">4</span><div class="txt"><h4>Pour moderniser</h4><p>Proposer une expérience numérique adaptée aux usages actuels.</p></div></div>
+  <div class="why-row"><span class="num-badge">5</span><div class="txt"><h4>Pour améliorer le suivi</h4><p>Faciliter le suivi des élèves et des activités scolaires au fil de l'année.</p></div></div>
+  <div class="why-row"><span class="num-badge">6</span><div class="txt"><h4>Pour développer le numérique pédagogique</h4><p>Mettre à disposition des ressources et des espaces d'apprentissage en ligne.</p></div></div>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>22 / 24</span></div>
+</section>
+
+<!-- PAGE 23 — TEMOIGNAGE / RECAP VISUEL (optional strong page) -->
+<section class="page">
+  <div class="kicker">En bref</div>
+  <h2 class="title">Un environnement, tous les services de l'école</h2>
+  <div class="rule"></div>
+
+  <div class="grid3">
+    <div class="card"><h4>1 plateforme</h4><p>pour l'ensemble des services de l'établissement</p></div>
+    <div class="card"><h4>8 espaces métier</h4><p>direction, surveillance, enseignants, élèves, comptabilité, caisse, e-learning, communication</p></div>
+    <div class="card"><h4>Documents vérifiables</h4><p>bulletins et reçus authentifiables par QR code</p></div>
+  </div>
+
+  <h3 class="sub">Un déploiement simple</h3>
+  <ul class="clean">
+    <li>Activation des modules selon les besoins réels de l'établissement</li>
+    <li>Prise en main progressive par chaque équipe</li>
+    <li>Accompagnement possible lors de la mise en place</li>
+  </ul>
+
+  <div class="shot shot-md" style="margin-top:10px;"><div class="lbl">Capture — Vue d'ensemble de la plateforme</div></div>
+  <p class="caption">Figure 14 — Vue d'ensemble des principaux espaces de la plateforme.</p>
+
+  <div class="footer-bar"><span>AzelieEdu — Présentation commerciale</span><span>23 / 24</span></div>
+</section>
+
+<!-- PAGE 24 — CONCLUSION -->
+<section class="page closing">
+  <img src="images/azeliedu-logo-icon.png" style="height:52px; margin-bottom:22px;" alt="logo" />
+  <h2>Transformons la gestion de votre établissement.</h2>
+  <p class="big">AzelieEdu vous accompagne dans la digitalisation de votre établissement, à votre rythme, avec un environnement pensé pour chaque acteur de votre communauté scolaire.</p>
+
+  <div class="cta-box">
+    <h4>Prochaine étape</h4>
+    <ul>
+      <li>Demander une démonstration personnalisée de la plateforme</li>
+      <li>Discuter des besoins spécifiques de votre établissement</li>
+      <li>Envisager ensemble une mise en place progressive</li>
+    </ul>
+  </div>
+</section>
+
+</body>
+</html>

@@ -67,6 +67,12 @@
         <tr><td class="label">Matricule</td><td>{{ $payment->student->identifier ?? '—' }}</td></tr>
         <tr><td class="label">Date</td><td>{{ $payment->paid_at->format('d/m/Y H:i') }}</td></tr>
         <tr><td class="label">Mode</td><td>{{ $payment->methodLabel() }}</td></tr>
+        @if($payment->payment_reference)
+            <tr><td class="label">{{ $payment->referenceLabel() }}</td><td>{{ $payment->payment_reference }}</td></tr>
+        @endif
+        @if($payment->payment_bank)
+            <tr><td class="label">Banque</td><td>{{ $payment->payment_bank }}</td></tr>
+        @endif
         <tr><td class="label">Encaissé par</td><td>{{ $payment->recordedBy->name }}</td></tr>
     </table>
 

@@ -65,7 +65,7 @@
                             <li class="list-group-item d-flex justify-content-between align-items-start">
                                 <div>
                                     <div class="small"><code>{{ $payment->receipt_number }}</code></div>
-                                    <div class="text-muted" style="font-size:.75rem">{{ $payment->paid_at->format('d/m/Y H:i') }} — {{ $payment->methodLabel() }}</div>
+                                    <div class="text-muted" style="font-size:.75rem">{{ $payment->paid_at->format('d/m/Y H:i') }} — {{ $payment->methodLabel() }}@if($payment->payment_reference) ({{ $payment->referenceLabel() }} : {{ $payment->payment_reference }}@if($payment->payment_bank), {{ $payment->payment_bank }}@endif)@endif</div>
                                 </div>
                                 <span class="{{ $payment->isCancelled() ? 'text-muted text-decoration-line-through' : 'fw-semibold' }}">
                                     {{ number_format($payment->amount, 0, ',', ' ') }}

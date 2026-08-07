@@ -49,11 +49,11 @@
                 </div>
                 
                 <div class="col-md-6">
-                    <label for="end_date" class="form-label">Date de fin (clôture) <span class="text-muted fw-normal">— optionnelle</span></label>
-                    <input type="date" class="form-control @error('end_date') is-invalid @enderror" 
-                           id="end_date" name="end_date" 
-                           value="{{ old('end_date', $academicYear->end_date?->format('Y-m-d')) }}">
-                    <div class="form-text">Laissez vide tant que la clôture n'est pas fixée officiellement.</div>
+                    <label for="end_date" class="form-label">Date de fin (clôture) <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control @error('end_date') is-invalid @enderror"
+                           id="end_date" name="end_date"
+                           value="{{ old('end_date', $academicYear->end_date?->format('Y-m-d')) }}" required>
+                    <div class="form-text">Obligatoire : sert à générer automatiquement les mensualités de toute l'année (module Comptabilité).</div>
                     @error('end_date')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror

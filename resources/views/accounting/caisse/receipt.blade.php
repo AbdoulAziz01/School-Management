@@ -24,6 +24,14 @@
             <dd class="col-7">{{ $payment->student->name }} ({{ $payment->student->identifier ?? '—' }})</dd>
             <dt class="col-5">Mode de paiement</dt>
             <dd class="col-7">{{ $payment->methodLabel() }}</dd>
+            @if($payment->payment_reference)
+                <dt class="col-5">{{ $payment->referenceLabel() }}</dt>
+                <dd class="col-7">{{ $payment->payment_reference }}</dd>
+            @endif
+            @if($payment->payment_bank)
+                <dt class="col-5">Banque</dt>
+                <dd class="col-7">{{ $payment->payment_bank }}</dd>
+            @endif
             <dt class="col-5">Encaissé par</dt>
             <dd class="col-7">{{ $payment->recordedBy->name }}</dd>
         </dl>

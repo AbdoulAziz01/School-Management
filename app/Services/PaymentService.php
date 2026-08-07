@@ -43,7 +43,9 @@ class PaymentService
         string $method,
         User $cashier,
         ?CashSession $session,
-        ?string $notes = null
+        ?string $notes = null,
+        ?string $reference = null,
+        ?string $bank = null
     ): Payment {
         $allocations = array_filter(
             $allocations,
@@ -54,7 +56,15 @@ class PaymentService
             throw new \InvalidArgumentException('Aucun montant à encaisser.');
         }
 
-        return DB::transaction(function () use ($student, $allocations, $method, $cashier, $session, $notes) {
+        if (in_array($method, Payment::METHODS_REQUIRING_REFERENCE, true) && ! $reference) {
+            throw new \InvalidArgumentException('Une référence est obligatoire pour ce mode de paiement.');
+        }
+
+        if (in_array($method, Payment::METHODS_REQUIRING_BANK, true) && ! $bank) {
+            throw new \InvalidArgumentException('La banque est obligatoire pour ce mode de paiement.');
+        }
+
+        return DB::transaction(function () use ($student, $allocations, $method, $cashier, $session, $notes, $reference, $bank) {
             $invoices = StudentInvoice::whereIn('id', array_keys($allocations))
                 ->where('student_id', $student->id)
                 ->lockForUpdate()
@@ -82,6 +92,8 @@ class PaymentService
                 'student_id' => $student->id,
                 'amount' => round($totalAmount, 2),
                 'payment_method' => $method,
+                'payment_reference' => $reference,
+                'payment_bank' => $bank,
                 'paid_at' => now(),
                 'cash_session_id' => $session?->id,
                 'recorded_by' => $cashier->id,

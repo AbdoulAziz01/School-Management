@@ -158,7 +158,18 @@ class CaisseController extends Controller
             'amounts' => ['required', 'array'],
             'amounts.*' => ['nullable', 'numeric', 'min:0'],
             'payment_method' => ['required', Rule::in(array_keys(Payment::METHOD_LABELS))],
+            'payment_reference' => [
+                Rule::requiredIf(in_array($request->input('payment_method'), Payment::METHODS_REQUIRING_REFERENCE, true)),
+                'nullable', 'string', 'max:255',
+            ],
+            'payment_bank' => [
+                Rule::requiredIf(in_array($request->input('payment_method'), Payment::METHODS_REQUIRING_BANK, true)),
+                'nullable', 'string', 'max:255',
+            ],
             'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'payment_reference.required' => 'La référence est obligatoire pour ce mode de paiement.',
+            'payment_bank.required' => 'La banque est obligatoire pour ce mode de paiement.',
         ]);
 
         try {
@@ -168,7 +179,9 @@ class CaisseController extends Controller
                 $validated['payment_method'],
                 $request->user(),
                 $session,
-                $validated['notes'] ?? null
+                $validated['notes'] ?? null,
+                $validated['payment_reference'] ?? null,
+                $validated['payment_bank'] ?? null
             );
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());

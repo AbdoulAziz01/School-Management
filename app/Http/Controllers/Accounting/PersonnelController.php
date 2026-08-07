@@ -122,4 +122,32 @@ class PersonnelController extends Controller
                 'password' => $password,
             ]);
     }
+
+    /**
+     * Régénère le mot de passe d'un comptable/caissier — réservé aux
+     * subordonnés directs du directeur (même restriction que store()) et à
+     * son propre établissement, pas de contrôle par rôle admin ici.
+     */
+    public function regenerateCredentials(Request $request, User $staff): RedirectResponse
+    {
+        abort_unless(
+            in_array($staff->role, self::CREATABLE_ROLES, true) && $staff->school_id === $request->user()->school_id,
+            404,
+            'Compte introuvable.'
+        );
+
+        $password = Str::password(10, symbols: false);
+        $staff->forceFill(['password' => Hash::make($password)])->save();
+
+        $group = $staff->role === User::ROLE_CAISSIER ? 'caissiers' : 'comptables';
+
+        return redirect()->route('directeur.personnel.show', $group)
+            ->with('success', "Nouveau mot de passe généré pour {$staff->name}. Affiché ci-dessous — communiquez-le manuellement.")
+            ->with('new_staff_credentials', [
+                'name' => $staff->name,
+                'identifier' => $staff->identifier,
+                'email' => $staff->email,
+                'password' => $password,
+            ]);
+    }
 }

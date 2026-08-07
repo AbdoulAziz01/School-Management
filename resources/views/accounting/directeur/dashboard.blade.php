@@ -91,43 +91,48 @@
 </div>
 
 {{-- Présence du jour --}}
-<div class="section-eyebrow"><i class="fas fa-calendar-day"></i>Présence du jour</div>
+<div class="section-eyebrow d-flex align-items-center justify-content-between">
+    <span><i class="fas fa-calendar-day"></i>Présence du jour</span>
+    <span class="live-refresh-indicator small text-muted">
+        <span class="live-dot"></span> Mise à jour auto — <span id="dashboard-refreshed-at">{{ now()->format('H:i:s') }}</span>
+    </span>
+</div>
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <div class="kpi-tile kpi-tile-static">
+        <a href="{{ route('directeur.school.attendance.today') }}" class="kpi-tile">
             <div class="kpi-icon kpi-icon-green"><i class="fas fa-check-circle"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Élèves présents aujourd'hui</div>
-                <div class="kpi-value text-success">{{ $attendanceToday['students_present'] }}</div>
+                <div class="kpi-value text-success"><span id="kpi-students-present">{{ $attendanceToday['students_present'] }}</span></div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="kpi-tile kpi-tile-static">
+        <a href="{{ route('directeur.school.attendance.today') }}" class="kpi-tile">
             <div class="kpi-icon kpi-icon-red"><i class="fas fa-times-circle"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Élèves absents aujourd'hui</div>
-                <div class="kpi-value text-danger">{{ $attendanceToday['students_absent'] }}</div>
+                <div class="kpi-value text-danger"><span id="kpi-students-absent">{{ $attendanceToday['students_absent'] }}</span></div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="kpi-tile kpi-tile-static">
+        <a href="{{ route('directeur.school.attendance.today') }}" class="kpi-tile">
             <div class="kpi-icon kpi-icon-orange"><i class="fas fa-user-clock"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Enseignants absents</div>
-                <div class="kpi-value text-warning">{{ $attendanceToday['teachers_absent'] }}</div>
+                <div class="kpi-value text-warning"><span id="kpi-teachers-absent">{{ $attendanceToday['teachers_absent'] }}</span></div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="kpi-tile kpi-tile-static">
+        <a href="{{ route('directeur.school.students.difficulty') }}" class="kpi-tile">
             <div class="kpi-icon kpi-icon-red"><i class="fas fa-triangle-exclamation"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Élèves en difficulté</div>
-                <div class="kpi-value text-danger">{{ $academicSnapshot['students_in_difficulty'] }}</div>
+                <div class="kpi-value text-danger"><span id="kpi-students-difficulty">{{ $academicSnapshot['students_in_difficulty'] }}</span></div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -135,30 +140,30 @@
 <div class="section-eyebrow"><i class="fas fa-graduation-cap"></i>Vision académique</div>
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-6">
-        <div class="kpi-tile kpi-tile-static kpi-tile-lg">
+        <a href="{{ route('directeur.school.classes.index') }}" class="kpi-tile kpi-tile-lg">
             <div class="kpi-icon kpi-icon-purple"><i class="fas fa-star"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Moyenne générale de l'école</div>
-                <div class="kpi-value">
+                <div class="kpi-value" id="kpi-general-average-wrap">
                     @if($academicSnapshot['general_average'] !== null)
-                        {{ $academicSnapshot['general_average'] }} <span class="kpi-value-suffix">/ 20</span>
+                        <span id="kpi-general-average">{{ $academicSnapshot['general_average'] }}</span> <span class="kpi-value-suffix" id="kpi-general-average-suffix">/ 20</span>
                     @else
-                        <span class="kpi-value-suffix">Pas encore de notes</span>
+                        <span id="kpi-general-average"></span><span class="kpi-value-suffix" id="kpi-general-average-suffix">Pas encore de notes</span>
                     @endif
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-6">
-        <div class="kpi-tile kpi-tile-static kpi-tile-lg">
+        <a href="{{ route('directeur.school.classes.index') }}" class="kpi-tile kpi-tile-lg">
             <div class="kpi-icon kpi-icon-purple"><i class="fas fa-medal"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Taux de réussite</div>
                 <div class="kpi-value">
-                    {{ $academicSnapshot['success_rate'] !== null ? $academicSnapshot['success_rate'].'%' : '—' }}
+                    <span id="kpi-success-rate">{{ $academicSnapshot['success_rate'] !== null ? $academicSnapshot['success_rate'].'%' : '—' }}</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -171,7 +176,7 @@
             <div class="kpi-icon kpi-icon-amber"><i class="fas fa-wallet"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Solde actuel</div>
-                <div class="kpi-value">{{ number_format($summary['solde_actuel'], 0, ',', ' ') }} <span class="kpi-value-suffix">FCFA</span></div>
+                <div class="kpi-value"><span id="kpi-solde-actuel">{{ number_format($summary['solde_actuel'], 0, ',', ' ') }}</span> <span class="kpi-value-suffix">FCFA</span></div>
             </div>
         </a>
     </div>
@@ -180,7 +185,7 @@
             <div class="kpi-icon kpi-icon-green"><i class="fas fa-arrow-trend-up"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Recettes du mois</div>
-                <div class="kpi-value text-success">{{ number_format($summary['recettes_mois'], 0, ',', ' ') }}</div>
+                <div class="kpi-value text-success"><span id="kpi-recettes-mois">{{ number_format($summary['recettes_mois'], 0, ',', ' ') }}</span></div>
             </div>
         </a>
     </div>
@@ -189,7 +194,7 @@
             <div class="kpi-icon kpi-icon-red"><i class="fas fa-arrow-trend-down"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Dépenses du mois</div>
-                <div class="kpi-value text-danger">{{ number_format($summary['depenses_mois'], 0, ',', ' ') }}</div>
+                <div class="kpi-value text-danger"><span id="kpi-depenses-mois">{{ number_format($summary['depenses_mois'], 0, ',', ' ') }}</span></div>
             </div>
         </a>
     </div>
@@ -198,7 +203,7 @@
             <div class="kpi-icon kpi-icon-slate"><i class="fas fa-money-check-alt"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Masse salariale mensuelle</div>
-                <div class="kpi-value">{{ number_format($summary['masse_salariale'], 0, ',', ' ') }}</div>
+                <div class="kpi-value"><span id="kpi-masse-salariale">{{ number_format($summary['masse_salariale'], 0, ',', ' ') }}</span></div>
             </div>
         </a>
     </div>
@@ -207,7 +212,7 @@
             <div class="kpi-icon kpi-icon-green"><i class="fas fa-coins"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Recettes du jour</div>
-                <div class="kpi-value kpi-value-sm text-success">{{ number_format($summary['recettes_jour'], 0, ',', ' ') }}</div>
+                <div class="kpi-value kpi-value-sm text-success"><span id="kpi-recettes-jour">{{ number_format($summary['recettes_jour'], 0, ',', ' ') }}</span></div>
             </div>
         </a>
     </div>
@@ -216,7 +221,7 @@
             <div class="kpi-icon kpi-icon-green"><i class="fas fa-circle-check"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Élèves à jour</div>
-                <div class="kpi-value kpi-value-sm">{{ $summary['eleves_payes'] }}</div>
+                <div class="kpi-value kpi-value-sm"><span id="kpi-eleves-payes">{{ $summary['eleves_payes'] }}</span></div>
             </div>
         </a>
     </div>
@@ -225,7 +230,7 @@
             <div class="kpi-icon kpi-icon-orange"><i class="fas fa-user-clock"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Élèves débiteurs</div>
-                <div class="kpi-value kpi-value-sm text-warning">{{ $summary['eleves_debiteurs'] }}</div>
+                <div class="kpi-value kpi-value-sm text-warning"><span id="kpi-eleves-debiteurs">{{ $summary['eleves_debiteurs'] }}</span></div>
             </div>
         </a>
     </div>
@@ -234,7 +239,7 @@
             <div class="kpi-icon kpi-icon-slate"><i class="fas fa-file-invoice"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Factures en attente</div>
-                <div class="kpi-value kpi-value-sm">{{ $summary['paiements_en_attente'] }}</div>
+                <div class="kpi-value kpi-value-sm"><span id="kpi-factures-attente">{{ $summary['paiements_en_attente'] }}</span></div>
             </div>
         </a>
     </div>
@@ -243,7 +248,7 @@
             <div class="kpi-icon kpi-icon-blue"><i class="fas fa-percent"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Taux de paiement des élèves</div>
-                <div class="kpi-value kpi-value-sm">{{ $paymentRate }}%</div>
+                <div class="kpi-value kpi-value-sm"><span id="kpi-taux-paiement">{{ $paymentRate }}</span>%</div>
             </div>
         </a>
     </div>
@@ -252,7 +257,7 @@
             <div class="kpi-icon kpi-icon-orange"><i class="fas fa-hourglass-half"></i></div>
             <div class="kpi-body">
                 <div class="kpi-label">Salaires en attente ({{ now()->locale('fr')->translatedFormat('F') }})</div>
-                <div class="kpi-value kpi-value-sm text-warning">{{ $pendingPayroll['count'] }} <span class="kpi-value-suffix">({{ number_format($pendingPayroll['amount'], 0, ',', ' ') }} FCFA)</span></div>
+                <div class="kpi-value kpi-value-sm text-warning"><span id="kpi-salaires-attente-count">{{ $pendingPayroll['count'] }}</span> <span class="kpi-value-suffix">(<span id="kpi-salaires-attente-amount">{{ number_format($pendingPayroll['amount'], 0, ',', ' ') }}</span> FCFA)</span></div>
             </div>
         </a>
     </div>
@@ -264,6 +269,24 @@
     /* Extras propres à cette page (non repris dans le système partagé) */
     .section-eyebrow-finance { color: #78716c; }
     .kpi-tile-lg .kpi-icon { width: 52px; height: 52px; font-size: 1.15rem; }
+
+    /* Indicateur de rafraîchissement automatique — Présence du jour /
+       Vision académique / Finances se mettent à jour sans recharger la page. */
+    .live-refresh-indicator { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+    .live-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #16a34a; display: inline-block;
+        animation: live-dot-pulse 2s ease-in-out infinite;
+    }
+    @keyframes live-dot-pulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(22, 163, 74, .4); }
+        50% { opacity: .6; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0); }
+    }
+    .kpi-flash { animation: kpi-value-flash .8s ease-out; }
+    @keyframes kpi-value-flash {
+        0% { color: #f59e0b; }
+        100% { color: inherit; }
+    }
 </style>
 @endpush
 
@@ -492,6 +515,81 @@
             },
         });
     }
+})();
+</script>
+<script>
+// Rafraîchissement auto (toutes les 30s) des tuiles Présence du jour /
+// Vision académique / Finances, sans recharger la page — les graphiques et
+// listes ci-dessus restent, eux, chargés au prochain rechargement complet.
+(function () {
+    var REFRESH_URL = @json(route('directeur.dashboard.refresh'));
+    var REFRESH_INTERVAL_MS = 30000;
+
+    function formatNumber(value) {
+        return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+
+    function setText(id, text) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el.textContent === text) return; // pas de flash si rien n'a changé
+        el.textContent = text;
+        el.classList.remove('kpi-flash');
+        // Force le reflow pour pouvoir rejouer l'animation sur des mises à jour successives.
+        void el.offsetWidth;
+        el.classList.add('kpi-flash');
+    }
+
+    function applyRefresh(data) {
+        setText('kpi-students-present', String(data.attendance_today.students_present));
+        setText('kpi-students-absent', String(data.attendance_today.students_absent));
+        setText('kpi-teachers-absent', String(data.attendance_today.teachers_absent));
+        setText('kpi-students-difficulty', String(data.academic_snapshot.students_in_difficulty));
+
+        if (data.academic_snapshot.general_average !== null) {
+            setText('kpi-general-average', String(data.academic_snapshot.general_average));
+            setText('kpi-general-average-suffix', '/ 20');
+        } else {
+            setText('kpi-general-average', '');
+            setText('kpi-general-average-suffix', 'Pas encore de notes');
+        }
+        setText('kpi-success-rate', data.academic_snapshot.success_rate !== null ? data.academic_snapshot.success_rate + '%' : '—');
+
+        setText('kpi-solde-actuel', formatNumber(data.summary.solde_actuel));
+        setText('kpi-recettes-mois', formatNumber(data.summary.recettes_mois));
+        setText('kpi-depenses-mois', formatNumber(data.summary.depenses_mois));
+        setText('kpi-masse-salariale', formatNumber(data.summary.masse_salariale));
+        setText('kpi-recettes-jour', formatNumber(data.summary.recettes_jour));
+        setText('kpi-eleves-payes', String(data.summary.eleves_payes));
+        setText('kpi-eleves-debiteurs', String(data.summary.eleves_debiteurs));
+        setText('kpi-factures-attente', String(data.summary.paiements_en_attente));
+        setText('kpi-taux-paiement', String(data.payment_rate));
+        setText('kpi-salaires-attente-count', String(data.pending_payroll.count));
+        setText('kpi-salaires-attente-amount', formatNumber(data.pending_payroll.amount));
+
+        var refreshedAt = document.getElementById('dashboard-refreshed-at');
+        if (refreshedAt) refreshedAt.textContent = data.refreshed_at;
+    }
+
+    function refresh() {
+        fetch(REFRESH_URL, {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (data) { if (data) applyRefresh(data); })
+            .catch(function () { /* échec silencieux — on retentera au prochain intervalle */ });
+    }
+
+    // On ne rafraîchit que si l'onglet est visible, pour ne pas bombarder le
+    // serveur de requêtes inutiles pendant que le directeur est ailleurs.
+    var timer = setInterval(function () {
+        if (document.visibilityState === 'visible') refresh();
+    }, REFRESH_INTERVAL_MS);
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') refresh();
+    });
 })();
 </script>
 @endpush

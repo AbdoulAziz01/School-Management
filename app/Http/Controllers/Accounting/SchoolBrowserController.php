@@ -286,4 +286,114 @@ class SchoolBrowserController extends Controller
             'attendanceStats' => $attendanceStats,
         ]);
     }
+
+    // ── Présence du jour ─────────────────────────────────────────────────
+
+    /**
+     * Détail derrière les tuiles "Présence du jour" du tableau de bord :
+     * qui est absent aujourd'hui (élèves) et quels enseignants n'ont fait
+     * l'appel dans aucune de leurs classes prévues aujourd'hui — même
+     * définition que SchoolOverviewService::attendanceToday(), en version
+     * listée plutôt que comptée.
+     */
+    public function attendanceToday(Request $request)
+    {
+        $school = School::find($request->user()->school_id);
+
+        $absentStudents = \App\Models\Attendance::where('school_id', $school->id)
+            ->whereDate('date', today())
+            ->where('status', 'absent')
+            ->with(['user.schoolClass'])
+            ->get()
+            ->unique('user_id')
+            ->sortBy(fn ($row) => $row->user?->name);
+
+        $presentCount = \App\Models\Attendance::where('school_id', $school->id)
+            ->whereDate('date', today())
+            ->whereIn('status', ['present', 'late'])
+            ->distinct('user_id')
+            ->count('user_id');
+
+        $teacherIds = User::where('school_id', $school->id)
+            ->whereIn('role', User::ROLE_TEACHER_ALIASES)
+            ->pluck('id');
+
+        $teachersWhoTookAttendanceToday = \App\Models\Attendance::where('school_id', $school->id)
+            ->whereDate('date', today())
+            ->whereIn('teacher_id', $teacherIds)
+            ->distinct()
+            ->pluck('teacher_id');
+
+        $dayOfWeek = (int) now()->dayOfWeekIso;
+        $teachersScheduledToday = \App\Models\Schedule::where('school_id', $school->id)
+            ->where('day_of_week', $dayOfWeek)
+            ->whereIn('teacher_id', $teacherIds)
+            ->with(['schoolClass', 'subject'])
+            ->get();
+
+        $absentTeacherIds = $teachersScheduledToday->pluck('teacher_id')->unique()->diff($teachersWhoTookAttendanceToday);
+        $absentTeachers = User::whereIn('id', $absentTeacherIds)->orderBy('name')->get()
+            ->map(function (User $teacher) use ($teachersScheduledToday) {
+                $teacher->today_classes = $teachersScheduledToday->where('teacher_id', $teacher->id);
+
+                return $teacher;
+            });
+
+        return view('accounting.directeur.attendance-today', [
+            'absentStudents' => $absentStudents,
+            'presentCount' => $presentCount,
+            'absentTeachers' => $absentTeachers,
+        ]);
+    }
+
+    // ── Élèves en difficulté ─────────────────────────────────────────────
+
+    /**
+     * Liste nominative derrière la tuile "Élèves en difficulté" du tableau
+     * de bord — même définition que SchoolOverviewService::academicSnapshot()
+     * (moyenne générale de l'élève, tous devoirs/compositions de l'année
+     * courante confondus, ramenée en ratio 0..1) : un élève est "en
+     * difficulté" s'il a au moins une note ET que son ratio est < 0.5
+     * (moins de la moitié du barème). Un élève sans aucune note n'est ni
+     * compté en difficulté ni compté réussi — il est simplement absent du
+     * calcul (voir SchoolOverviewService::studentGeneralAverage(), qui
+     * retourne null dans ce cas).
+     */
+    public function studentsInDifficulty(Request $request)
+    {
+        $school = School::find($request->user()->school_id);
+        $academicYear = $this->currentYear($school);
+
+        $students = User::where('school_id', $school->id)
+            ->whereIn('role', User::ROLE_STUDENT_ALIASES)
+            ->whereNotNull('class_id')
+            ->with('schoolClass.level')
+            ->get();
+
+        $rows = collect();
+
+        if ($academicYear) {
+            foreach ($students as $student) {
+                $average = $this->overview->studentGeneralAverage($student, $academicYear);
+
+                if ($average !== null && $average['ratio'] < 0.5) {
+                    $referenceMax = $this->bulletinComputation->referenceMaxGradeForLevel($student->schoolClass?->level);
+
+                    $rows->push([
+                        'student' => $student,
+                        'average' => round($average['ratio'] * $referenceMax, 2),
+                        'max_grade' => $referenceMax,
+                        'ratio' => $average['ratio'],
+                    ]);
+                }
+            }
+        }
+
+        $rows = $rows->sortBy('ratio')->values();
+
+        return view('accounting.directeur.students-in-difficulty', [
+            'rows' => $rows,
+            'academicYear' => $academicYear,
+        ]);
+    }
 }

@@ -58,6 +58,9 @@
                             <th>Matricule</th>
                             <th>Email</th>
                             <th>Statut</th>
+                            @if(in_array($group, ['comptables', 'caissiers']))
+                                <th class="text-end">Actions</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -80,6 +83,17 @@
                                         <span class="status-badge status-badge-danger">Rejeté</span>
                                     @endif
                                 </td>
+                                @if(in_array($group, ['comptables', 'caissiers']))
+                                    <td class="text-end">
+                                        <form method="POST" action="{{ route('directeur.personnel.regenerate-credentials', $person) }}"
+                                              onsubmit="return confirm('Régénérer le mot de passe de {{ $person->name }} ? L\'ancien mot de passe cessera de fonctionner immédiatement.');">
+                                            @csrf
+                                            <button type="submit" class="btn-pill-outline btn-sm">
+                                                <i class="fas fa-key"></i> Régénérer le mot de passe
+                                            </button>
+                                        </form>
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
